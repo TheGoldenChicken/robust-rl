@@ -1,6 +1,5 @@
 import WareHouseEnv as warehouse
 import GridWorldEnv as gridworld
-import WareHousePlayer as wh_player
 import Agent
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,7 +10,7 @@ env = warehouse.WareHouseEnv(n = 10, h = 1, k = 2, p = 3)
 
 ### Value iteration agent
 agent = Agent.DiscreteDestributionalMLMCRobustAgent(env)
-for i in tqdm(range(1000)):
+for i in tqdm(range(2000)):
     agent.next()
 
 # Value function
@@ -26,6 +25,7 @@ for i in agent.q.keys():
     img[i[0],i[1]] = agent.q[i]
 
 plt.imshow(img)
+plt.colorbar()
 plt.show()
 
 

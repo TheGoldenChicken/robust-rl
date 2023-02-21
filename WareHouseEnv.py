@@ -19,10 +19,10 @@ class WareHouseEnv():
             demand = r
         
         # Holding cost
-        cost = self.h*(state + action - demand)
+        cost = np.abs(self.h*(state + action - demand))
         
         # Lost sales penalty
-        cost += self.p*(demand - state - action)
+        cost += np.abs(self.p*(demand - state - action))
         
         # Fixed ordering cost
         #cost += self.k*action

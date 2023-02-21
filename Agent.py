@@ -58,9 +58,12 @@ class DiscreteDestributionalMLMCRobustAgent(Agent):
             beta_step = 0.1
             
             
-            temp_1 = lambda N, s_, beta : -beta*np.log((1/(2**(N+1)))*sum([np.exp(-max([self.q[(s_[i][0], b)]/(beta + 1e-10) for b in self.env.A(s_[i][0])])) for i in range(int(2**(N+1)))]) + 1e-10) - beta*self.delta
-            temp_2 = lambda N, s_, beta : -beta*np.log((1/(2**(N)))*sum([np.exp(-max([self.q[(s_[2*i][0], b)]/(beta + 1e-10) for b in self.env.A(s_[2*i][0])])) for i in range(int(2**(N)))]) + 1e-10) - beta*self.delta
-            temp_3 = lambda N, s_, beta : -beta*np.log((1/(2**(N)))*sum([np.exp(-max([self.q[(s_[2*i-1][0], b)]/(beta + 1e-10) for b in self.env.A(s_[2*i-1][0])])) for i in range(int(2**(N)))]) + 1e-10) - beta*self.delta
+            temp_1 = lambda N, s_, beta : -beta*np.log((1/(2**(N+1))) *
+                                                       sum([np.exp(-max([self.q[(s_[i][0], b)] / (beta + 1e-10) for b in self.env.A(s_[i][0])])) for i in range(int(2**(N+1)))]) + 1e-10) - beta*self.delta
+            temp_2 = lambda N, s_, beta : -beta*np.log((1/(2**(N))) *
+                                                       sum([np.exp(-max([self.q[(s_[2*i][0], b)]/(beta + 1e-10) for b in self.env.A(s_[2*i][0])])) for i in range(int(2**(N)))]) + 1e-10) - beta*self.delta
+            temp_3 = lambda N, s_, beta : -beta*np.log((1/(2**(N))) *
+                                                       sum([np.exp(-max([self.q[(s_[2*i-1][0], b)]/(beta + 1e-10) for b in self.env.A(s_[2*i-1][0])])) for i in range(int(2**(N)))]) + 1e-10) - beta*self.delta
             
             Delta_q = max([temp_1(N, samples, beta) for beta in np.arange(beta_min, beta_max, beta_step)]) - 1/2*max([temp_2(N, samples, beta) for beta in np.arange(beta_min, beta_max, beta_step)]) - 1/2*max([temp_3(N, samples, beta) for beta in np.arange(beta_min, beta_max, beta_step)])
             return Delta_q
