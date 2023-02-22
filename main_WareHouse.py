@@ -10,7 +10,7 @@ env = warehouse.WareHouseEnv(n = 10, h = 1, k = 2, p = 3)
 
 ### Value iteration agent
 agent = Agent.DiscreteDestributionalMLMCRobustAgent(env)
-for i in tqdm(range(2000)):
+for i in tqdm(range(10)):
     agent.next()
 
 # Value function

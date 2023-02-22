@@ -2,6 +2,7 @@ from collections import defaultdict
 import Policy as policy
 import random
 import numpy as np
+import matplotlib.pyplot as plt
 
 class Agent:
     
@@ -39,33 +40,83 @@ class DiscreteDestributionalMLMCRobustAgent(Agent):
         
     def next(self) -> bool:
         
+        def newtonMethod(f, f_prime, N, r, x0, epsilon=0.01):
+            x = x0
+            while abs(f_prime(N, r, x)) > epsilon:
+                x = x + 0.1*f_prime(N, r, x)
+                if(x < 0):
+                    x = 0.1
+                    if(f_prime(N, r, x) < 0):
+                        break
+            return x
+        
         def f_Delta_r(N, samples):
-            alpha_max = 10
-            alpha_min = 0.1
-            alpha_step = 0.1
 
-            temp_1 = lambda N, r, alpha : -alpha*np.log((1/(2**(N+1)))*sum([np.exp(-r[i][1]/(alpha + 1e-10)) for i in range(int(2**(N+1)))]) + 1e-10) - alpha*self.delta
-            temp_2 = lambda N, r, alpha : -alpha*np.log((1/(2**(N)))*sum([np.exp(-r[2*i][1]/(alpha + 1e-10)) for i in range(int(2**(N)))]) + 1e-10) - alpha*self.delta
-            temp_3 = lambda N, r, alpha : -alpha*np.log((1/(2**(N)))*sum([np.exp(-r[2*i-1][1]/(alpha + 1e-10)) for i in range(int(2**(N)))]) + 1e-10) - alpha*self.delta
+            temp_1 = lambda N, r, alpha : -alpha*np.log((1/(2**(N+1)))*sum([np.exp(-r[i][1]/(alpha + 1e-2)) for i in range(int(2**(N+1)))]) + 1e-2) - alpha*self.delta
+            temp_2 = lambda N, r, alpha : -alpha*np.log((1/(2**(N)))*sum([np.exp(-r[2*i][1]/(alpha + 1e-2)) for i in range(int(2**(N)))]) + 1e-2) - alpha*self.delta
+            temp_3 = lambda N, r, alpha : -alpha*np.log((1/(2**(N)))*sum([np.exp(-r[2*i-1][1]/(alpha + 1e-2)) for i in range(int(2**(N)))]) + 1e-2) - alpha*self.delta
 
-            Delta_r = max([temp_1(N, samples, alpha) for alpha in np.arange(alpha_min, alpha_max, alpha_step)]) - 1/2*max([temp_2(N, samples, alpha) for alpha in np.arange(alpha_min, alpha_max, alpha_step)]) - 1/2*max([temp_3(N, samples, alpha) for alpha in np.arange(alpha_min, alpha_max, alpha_step)])
+            # diff_temp_1 = lambda N, r, alpha : - \
+            #     np.log(sum([np.exp(-r[i][1]/(alpha + 1e-2)) for i in range(int(2**(N+1)))])/(2**(N+1))) - \
+            #         (alpha*((sum([(r[i][1]*np.exp(-r[i][1]/(alpha + 1e-2))) / (alpha**2 + 1e-2) for i in range(int(2**(N+1)))])))) / \
+            #             (sum([np.exp(-r[i][1]/(alpha + 1e-2)) for i in range(int(2**(N+1)))])) - self.delta
+            
+            # diff_temp_2 = lambda N, r, alpha : - \
+            #     np.log(sum([np.exp(-r[2*i][1]/(alpha + 1e-2)) for i in range(int(2**(N)))])/(2**(N))) - \
+            #         (alpha*((sum([(r[2*i][1]*np.exp(-r[2*i][1]/(alpha + 1e-2))) / (alpha**2 + 1e-2) for i in range(int(2**(N)))])))) / \
+            #             (sum([np.exp(-r[2*i][1]/(alpha + 1e-2)) for i in range(int(2**(N)))])) - self.delta
+                        
+            # diff_temp_3 = lambda N, r, alpha : - \
+            #     np.log(sum([np.exp(-r[2*i-1][1]/(alpha + 1e-2)) for i in range(int(2**(N)))])/(2**(N))) - \
+            #         (alpha*((sum([(r[2*i-1][1]*np.exp(-r[2*i-1][1]/(alpha + 1e-2))) / (alpha**2 + 1e-2) for i in range(int(2**(N)))])))) / \
+            #             (sum([np.exp(-r[2*i-1][1]/(alpha + 1e-2)) for i in range(int(2**(N)))])) - self.delta
+            
+            # alpha1 = newtonMethod(temp_1, diff_temp_1, N, samples, 1)
+            # alpha2 = newtonMethod(temp_2, diff_temp_2, N, samples, 1)
+            # alpha3 = newtonMethod(temp_3, diff_temp_3, N, samples, 1)
+            
+            # Delta_r = temp_1(N, samples, alpha1) - 1/2*temp_2(N, samples, alpha2) - 1/2*temp_3(N, samples, alpha3)
+            
+            Delta_r = max([temp_1(N,samples, a_) for a_ in np.arange(0.1, 10, 0.01)])
+            Delta_r -= 1/2*max([temp_2(N,samples, a_) for a_ in np.arange(0.1, 10, 0.01)])
+            Delta_r -= 1/2*max([temp_3(N,samples, a_) for a_ in np.arange(0.1, 10, 0.01)])
             
             return Delta_r
         
         def f_Delta_q(N, samples):
-            beta_max = 10
-            beta_min = 0.1
-            beta_step = 0.1
-            
             
             temp_1 = lambda N, s_, beta : -beta*np.log((1/(2**(N+1))) *
-                                                       sum([np.exp(-max([self.q[(s_[i][0], b)] / (beta + 1e-10) for b in self.env.A(s_[i][0])])) for i in range(int(2**(N+1)))]) + 1e-10) - beta*self.delta
+                                                       sum([np.exp(-max([self.q[(s_[i][0], b)] / (beta + 1e-2) for b in self.env.A(s_[i][0])])) for i in range(int(2**(N+1)))]) + 1e-2) - beta*self.delta
             temp_2 = lambda N, s_, beta : -beta*np.log((1/(2**(N))) *
-                                                       sum([np.exp(-max([self.q[(s_[2*i][0], b)]/(beta + 1e-10) for b in self.env.A(s_[2*i][0])])) for i in range(int(2**(N)))]) + 1e-10) - beta*self.delta
+                                                       sum([np.exp(-max([self.q[(s_[2*i][0], b)]/(beta + 1e-2) for b in self.env.A(s_[2*i][0])])) for i in range(int(2**(N)))]) + 1e-2) - beta*self.delta
             temp_3 = lambda N, s_, beta : -beta*np.log((1/(2**(N))) *
-                                                       sum([np.exp(-max([self.q[(s_[2*i-1][0], b)]/(beta + 1e-10) for b in self.env.A(s_[2*i-1][0])])) for i in range(int(2**(N)))]) + 1e-10) - beta*self.delta
+                                                       sum([np.exp(-max([self.q[(s_[2*i-1][0], b)]/(beta + 1e-2) for b in self.env.A(s_[2*i-1][0])])) for i in range(int(2**(N)))]) + 1e-2) - beta*self.delta
             
-            Delta_q = max([temp_1(N, samples, beta) for beta in np.arange(beta_min, beta_max, beta_step)]) - 1/2*max([temp_2(N, samples, beta) for beta in np.arange(beta_min, beta_max, beta_step)]) - 1/2*max([temp_3(N, samples, beta) for beta in np.arange(beta_min, beta_max, beta_step)])
+            # diff_temp_1 = lambda N, s_, beta : - \
+            #     np.log(sum([np.exp(-max([self.q[(s_[i][0], b)] / (beta + 1e-2) for b in self.env.A(s_[i][0])])/(beta + 1e-2)) for i in range(int(2**(N+1)))])/(2**(N+1))) - \
+            #         (beta*((sum([(max([self.q[(s_[i][0], b)] / (beta + 1e-2) for b in self.env.A(s_[i][0])])*np.exp(-max([self.q[(s_[i][0], b)] / (beta + 1e-2) for b in self.env.A(s_[i][0])])/(beta + 1e-2))) / (beta**2 + 1e-2) for i in range(int(2**(N+1)))])))) / \
+            #             (sum([np.exp(-max([self.q[(s_[i][0], b)] / (beta + 1e-2) for b in self.env.A(s_[i][0])])/(beta + 1e-2)) for i in range(int(2**(N+1)))])) - self.delta
+            
+            # diff_temp_2 = lambda N, s_, beta : - \
+            #     np.log(sum([np.exp(-max([self.q[(s_[2*i][0], b)] / (beta + 1e-2) for b in self.env.A(s_[2*i][0])])/(beta + 1e-2)) for i in range(int(2**(N)))])/(2**(N))) - \
+            #         (beta*((sum([(max([self.q[(s_[2*i][0], b)] / (beta + 1e-2) for b in self.env.A(s_[2*i][0])])*np.exp(-max([self.q[(s_[2*i][0], b)] / (beta + 1e-2) for b in self.env.A(s_[2*i][0])])/(beta + 1e-2))) / (beta**2 + 1e-2) for i in range(int(2**(N)))])))) / \
+            #             (sum([np.exp(-max([self.q[(s_[2*i][0], b)] / (beta + 1e-2) for b in self.env.A(s_[2*i][0])])/(beta + 1e-2)) for i in range(int(2**(N)))])) - self.delta
+                        
+            # diff_temp_3 = lambda N, s_, beta : - \
+            #     np.log(sum([np.exp(-max([self.q[(s_[2*i-1][0], b)] / (beta + 1e-2) for b in self.env.A(s_[2*i-1][0])])/(beta + 1e-2)) for i in range(int(2**(N)))])/(2**(N))) - \
+            #         (beta*((sum([(max([self.q[(s_[2*i-1][0], b)] / (beta + 1e-2) for b in self.env.A(s_[2*i-1][0])])*np.exp(-max([self.q[(s_[2*i-1][0], b)] / (beta + 1e-2) for b in self.env.A(s_[2*i-1][0])])/(beta + 1e-2))) / (beta**2 + 1e-2) for i in range(int(2**(N)))])))) / \
+            #             (sum([np.exp(-max([self.q[(s_[2*i-1][0], b)] / (beta + 1e-2) for b in self.env.A(s_[2*i-1][0])])/(beta + 1e-2)) for i in range(int(2**(N)))])) - self.delta
+            
+            # alpha1 = newtonMethod(temp_1, diff_temp_1, N, samples, 1)
+            # alpha2 = newtonMethod(temp_2, diff_temp_2, N, samples, 1)
+            # alpha3 = newtonMethod(temp_3, diff_temp_3, N, samples, 1)
+            
+            #Delta_q = temp_1(N, samples, alpha1) - 1/2*temp_2(N, samples, alpha2) - 1/2*temp_3(N, samples, alpha3)
+            
+            Delta_q = max([temp_1(N,samples, a_) for a_ in np.arange(0.1, 10, 0.01)])
+            Delta_q -= 1/2*max([temp_2(N,samples, a_) for a_ in np.arange(0.1, 10, 0.01)])
+            Delta_q -= 1/2*max([temp_3(N,samples, a_) for a_ in np.arange(0.1, 10, 0.01)])
+            
             return Delta_q
         
         
