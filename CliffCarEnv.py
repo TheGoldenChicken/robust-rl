@@ -9,77 +9,165 @@ height = 600
 backgroundColor = (255,255,255)
 
 
-class Player:
+# class Player:
 
-    def __init__(self):
-        self.position = [250, 250]
-        self.angle = 0 # Angle - Radians, pls
+#     def __init__(self):
+#         self.position = [250, 250]
+#         self.angle = 0 # Angle - Radians, pls
 
-        self.velocity = np.array([0,0], dtype=np.float64)
-        self.angle_speed = 0 # Deg/second right now - cuz im stupid
+#         self.velocity = np.array([0,0], dtype=np.float64)
+#         self.angle_speed = 0 # Deg/second right now - cuz im stupid
 
-        self.accel = 1
-        self.angle_accel = 0.4
-        self.mass = 1 # Mass
-        self.k = 0.1 #Friction coeffcient
+#         self.accel = 1
+#         self.angle_accel = 0.4
+#         self.mass = 1 # Mass
+#         self.k = 0.1 #Friction coeffcient
 
-        # Wind - Move to env
-        self.wind_direction_change = [0, 1] # Normal distribution change
-        self.wind_force_change = [0, 1] # Normal distribution change
-
-
-    def update_position(self, time_discret=1, radians = True):
-        """
-
-        :param int time_discret: int time-discretisation factor, divides all position updates by that factor
-        :param radians: unused, TODO: implement plox
-        :return:
-        """
-        if not radians:
-            print("Please use radians")
-            pass
-
-        self.position += self.velocity / time_discret
-        self.angle += self.angle_speed / time_discret
-
-        # self.position += [np.cos(self.angle*np.pi/180) * self.speed,
-        #                   np.sin(self.angle*np.pi/180) * self.speed]
-        #
-        # self.angle += self.angle_speed
-
-    def update_velocity(self, actions: list, wind, wind_direction, time_discret=1):
-        """
-        Update angle speed and 'regular' speed
-        :param int time_discret: time-discretisation factor, divides all accelerations by that factor
-        :return:
-        """
-
-        x_accel = ((-self.k * self.velocity[0]
-                  + actions[0] * self.accel * np.cos(self.angle*np.pi/180)
-                  + wind * np.cos(wind_direction*np.pi/180)) / self.mass) / time_discret
-
-        y_accel = ((-self.k * self.velocity[1]
-                   + actions[0] * self.accel * np.sin(self.angle * np.pi / 180)
-                   + wind * np.sin(wind_direction*np.pi/180)) / self.mass) / time_discret
-
-        angle_accel = ((-self.k * self.angle_speed + actions[1] * self.angle_accel) / self.mass) / time_discret
-
-        self.velocity += [x_accel / time_discret, y_accel / time_discret]
-        self.angle_speed += angle_accel / time_discret
-
-        # f_forward = -self.k * self.speed**2\
-        #             + actions[0] * self.accel
-        # self.accel = f_forward/self.mass
-        #
-        # f_angle = -self.k * self.angle_speed\
-        #           + actions[1] * self.angle_accel
-        # self.angle_accel = f_angle/self.mass
-        #
+#         # Wind - Move to env
+#         self.wind_direction_change = [0, 1] # Normal distribution change
+#         self.wind_force_change = [0, 1] # Normal distribution change
 
 
+#     def update_position(self, time_discret=1, radians = True):
+#         """
 
+#         :param int time_discret: int time-discretisation factor, divides all position updates by that factor
+#         :param radians: unused, TODO: implement plox
+#         :return:
+#         """
+#         if not radians:
+#             print("Please use radians")
+#             pass
 
-class CliffCar:
+#         self.position += self.velocity / time_discret
+#         self.angle += self.angle_speed / time_discret
+
+#         # self.position += [np.cos(self.angle*np.pi/180) * self.speed,
+#         #                   np.sin(self.angle*np.pi/180) * self.speed]
+#         #
+#         # self.angle += self.angle_speed
+
+#     def update_velocity(self, actions: list, wind, wind_direction, time_discret=1):
+#         """
+#         Update angle speed and 'regular' speed
+#         :param int time_discret: time-discretisation factor, divides all accelerations by that factor
+#         :return:
+#         """
+
+#         x_accel = ((-self.k * self.velocity[0]
+#                   + actions[0] * self.accel * np.cos(self.angle*np.pi/180)
+#                   + wind * np.cos(wind_direction*np.pi/180)) / self.mass) / time_discret
+
+#         y_accel = ((-self.k * self.velocity[1]
+#                    + actions[0] * self.accel * np.sin(self.angle * np.pi / 180)
+#                    + wind * np.sin(wind_direction*np.pi/180)) / self.mass) / time_discret
+
+#         angle_accel = ((-self.k * self.angle_speed + actions[1] * self.angle_accel) / self.mass) / time_discret
+
+#         self.velocity += [x_accel / time_discret, y_accel / time_discret]
+#         self.angle_speed += angle_accel / time_discret
+
+#         # f_forward = -self.k * self.speed**2\
+#         #             + actions[0] * self.accel
+#         # self.accel = f_forward/self.mass
+#         #
+#         # f_angle = -self.k * self.angle_speed\
+#         #           + actions[1] * self.angle_accel
+#         # self.angle_accel = f_angle/self.mass
+#         #
+
+from env import *
+import display
+from player import *
+from scipy.stats import multivariate_normal
+
+class CliffCar(Player):
+    
+    def __init__(self, env, speed = 1, noise_var = 1) -> None:
+        super().__init__(env)
+        
+        self.position = (0,0)
+        self.speed = speed
+        self.noise_var = noise_var
+        
+        self.reset()
+        
+    def update(self, action, noise):
+        self.position = (self.position[0] + action[0]*self.speed + noise[0],
+                         self.position[1] + action[1]*self.speed + noise[1])
+        return self.position
+    
+    def reset(self, position):
+        self.position = position
+        
+class CliffCarEnv(ContinuousEnv):
+    
+    ### Layout ###
+    # ' ' = Empty
+    # 'S' = Start
+    # 'E' = End
+    # '#' = Cliff
+    layout = [[' ',' ',' ',' ',' '],
+              [' ',' ',' ',' ',' '],
+              ['S',' ',' ',' ','E'],
+              ['#','#','#','#','#']]
+    
+    def __init__(self, player : Player, layout = None):
+        super().__init__()
+        
+        if(layout != None): self.layout = layout
+        
+        # Find the goal and start positions
+        for i in range(len(self.layout)):
+            for j in range(len(self.layout[i])):
+                if(self.layout[i][j] == 'S'): self.players.append(player)
+                if(self.layout[i][j] == 'E'): self.goal = [i, j]
+        
+    def step(self, state, actions):
+        
+        state_ = ()
+        reward = 0
+        
+        # sample from 2d normal distribution
+        for action, player in zip(actions, self.players):
+            noise = multivariate_normal.rvs([0,0], [[player.noise_var,0],
+                                                    [0,player.noise_var]])
+            
+            new_pos = player.update(action, noise)
+            
+            reward -= (new_pos[0]-self.goal)**2 + (new_pos[1]-self.goal)**2
+            
+            state_ += new_pos
+        
+        return state_, reward
+    
+    def A(self, state):
+        A = ()
+        for _ in range(len(self.players)):
+            A += ([(-1,0), (0,1), (1,0), (0,-1), (0,0)])
+        return A
+    
+    def reset(self):
+        for player in self.players:
+            for i in len(self.env.layout):
+                for j in len(self.env.layout[i]):
+                    if(self.env[i][j] == 'S'): player.reset((i,j))
+        
+    def init_render(self, grid_scale = 100):
+        self.width = len(self.layout[0]) * grid_scale
+        self.height = len(self.layout) * grid_scale
+        
+        self.display = display.displayHandler(self.width, self.height)
+        
+    def render(self):
+        for i in range(len(self.layout)):
+            for j in range(len(self.layout[i])):
+                if(self.layout[i][j] == ' '): self.display.draw_rect((j*100, i*100), (100,100), (255,255,255))
+                elif(self.layout[i][j] == 'S'): self.display.draw_rect((j*100, i*100), (100,100), (0,255,0))
+                elif(self.layout[i][j] == 'E'): self.display.draw_rect((j*100, i*100), (100,100), (0,0,255))
+                elif(self.layout[i][j] == '#'): self.display.draw_rect((j*100, i*100), (100,100), (255,0,0))
+
+class CliffCarEnv:
 
     def __init__(self):
         pygame.init()
