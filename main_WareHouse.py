@@ -1,6 +1,6 @@
 import WareHouseEnv as warehouse
 import GridWorldEnv as gridworld
-import Agent
+import rl.agent as agent
 import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
@@ -9,7 +9,7 @@ env = warehouse.WareHouseEnv(n = 10, h = 1, k = 2, p = 3)
 
 
 ### Value iteration agent
-agent = Agent.DiscreteDestributionalMLMCRobustAgent(env)
+agent = agent.DiscreteDestributionalMLMCRobustAgent(env)
 for i in tqdm(range(10)):
     agent.next()
 

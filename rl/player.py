@@ -6,7 +6,7 @@ class Player:
         
     # Update the variables of the player
     def update(self):
-        pass
+        raise NotImplementedError("Player.update() is not implemented")
     
     def reset(self):
-        pass
+        raise NotImplementedError("Player.reset() is not implemented")

@@ -3,23 +3,44 @@ import Policy as policy
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+# import pytorch as torch
 
 class Agent:
     
     def __init__(self, env) -> None:
         self.env = env
         
-        self.v = defaultdict(lambda : 0)
-        self.q = defaultdict(lambda : 0)
+        # replay_buffer = {(state, action) : (state_, reward)}
+        self.replay_buffer = defaultdict(lambda : tuple(list, float))
         
-        self.visited_states = []
-        self.previous_actions = []
-        self.obtained_rewards = []
-        
-        self.state = env.reset()
-        
+        # visisted_states = {state}
+        self.visisted_states = set()
+    
+    # Returns True if the environment is done (won or lost)
     def next(self) -> bool:
-        return True
+        return False
+    
+# Shallow agent for discrete environments or continuous environments with a small state space
+class ShallowAgent(Agent):
+    
+    def __init__(self, env) -> None:
+        super().__init__(env)
+        
+        # self.v = {state : value}
+        self.v = defaultdict(lambda : 0)
+        
+        # self.q = {(state, action) : value}
+        self.q = defaultdict(lambda : 0)
+
+# Deep agent for continuous environments or discrete environments with a large state space
+class DeepAgent(Agent):
+    
+    def __init__(self, env, weight_size) -> None:
+        super().__init__(env)
+        
+        # self.w = torch.rand(weight_size)
+    
+    
 
 class DiscreteQLearningAgent(Agent):
     

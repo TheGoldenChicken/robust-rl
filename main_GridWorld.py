@@ -1,7 +1,7 @@
 import WareHouseEnv as warehouse
 import GridWorldEnv as gridworld
 import WareHousePlayer as wh_player
-import Agent
+import rl.agent as agent
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -9,7 +9,7 @@ env = gridworld.GridWorldEnv()
 
 
 ### Value iteration agent
-agent = Agent.DiscreteActionValueIterationAgent(env)
+agent = agent.DiscreteActionValueIterationAgent(env)
 for i in range(5):
     agent.next()
 
