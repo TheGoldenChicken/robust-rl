@@ -1,4 +1,4 @@
-import WareHouseEnv as warehouse
+import ware_house.ware_house as warehouse
 import GridWorldEnv as gridworld
 import WareHousePlayer as wh_player
 import rl.agent as agent

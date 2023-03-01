@@ -2,13 +2,13 @@ import rl.player
 
 class ContinuousEnv:
     
-    def __init__(self, playerOptions : list) -> None:
+    def __init__(self) -> None:
         # List of players
         self.players = list()
         self.state_size = 0
     
     # Return the next state and reward
-    def step_(self, state : tuple, actions : list[tuple]) -> tuple[list[tuple],list[int]]:
+    def step(self, state : tuple, actions : list[tuple]) -> tuple[list[tuple],list[int]]:
         raise NotImplementedError("ContinuousEnv.step() is not implemented")
     
         # Return next state and reward
@@ -27,11 +27,13 @@ class ContinuousEnv:
         # Return True if the state is a goal state
         return False
     
-    # Reset all players
+    # Reset state by returning initial state
     def reset(self) -> None:
-        for player in self.players:
-            player.reset()
-
+        raise NotImplementedError("ContinuousEnv.reset() is not implemented")
+        
+        state = Tuple()
+        return state
+        
     def init_render(self):
         raise NotImplementedError("ContinuousEnv.init_render() is not implemented")
     
@@ -39,7 +41,7 @@ class ContinuousEnv:
         self.height = 600
         self.display = rl.display.displayHandler(self.width, self.height)
     
-    def render(self):
+    def render(self, state):
         raise NotImplementedError("ContinuousEnv.render() is not implemented")
     
         self.display.update()
@@ -48,8 +50,8 @@ class ContinuousEnv:
     
 class DiscreteEnv(ContinuousEnv):
     
-    def __init__(self, playerOptions : list) -> None:
-        super.__init__(playerOptions)
+    def __init__(self) -> None:
+        super().__init__()
     
     def get_transistion_probabilities(self, state, action) -> dict:
         raise NotImplementedError("DiscreteEnv.get_transistion_probabilities() is not implemented")

@@ -15,7 +15,10 @@ class Agent:
         
         # visisted_states = {state}
         self.visisted_states = set()
+        
+        self.state = self.env.reset()
     
+    # Decide an action from a given state
     # Returns True if the environment is done (won or lost)
     def next(self) -> bool:
         return False
@@ -27,10 +30,10 @@ class ShallowAgent(Agent):
         super().__init__(env)
         
         # self.v = {state : value}
-        self.v = defaultdict(lambda : 0)
+        self.V = defaultdict(lambda : 0)
         
         # self.q = {(state, action) : value}
-        self.q = defaultdict(lambda : 0)
+        self.Q = defaultdict(lambda : 0)
 
 # Deep agent for continuous environments or discrete environments with a large state space
 class DeepAgent(Agent):
@@ -42,130 +45,20 @@ class DeepAgent(Agent):
     
     
 
+
+
+
+
+
+
+
+
 class DiscreteQLearningAgent(Agent):
     
     def __init__(self, env) -> None:
         super().__init__(env)
         
-class DiscreteDestributionalMLMCRobustAgent(Agent):
-    
-    def __init__(self, env) -> None:
-        super().__init__(env)
-        
-        self.gamma = 0.5
-        self.delta = 1
-        self.lr = lambda t : 1/(1+(1-self.gamma)*(t-1))
-        self.e = 0.5
-        
-        self.t = 0
-        
-    def next(self) -> bool:
-        
-        def newtonMethod(f, f_prime, N, r, x0, epsilon=0.01):
-            x = x0
-            while abs(f_prime(N, r, x)) > epsilon:
-                x = x + 0.1*f_prime(N, r, x)
-                if(x < 0):
-                    x = 0.1
-                    if(f_prime(N, r, x) < 0):
-                        break
-            return x
-        
-        def f_Delta_r(N, samples):
 
-            temp_1 = lambda N, r, alpha : -alpha*np.log((1/(2**(N+1)))*sum([np.exp(-r[i][1]/(alpha + 1e-2)) for i in range(int(2**(N+1)))]) + 1e-2) - alpha*self.delta
-            temp_2 = lambda N, r, alpha : -alpha*np.log((1/(2**(N)))*sum([np.exp(-r[2*i][1]/(alpha + 1e-2)) for i in range(int(2**(N)))]) + 1e-2) - alpha*self.delta
-            temp_3 = lambda N, r, alpha : -alpha*np.log((1/(2**(N)))*sum([np.exp(-r[2*i-1][1]/(alpha + 1e-2)) for i in range(int(2**(N)))]) + 1e-2) - alpha*self.delta
-
-            # diff_temp_1 = lambda N, r, alpha : - \
-            #     np.log(sum([np.exp(-r[i][1]/(alpha + 1e-2)) for i in range(int(2**(N+1)))])/(2**(N+1))) - \
-            #         (alpha*((sum([(r[i][1]*np.exp(-r[i][1]/(alpha + 1e-2))) / (alpha**2 + 1e-2) for i in range(int(2**(N+1)))])))) / \
-            #             (sum([np.exp(-r[i][1]/(alpha + 1e-2)) for i in range(int(2**(N+1)))])) - self.delta
-            
-            # diff_temp_2 = lambda N, r, alpha : - \
-            #     np.log(sum([np.exp(-r[2*i][1]/(alpha + 1e-2)) for i in range(int(2**(N)))])/(2**(N))) - \
-            #         (alpha*((sum([(r[2*i][1]*np.exp(-r[2*i][1]/(alpha + 1e-2))) / (alpha**2 + 1e-2) for i in range(int(2**(N)))])))) / \
-            #             (sum([np.exp(-r[2*i][1]/(alpha + 1e-2)) for i in range(int(2**(N)))])) - self.delta
-                        
-            # diff_temp_3 = lambda N, r, alpha : - \
-            #     np.log(sum([np.exp(-r[2*i-1][1]/(alpha + 1e-2)) for i in range(int(2**(N)))])/(2**(N))) - \
-            #         (alpha*((sum([(r[2*i-1][1]*np.exp(-r[2*i-1][1]/(alpha + 1e-2))) / (alpha**2 + 1e-2) for i in range(int(2**(N)))])))) / \
-            #             (sum([np.exp(-r[2*i-1][1]/(alpha + 1e-2)) for i in range(int(2**(N)))])) - self.delta
-            
-            # alpha1 = newtonMethod(temp_1, diff_temp_1, N, samples, 1)
-            # alpha2 = newtonMethod(temp_2, diff_temp_2, N, samples, 1)
-            # alpha3 = newtonMethod(temp_3, diff_temp_3, N, samples, 1)
-            
-            # Delta_r = temp_1(N, samples, alpha1) - 1/2*temp_2(N, samples, alpha2) - 1/2*temp_3(N, samples, alpha3)
-            
-            Delta_r = max([temp_1(N,samples, a_) for a_ in np.arange(0.1, 10, 0.01)])
-            Delta_r -= 1/2*max([temp_2(N,samples, a_) for a_ in np.arange(0.1, 10, 0.01)])
-            Delta_r -= 1/2*max([temp_3(N,samples, a_) for a_ in np.arange(0.1, 10, 0.01)])
-            
-            return Delta_r
-        
-        def f_Delta_q(N, samples):
-            
-            temp_1 = lambda N, s_, beta : -beta*np.log((1/(2**(N+1))) *
-                                                       sum([np.exp(-max([self.q[(s_[i][0], b)] / (beta + 1e-2) for b in self.env.A(s_[i][0])])) for i in range(int(2**(N+1)))]) + 1e-2) - beta*self.delta
-            temp_2 = lambda N, s_, beta : -beta*np.log((1/(2**(N))) *
-                                                       sum([np.exp(-max([self.q[(s_[2*i][0], b)]/(beta + 1e-2) for b in self.env.A(s_[2*i][0])])) for i in range(int(2**(N)))]) + 1e-2) - beta*self.delta
-            temp_3 = lambda N, s_, beta : -beta*np.log((1/(2**(N))) *
-                                                       sum([np.exp(-max([self.q[(s_[2*i-1][0], b)]/(beta + 1e-2) for b in self.env.A(s_[2*i-1][0])])) for i in range(int(2**(N)))]) + 1e-2) - beta*self.delta
-            
-            # diff_temp_1 = lambda N, s_, beta : - \
-            #     np.log(sum([np.exp(-max([self.q[(s_[i][0], b)] / (beta + 1e-2) for b in self.env.A(s_[i][0])])/(beta + 1e-2)) for i in range(int(2**(N+1)))])/(2**(N+1))) - \
-            #         (beta*((sum([(max([self.q[(s_[i][0], b)] / (beta + 1e-2) for b in self.env.A(s_[i][0])])*np.exp(-max([self.q[(s_[i][0], b)] / (beta + 1e-2) for b in self.env.A(s_[i][0])])/(beta + 1e-2))) / (beta**2 + 1e-2) for i in range(int(2**(N+1)))])))) / \
-            #             (sum([np.exp(-max([self.q[(s_[i][0], b)] / (beta + 1e-2) for b in self.env.A(s_[i][0])])/(beta + 1e-2)) for i in range(int(2**(N+1)))])) - self.delta
-            
-            # diff_temp_2 = lambda N, s_, beta : - \
-            #     np.log(sum([np.exp(-max([self.q[(s_[2*i][0], b)] / (beta + 1e-2) for b in self.env.A(s_[2*i][0])])/(beta + 1e-2)) for i in range(int(2**(N)))])/(2**(N))) - \
-            #         (beta*((sum([(max([self.q[(s_[2*i][0], b)] / (beta + 1e-2) for b in self.env.A(s_[2*i][0])])*np.exp(-max([self.q[(s_[2*i][0], b)] / (beta + 1e-2) for b in self.env.A(s_[2*i][0])])/(beta + 1e-2))) / (beta**2 + 1e-2) for i in range(int(2**(N)))])))) / \
-            #             (sum([np.exp(-max([self.q[(s_[2*i][0], b)] / (beta + 1e-2) for b in self.env.A(s_[2*i][0])])/(beta + 1e-2)) for i in range(int(2**(N)))])) - self.delta
-                        
-            # diff_temp_3 = lambda N, s_, beta : - \
-            #     np.log(sum([np.exp(-max([self.q[(s_[2*i-1][0], b)] / (beta + 1e-2) for b in self.env.A(s_[2*i-1][0])])/(beta + 1e-2)) for i in range(int(2**(N)))])/(2**(N))) - \
-            #         (beta*((sum([(max([self.q[(s_[2*i-1][0], b)] / (beta + 1e-2) for b in self.env.A(s_[2*i-1][0])])*np.exp(-max([self.q[(s_[2*i-1][0], b)] / (beta + 1e-2) for b in self.env.A(s_[2*i-1][0])])/(beta + 1e-2))) / (beta**2 + 1e-2) for i in range(int(2**(N)))])))) / \
-            #             (sum([np.exp(-max([self.q[(s_[2*i-1][0], b)] / (beta + 1e-2) for b in self.env.A(s_[2*i-1][0])])/(beta + 1e-2)) for i in range(int(2**(N)))])) - self.delta
-            
-            # alpha1 = newtonMethod(temp_1, diff_temp_1, N, samples, 1)
-            # alpha2 = newtonMethod(temp_2, diff_temp_2, N, samples, 1)
-            # alpha3 = newtonMethod(temp_3, diff_temp_3, N, samples, 1)
-            
-            #Delta_q = temp_1(N, samples, alpha1) - 1/2*temp_2(N, samples, alpha2) - 1/2*temp_3(N, samples, alpha3)
-            
-            Delta_q = max([temp_1(N,samples, a_) for a_ in np.arange(0.1, 10, 0.01)])
-            Delta_q -= 1/2*max([temp_2(N,samples, a_) for a_ in np.arange(0.1, 10, 0.01)])
-            Delta_q -= 1/2*max([temp_3(N,samples, a_) for a_ in np.arange(0.1, 10, 0.01)])
-            
-            return Delta_q
-        
-        
-        self.t += 1
-        alpha_t = self.lr(self.t)
-        q_ = defaultdict(lambda : 0)
-        
-        for state in self.env.get_states():
-            actions = self.env.A(state)
-            for action in actions:
-                p = lambda n : self.e*(1-self.e)**(n)
-                cp = lambda n : 1/p(n)
-                N = cp(random.random())
-                samples = [self.env.step(state, action) for _ in range(int(2**(N+1)))]
-
-                Delta_r = f_Delta_r(N, samples)
-                Delta_q = f_Delta_q(N, samples)
-                R_rob = samples[0][1] + Delta_r/p(N)
-                T_rob = max([self.q[(samples[0][0], b)] for b in self.env.A(samples[0][0])]) + Delta_q/p(N)
-                T_rob_e = R_rob + self.gamma*T_rob
-                
-                if(type((1-alpha_t)*self.q[(state, action)] + alpha_t*T_rob_e) != np.float64):
-                    print("Error")
-                
-                q_[(state,action)] = (1-alpha_t)*self.q[(state, action)] + alpha_t*T_rob_e
-        self.q = q_
-                
-        return True
 
 class DiscreteActionValueIterationAgent(Agent):
     
