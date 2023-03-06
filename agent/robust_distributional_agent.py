@@ -17,6 +17,8 @@ class robust_distributional_agent(rl.agent.ShallowAgent):
         
         self.lr = lambda t : 1/(1+(1-self.gamma)*(t-1))
         self.t = 0
+        
+        self.total_samples = 0
     
     # Returns True if the environment is done (won or lost)
     def next(self) -> bool:
@@ -51,18 +53,18 @@ class robust_distributional_agent(rl.agent.ShallowAgent):
         
         def fDelta_q(N, state_):
             
-            v_max = max([np.exp(-max([self.Q[(state_[i], b)] / 0.05 for b in self.env.A(state_[i])])) \
-                                                           for i in range(int(2**(N+1)))])
+            v_max = max([np.exp(-max([self.Q[(s_, b)] / 0.05 for b in self.env.A(s_)])) \
+                                                           for s_ in state_])
             
             part_1 = lambda beta : -beta*np.log(1/(2**(N+1))) + v_max + \
-                                                       np.log(sum([np.exp(-max([self.Q[(state_[i], b)] / (beta) for b in self.env.A(state_[i])])-v_max) + 1e-5 \
-                                                           for i in range(int(2**(N+1)))])) - beta*self.delta
+                                                       np.log(sum([np.exp(-max([self.Q[(state_[i], b)] / beta for b in self.env.A(state_[i])])-v_max) \
+                                                           for i in range(int(2**(N+1)))]) + 1e-5) - beta*self.delta
             part_2 = lambda beta : -beta*np.log(1/(2**N)) + v_max + \
-                                                       np.log(sum([np.exp(-max([self.Q[(state_[2*i], b)] / (beta) for b in self.env.A(state_[2*i])])-v_max) + 1e-5 \
-                                                           for i in range(int(2**(N)))])) - beta*self.delta
+                                                       np.log(sum([np.exp(-max([self.Q[(state_[2*i], b)] / beta for b in self.env.A(state_[2*i])])-v_max) \
+                                                           for i in range(int(2**(N)))]) + 1e-5) - beta*self.delta
             part_3 = lambda beta : -beta*np.log(1/(2**N)) + v_max + \
-                                                       np.log(sum([np.exp(-max([self.Q[(state_[2*i-1], b)] / (beta) for b in self.env.A(state_[2*i-1])])-v_max) + 1e-5 \
-                                                           for i in range(int(2**(N)))])) - beta*self.delta
+                                                       np.log(sum([np.exp(-max([self.Q[(state_[2*i-1], b)] / beta for b in self.env.A(state_[2*i-1])])-v_max) \
+                                                           for i in range(int(2**(N)))]) + 1e-5) - beta*self.delta
             
             Delta_q = part_1(locate_maxima(lambda x : part_1(x), x0 = 1))
             Delta_q -= 1/2 * part_2(locate_maxima(lambda x : part_2(x), x0 = 1))
@@ -82,6 +84,8 @@ class robust_distributional_agent(rl.agent.ShallowAgent):
                 N = cp(random.random())
                 samples = np.array([self.env.step(state, [action]) for _ in range(int(2**(N+1)))])
 
+                self.total_samples += int(2**(N+1))
+                
                 Delta_r = fDelta_r(N, samples[:,1])
                 Delta_q = fDelta_q(N, samples[:,0])
                 
