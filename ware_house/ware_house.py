@@ -30,6 +30,7 @@ class Env(rl.env.DiscreteEnv):
         cost += np.abs(self.p*(demand - state - actions[0]))
         
         # Fixed ordering cost
+        # cost += self.k*actions[0]
         if(actions[0] > 0): cost += self.k
         
         next_state = state + actions[0] - min(demand, state + actions[0])

@@ -9,7 +9,7 @@ agent = robust_distributional_agent(env)
 
 manager = rl.manager.Manager(env, agent)
 
-manager.run(iterations = 2000)
+print("iteration: " + manager.run(iterations = 300))
 
 # # Action value function
 img = np.zeros((env.n+1, env.n+1))

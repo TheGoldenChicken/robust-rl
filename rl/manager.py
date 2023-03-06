@@ -5,7 +5,6 @@ class Manager:
     def __init__(self, env, agent, render = False, renderOptions = []) -> None:
         self.env = env
         self.agent = agent
-        
         self.renderOptions = renderOptions
         self.render = render
         if(self.render): self.env.init_render(*self.renderOptions)
@@ -16,7 +15,7 @@ class Manager:
         def iteration():
             done = self.agent.next()
             
-            if(self.render): self.env.render(self.agent.state)
+            if(self.render): self.env.render(self.agent)
             
             if(done): return True
             else: return False

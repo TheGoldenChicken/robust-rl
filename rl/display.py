@@ -10,7 +10,9 @@ class displayHandler:
         self.white = (255,255,255)
         self.black = (0,0,0)
         
-        self.font = pygame.font.SysFont('arial',12)
+        self.font_size = 12
+        self.font = pygame.font.SysFont('arial',self.font_size)
+        
         
         self.display = pygame.display.set_mode((width, height))
         self.clock = pygame.time.Clock()
@@ -37,67 +39,65 @@ class displayHandler:
         for event in pygame.event.get():
             #The quit event. When the [x] is pressed
             if event.type == pygame.QUIT:
-                running = False
+                self.close()
+                running = False        
             
-            #When a key is pressed down
-            if event.type == pygame.KEYDOWN:
-                if event.key in [pygame.K_ESCAPE, pygame.K_q]:
-                    running = False
-            
-            # Mouse events
-            # if event.type == pygame.MOUSEBUTTONUP:
-            #     if event.button == 1 and self.left_up_code != None: #left mouse up
-            #         self.left_up_code(pygame.mouse.get_pos())
-            #     if event.button == 2 and self.middle_up_code != None: #left mouse up
-            #         self.middle_up_code(pygame.mouse.get_pos())
-            #     if event.button == 3 and self.right_up_code != None: #left mouse up
-            #         self.right_up_code(pygame.mouse.get_pos())
-            
-            # Arrow keys (pressed down)
-            # if event.type == pygame.KEYDOWN:
-            #     if event.key == pygame.K_a:
-            #         self.A_button_down(pygame.mouse.get_pos())
-            #     if event.key == pygame.K_d:
-            #         self.D_button_down(pygame.mouse.get_pos())
-            #     if event.key == pygame.K_w:
-            #         self.W_button_down(pygame.mouse.get_pos())
-            #     if event.key == pygame.K_s:
-            #         self.S_button_down(pygame.mouse.get_pos())
-
-            
-            # Arrow keys (released up)
-            # if event.type == pygame.KEYUP:
-            #     if event.key == pygame.K_a:
-            #         self.A_button_up(pygame.mouse.get_pos())
-            #     if event.key == pygame.K_d:
-            #         self.D_button_up(pygame.mouse.get_pos())
-            #     if event.key == pygame.K_w:
-            #         self.W_button_up(pygame.mouse.get_pos())
-            #     if event.key == pygame.K_s:
-            #         self.S_button_up(pygame.mouse.get_pos())          
-            
+        # Detect key releases
         self.key_released = [i*(True-j) for i,j in zip(self.key_pressed,pygame.key.get_pressed())]
         
+        # Detect key presses
         self.key_pressed = pygame.key.get_pressed()
-            
+        
+        if(self.key_released[pygame.K_ESCAPE] or self.key_released[pygame.K_q]):
+            self.close()
+            running = False
 
         return running
 
-    def drawSquare(self, center, size, color = (0,0,0), width = 0):
-        center = (center[0] - size[0]/2,center[1] - size[1]/2)
+    def draw_square(self, center, size, color = (0,0,0), width = 0, edge_color = (100,100,100)):
+        top_left = (center[0] - size[0]/2,center[1] - size[1]/2)
 
-        pygame.draw.rect(self.display,color, center+ tuple(size), width = width)
-
-    def drawCircle(self, center, radius, color = (0,0,0), width = 0):
+        pygame.draw.rect(self.display, color, top_left+ tuple(size))
+        
+        if(width > 0): pygame.draw.rect(self.display,edge_color, top_left+ tuple(size), width = width)
+            
+    def draw_sphere(self, center, radius, color = (0,0,0), width = 0, edge_color = (100,100,100)):
         # width: A width of zero makes a solid circle. Else it is non-solid
-        pygame.draw.circle(self.display, color,center, radius, width = width)
+        pygame.draw.circle(self.display, color, center, radius)
+        
+        if(width > 0): pygame.draw.circle(self.display, edge_color, center, radius, width = width)
+        
+        
     
-    def drawText(self, message, rect, color = (0,0,0)):
-
+    def draw_text(self, message, rect, color = (0,0,0), align="top-left", font = 'arial', font_size = None):
+        
+        self.set_font(font, font_size)
         text = self.font.render(message, True, color)
+        
+        # Match case on align with the following options
+        match align:
+            case "top-left":
+                rect = rect
+            case "top-right":
+                rect = (rect[0] - text.get_width(), rect[1])
+            case "bottom-left":
+                rect = (rect[0], rect[1] - text.get_height())
+            case "bottom-right":
+                rect = (rect[0] - text.get_width(), rect[1] - text.get_height())
+            case "center":
+                rect = (rect[0] - text.get_width()/2, rect[1] - text.get_height()/2)
+            case "center-left":
+                rect = (rect[0], rect[1] - text.get_height()/2)
+            case "center-right":
+                rect = (rect[0] - text.get_width(), rect[1] - text.get_height()/2)
+            case "center-top":
+                rect = (rect[0] - text.get_width()/2, rect[1])
+            case "center-bottom":
+                rect = (rect[0] - text.get_width()/2, rect[1] - text.get_height())
+        
         self.display.blit(text,rect)
     
-    def drawImage(self, path, center, scale = None, angle = None):
+    def draw_image(self, path, center, scale = None, angle = None):
         img = pygame.image.load(path)
         if(scale != None):
             img = pygame.transform.scale(img, scale)
@@ -106,18 +106,19 @@ class displayHandler:
             
         self.display.blit(img, (center[0] - img.get_width()/2, center[1] - img.get_height()/2))
     
+    def draw_polygon(self, points, color = (0,0,0), width = 0, edge_color = (100,100,100)):
+        pygame.draw.polygon(self.display, color, points)
+        
+        if(width > 0): pygame.draw.polygon(self.display, edge_color, points, width = width)
+    
+    def set_font(self, font_name = "arial", font_size = None):
+        if font_size == None: size = self.font_size
+        else: self.font_size = font_size
+        self.font = pygame.font.SysFont(font_name, self.font_size)
+    
     def close(self):
         pygame.quit()
         
     def update(self, backgroundColor = (255,255,255)):
         pygame.display.flip()
         self.display.fill(backgroundColor)
-
-def drawImage(display, path, center, scale=None, angle=None):
-    img = pygame.image.load(path)
-    if (scale != None):
-        img = pygame.transform.scale(img, scale)
-    if (angle != None):
-        img = pygame.transform.rotate(img, angle)
-
-    display.blit(img, center)

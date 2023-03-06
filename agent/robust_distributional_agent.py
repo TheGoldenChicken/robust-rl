@@ -7,7 +7,7 @@ import numpy as np
 
 class robust_distributional_agent(rl.agent.ShallowAgent):
     
-    def __init__(self, env, gamma = 0.5, delta = 1, epsilon = 0.5, tol = 0.05):
+    def __init__(self, env, gamma = 0.9, delta = 1, epsilon = 0.5, tol = 0.05):
         super().__init__(env)
         
         self.gamma = gamma
@@ -19,53 +19,55 @@ class robust_distributional_agent(rl.agent.ShallowAgent):
         self.t = 0
     
     # Returns True if the environment is done (won or lost)
-    def next(self, state) -> bool:
+    def next(self) -> bool:
         
-        def locate_maxima(f, x0, tol = 1e-2, max_iter = 100):
+        def locate_maxima(f, x0, tol = 5e-2, max_iter = 100):
             x = x0
             for i in range(max_iter):
                 f_prime = lambda x : (f(x+tol)-f(x-tol))/(2*tol)
-                x += (0.1/np.sqrt(i+1))*f_prime(x)
+                x += f_prime(x)
                 if(x <= tol): x = 2*tol
                 if(abs(f_prime(x)) < tol): break
+                if(np.isnan(np.array(x))):
+                    return tol*5
             return x
         
         def fDelta_r(N, reward):
             
-            r_max = max(reward)
+            r_max = max(-reward/0.05)
             
-            part_1 = lambda N, r, alpha : -alpha*np.log((1/(2**(N+1)))*np.exp(r_max)* \
-                sum([np.exp(-r[i]/(alpha)-r_max) for i in range(int(2**(N+1)))])) - alpha*self.delta
-            part_2 = lambda N, r, alpha : -alpha*np.log((1/(2**(N)))*np.exp(r_max)* \
-                sum([np.exp(-r[2*i]/(alpha)-r_max) for i in range(int(2**(N)))])) - alpha*self.delta
-            part_3 = lambda N, r, alpha : -alpha*np.log((1/(2**(N)))*np.exp(r_max)* \
-                sum([np.exp(-r[2*i-1]/(alpha)-r_max) for i in range(int(2**(N)))])) - alpha*self.delta
+            part_1 = lambda alpha : -alpha*np.log(1/(2**(N+1))) + r_max + \
+                np.log(sum([np.exp(-reward[i]/(alpha)-r_max) for i in range(int(2**(N+1)))]) + 1e-5) - alpha*self.delta
+            part_2 = lambda alpha : -alpha*np.log(1/(2**N)) + r_max + \
+                np.log(sum([np.exp(-reward[2*i]/(alpha)-r_max) for i in range(int(2**(N)))]) + 1e-5) - alpha*self.delta
+            part_3 = lambda alpha : -alpha*np.log(1/(2**N)) + r_max + \
+                np.log(sum([np.exp(-reward[2*i-1]/(alpha)-r_max) for i in range(int(2**(N)))]) + 1e-5) - alpha*self.delta
 
-            Delta_r = part_1(N,reward, locate_maxima(lambda x : part_1(N, reward, x), x0 = 1))
-            Delta_r -= 1/2 * part_2(N,reward, locate_maxima(lambda x : part_2(N, reward, x), x0 = 1))
-            Delta_r -= 1/2 * part_3(N,reward, locate_maxima(lambda x : part_3(N, reward, x), x0 = 1))
+            Delta_r = part_1(locate_maxima(lambda x : part_1(x), x0 = 1))
+            Delta_r -= 1/2 * part_2(locate_maxima(lambda x : part_2(x), x0 = 1))
+            Delta_r -= 1/2 * part_3(locate_maxima(lambda x : part_3(x), x0 = 1))
             
             return Delta_r
         
         def fDelta_q(N, state_):
             
-            v_max = max([np.exp(-max([self.Q[(state_[i], b)] for b in self.env.A(state_[i])])) \
+            v_max = max([np.exp(-max([self.Q[(state_[i], b)] / 0.05 for b in self.env.A(state_[i])])) \
                                                            for i in range(int(2**(N+1)))])
             
-            part_1 = lambda N, s_, beta : -beta*np.log((1/(2**(N+1))) * \
-                                                       np.exp(v_max)*sum([np.exp(-max([self.Q[(s_[i], b)] / (beta) for b in self.env.A(s_[i])])-v_max) \
+            part_1 = lambda beta : -beta*np.log(1/(2**(N+1))) + v_max + \
+                                                       np.log(sum([np.exp(-max([self.Q[(state_[i], b)] / (beta) for b in self.env.A(state_[i])])-v_max) + 1e-5 \
                                                            for i in range(int(2**(N+1)))])) - beta*self.delta
-            part_2 = lambda N, s_, beta : -beta*np.log((1/(2**(N))) *
-                                                       np.exp(v_max)*sum([np.exp(-max([self.Q[(s_[2*i], b)] / (beta) for b in self.env.A(s_[2*i])])-v_max) \
+            part_2 = lambda beta : -beta*np.log(1/(2**N)) + v_max + \
+                                                       np.log(sum([np.exp(-max([self.Q[(state_[2*i], b)] / (beta) for b in self.env.A(state_[2*i])])-v_max) + 1e-5 \
                                                            for i in range(int(2**(N)))])) - beta*self.delta
-            part_3 = lambda N, s_, beta : -beta*np.log((1/(2**(N))) *
-                                                       np.exp(v_max)*sum([np.exp(-max([self.Q[(s_[2*i-1], b)] / (beta) for b in self.env.A(s_[2*i-1])])-v_max) \
+            part_3 = lambda beta : -beta*np.log(1/(2**N)) + v_max + \
+                                                       np.log(sum([np.exp(-max([self.Q[(state_[2*i-1], b)] / (beta) for b in self.env.A(state_[2*i-1])])-v_max) + 1e-5 \
                                                            for i in range(int(2**(N)))])) - beta*self.delta
             
-            Delta_q = part_1(N,state_, locate_maxima(lambda x : part_1(N, state_, x), x0 = 1))
-            Delta_q -= 1/2 * part_2(N,state_, locate_maxima(lambda x : part_2(N, state_, x), x0 = 1))
-            Delta_q -= 1/2 * part_3(N,state_, locate_maxima(lambda x : part_3(N, state_, x), x0 = 1))
-            
+            Delta_q = part_1(locate_maxima(lambda x : part_1(x), x0 = 1))
+            Delta_q -= 1/2 * part_2(locate_maxima(lambda x : part_2(x), x0 = 1))
+            Delta_q -= 1/2 * part_3(locate_maxima(lambda x : part_3(x), x0 = 1))
+        
             return Delta_q
         
         self.t += 1
@@ -97,6 +99,7 @@ class robust_distributional_agent(rl.agent.ShallowAgent):
                 break
         
         self.Q = Q_
+        
         
         if(converged): return True
         return False
