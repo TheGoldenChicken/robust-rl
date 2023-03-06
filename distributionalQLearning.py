@@ -1,58 +1,70 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy.integrate
 
+def normal(x, mu, Sigma):
+    if Sigma.shape[0] != 1:
+        Sigma_det = np.linalg.det(Sigma)
+        Sigma_inv = np.linalg.inv(Sigma)
+    else:
+        Sigma_det = Sigma
+        Sigma_inv = 1/Sigma
+        
+    return 1/(np.sqrt((2*np.pi)**(mu.shape[0])*Sigma_det))*np.exp(-(1/2)*(x-mu).T@Sigma_inv@(x-mu))
+
+def gaus_to_expo_squared(mu, Sigma, k):
+    Sigma_inv = np.linalg.inv(Sigma)
+    Sigma_det = np.linalg.det(Sigma)
+    
+    A = -Sigma_inv/2
+    b = mu.T@Sigma_inv
+    c = k/np.sqrt((2*np.pi)**(mu.shape[0])*Sigma_det) * np.exp((1/2)*mu.T@Sigma_inv@mu)
+    
+    return A, b, c, lambda x : np.exp(x*A@x + b@x + c)    
+    
+def expo_squared_to_gaus(A, b, c):
+    if(A.shape[0] != 1):
+        A_inv = np.linalg.inv(A)
+        neg_half_A_det = np.linalg.det(-(1/2)*A_inv)
+    else:
+        A_inv = np.array([1/A,])
+        neg_half_A_det = -(1/2)*A_inv
+    
+    Sigma = -(1/2)*A_inv
+    mu = -(1/2)*b.T@A_inv
+    k = np.exp(c)*np.sqrt((2*np.pi)**(mu.shape[0])*neg_half_A_det)/np.exp((1/4)*b.T@A_inv@b)
+    
+    return mu, Sigma, k, lambda x : k*normal(x, mu, Sigma)
+
+
+beta = 1
+step = 0.1
 
 c_p = 2
-c_v = 1
-b_p = np.array([3])
-b_v = np.array([5])
+c_v = -1/-beta
+b_p = np.array([-3])
+b_v = np.array([5])/-beta
 A_p = np.array([[-3]])
-A_v = np.array([[7]])
+A_v = np.array([[7]])/-beta
 
-minus_beta = -1
+mu_p, Sigma_p, k_p, f_p = expo_squared_to_gaus(A_p, b_p, c_p)
+mu_v, Sigma_v, k_v, f_v = expo_squared_to_gaus(A_v, b_v, c_v)
 
-bv_beta = lambda beta : b_v/-beta
-
-Ap_inv = lambda : np.linalg.inv(A_p)
-Av_inv = lambda beta : np.linalg.inv(A_v/-beta)
-
-det_Ap = lambda : np.linalg.det(-(1/2)*Ap_inv())
-det_Av = lambda beta : np.linalg.det(-(1/2)*Av_inv(beta))
-
-Sigma_p = lambda : -(1/2)*Ap_inv()
-Sigma_v = lambda beta : -(1/2)*Av_inv(beta)
-mu_p = lambda : b_p.T@Sigma_p()
-mu_v = lambda beta : bv_beta(beta).T@Sigma_v(beta)
-k_p = lambda : c_p*np.sqrt((2*np.pi)**(A_p.shape[0])*np.linalg.det(Sigma_p()))/np.exp((1/4)*mu_p().T@Sigma_p()@mu_p())
-k_v = lambda beta : c_v*np.sqrt((2*np.pi)**(A_v.shape[0])*np.linalg.det(Sigma_v(beta)))/np.exp((1/4)*mu_v(beta).T@Sigma_v(beta)@mu_v(beta))
-
-normal = lambda x, mu, Sigma : 1/np.sqrt((2*np.pi)**(x.shape[0])*np.linalg.det(Sigma))*np.exp(-(1/2)*((x-mu).T@np.linalg.inv(Sigma)@(x-mu)))
-
-area = lambda beta : k_p()*k_v(beta)*normal(mu_p(), mu_v(beta), Sigma_p()+Sigma_v(beta))
-
-b = 1
-step = 0.01
 X = np.arange(-10,10,step)
-# Gaussian function using Sigma_p and mu_p
-fy_p = lambda x : k_p()/np.sqrt((2*np.pi)**(A_p.shape[0])*np.linalg.det(Sigma_p()))* \
-            np.exp(-(1/2)*(x-mu_p()).T@np.linalg.inv(Sigma_p())@(x-mu_p()))
-y_p = np.array([[fy_p(x)] for x in X])
 
-fy_v = lambda x, beta : k_v(beta)/np.sqrt((2*np.pi)**(A_v.shape[0])*np.linalg.det(Sigma_v(beta)))* \
-            np.exp(-(1/2)*(x-mu_v(beta)).T@np.linalg.inv(Sigma_v(beta))@(x-mu_v(beta)))
-y_v = np.array([[fy_v(x, b)] for x in X])
-
-y_res = np.array([[fy_p(x)*fy_v(x, b)] for x in X])
-
-plt.plot(X, y_p)
-plt.plot(X, y_v)
-plt.plot(X, y_res)
+plt.plot(X, np.array([f_p(np.array([x,])) for x in X]).squeeze())
+plt.plot(X, np.array([f_v(np.array([x,])) for x in X]).squeeze())
+plt.legend(["Normal: p", "Normal: v"])
+plt.plot(X, np.array([np.exp(A_p*(x**2) + b_p*x + c_p) for x in X]).squeeze())
+plt.plot(X, np.array([np.exp(A_v*(x**2) + b_v*x + c_v) for x in X]).squeeze())
+plt.legend(["Squared: p", "Squared: v"])
 plt.show()
 
-print("area: ", area(b))
-print("area res: ", sum(y_res[:,0])*step)
-plt.show()
+# Computed area by analytically integrating the product of two gaussian functions
+area_com = sum([f_p(x)*f_v(x) for x in X])*step
 
-x = np.linspace(0.1, 20, 100)
-plt.plot(x, [-beta*np.log(area(beta))-beta*0.1 for beta in x])
+# Derived area using the product of two gaussian functions
+area_der = k_p*k_v*normal(mu_p, mu_v, Sigma_p+Sigma_v)
+
+
+print("Computed area: " + str(area_com.squeeze()))
+print("Derived area: " + str(area_der.squeeze()))
