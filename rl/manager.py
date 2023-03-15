@@ -2,23 +2,23 @@ from tqdm import tqdm
 
 class Manager:
     
-    def __init__(self, env, agent, render = False, renderOptions = []) -> None:
-        self.env = env
+    def __init__(self, agent, render = False, renderOptions = []) -> None:
         self.agent = agent
         self.renderOptions = renderOptions
         self.render = render
-        if(self.render): self.env.init_render(*self.renderOptions)
+        if(self.render): self.agent.env.init_render(*self.renderOptions)
     
     # Return iteration number
     def run(self, iterations = None):
         
         def iteration():
-            done = self.agent.next()
+            if(self.agent.next()): return True
             
-            if(self.render): self.env.render(self.agent)
+            if(self.render): self.agent.env.render(self.agent)
             
-            if(done): return True
-            else: return False
+            if self.agent.env.is_terminal(self.agent.state):
+                self.agent.state = self.agent.env.reset()
+                return False
         
         if(iterations == None):
             i = 0
@@ -28,4 +28,5 @@ class Manager:
         else:
             for i in tqdm(range(iterations)):
                 if(iteration()): return i
+            return i
         

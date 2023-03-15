@@ -69,10 +69,13 @@ class displayHandler:
         
         
     
-    def draw_text(self, message, rect, color = (0,0,0), align="top-left", font = 'arial', font_size = None):
+    def draw_text(self, message, rect, color = (0,0,0), align="top-left", angle = None, font = 'arial', font_size = None):
         
         self.set_font(font, font_size)
         text = self.font.render(message, True, color)
+        
+        if(angle != None):
+            text = pygame.transform.rotate(text, angle)
         
         # Match case on align with the following options
         match align:
@@ -94,6 +97,7 @@ class displayHandler:
                 rect = (rect[0] - text.get_width()/2, rect[1])
             case "center-bottom":
                 rect = (rect[0] - text.get_width()/2, rect[1] - text.get_height())
+        
         
         self.display.blit(text,rect)
     

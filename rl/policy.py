@@ -5,6 +5,7 @@ class Policy:
     
     def __init__(self, env) -> None:
         self.env = env
+        
     
     @abstractmethod
     def get_action(self, agent):
@@ -13,11 +14,11 @@ class Policy:
 class Random(Policy):
     
     def __init__(self, env) -> None:
-        self.env = env
+        super().__init__(env, )
     
-    def get_action(self, agent):
+    def get_action(self, agent) -> tuple[tuple]:
         actions = self.env.A(agent.state)
-        return actions[random.randint(0, len(actions) - 1)]
+        return (actions[random.randint(0, len(actions) - 1)],)
     
 class EpsilonGreedy(Policy):
     
@@ -31,13 +32,17 @@ class EpsilonGreedy(Policy):
         self.epsilon = epsilon
         self.decay = decay
     
-    def get_action(self, agent):
+    def get_action(self, agent) -> tuple[tuple]:
         actions = self.env.A(agent.state)
         self.epsilon *= self.decay
+        
+       
         if(random.random() < self.epsilon):
-            return actions[random.randint(0, len(actions) - 1)]
+            return (actions[random.randint(0, len(actions) - 1)],)
         else:
-            return max(actions, key = lambda action: agent.Q[(agent.state, action)])
+            action = [a for a in actions if agent.Q[(agent.state, (a,))] == max([agent.Q[(agent.state, (a,))] for a in actions])]
+            
+            return (random.choice(action),)
         
         
         
