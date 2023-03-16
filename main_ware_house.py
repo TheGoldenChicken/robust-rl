@@ -3,17 +3,15 @@ from ware_house import ware_house
 from agent.robust_distributional_agent import robust_distributional_agent
 import numpy as np
 import matplotlib.pyplot as plt
-from agent.td_zero import TDZero
 import rl.policy
 import pickle
 
+
 env = ware_house.Env(playerOptions = None)
 agent = robust_distributional_agent(env)
-# policy = rl.policy.EpsilonGreedy(env, epsilon = 0.05, decay = 1)
-# agent = TDZero(env, policy, gamma = 0.95, lr = lambda : 0.95)
-manager = rl.manager.Manager(agent, render = False)
+manager = rl.manager.Manager(agent, render = True)
 
-print("iteration: " + str(manager.run(iterations = 10)))
+print("iteration: " + str(manager.run(iterations = 10000)))
 print("total samples: " + str(agent.total_samples))
 
 Q = [list(agent.Q.values()),list(agent.Q.keys())]
