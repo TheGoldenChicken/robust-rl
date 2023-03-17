@@ -1,16 +1,23 @@
 import rl.manager
-import ware_house
+from ware_house import ware_house
 from agent.robust_distributional_agent import robust_distributional_agent
 import numpy as np
 import matplotlib.pyplot as plt
+import rl.policy
+import pickle
+
 
 env = ware_house.Env(playerOptions = None)
 agent = robust_distributional_agent(env)
+manager = rl.manager.Manager(agent, render = True)
 
-manager = rl.manager.Manager(env, agent)
-
-print("iteration: " + manager.run(iterations = 2500))
+print("iteration: " + str(manager.run(iterations = 10000)))
 print("total samples: " + str(agent.total_samples))
+
+Q = [list(agent.Q.values()),list(agent.Q.keys())]
+
+with open('Q_values.pickle', 'wb') as handle:
+    pickle.dump(Q, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 # # Action value function
 img = np.zeros((env.n+1, env.n+1))
@@ -24,3 +31,4 @@ plt.colorbar()
 plt.savefig("Q_function.png")
 
 plt.show()
+

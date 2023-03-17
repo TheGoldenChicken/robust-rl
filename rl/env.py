@@ -13,7 +13,7 @@ class ContinuousEnv:
     
     # Return the next state and reward
     @abstractmethod
-    def step(self, state : tuple, actions : list[tuple]) -> tuple[tuple,int]:
+    def step(self, state : tuple, actions : list):
         """
         Step method. Returns the next state and reward
         """

@@ -6,6 +6,7 @@ import rl.display
 import rl.policy
 import numpy as np
 import pygame
+import time
 
 class Player(rl.player.Player):
     
@@ -25,23 +26,23 @@ class Player(rl.player.Player):
 class Env(rl.env.DiscreteEnv):
     
     layout0 = [[[' ',' ',' ','>','G'],
-                [' ','#',' ',' ','#'],
+                [' ','#',' ','>','G'],
                 ['P',' ',' ',' ','#']],
-               [[  0,  0,  0,  1, 0],
-                [  0,  0,  0, -1, 0],
+               [[  0,  0,  0,  0, 1],
+                [  0,  0,  0,  0, -1],
                 [  0,  0,  0,  0, 0]]]
     
     layout1 = [[[' ',' ','E','>','G'],
-                [' ','#',' ',' ','#'],
+                [' ','#',' ','>','G'],
                 ['P',' ',' ',' ','#']],
-               [[  0,  0,  0,  0, 0],
-                [  0,  0,  0,  0, 0],
+               [[  0,  0,  0,  0, 1],
+                [  0,  0,  0,  0, -1],
                 [  0,  0,  0,  0, 0]]]
     
     def __init__(self, layout = None) -> None:
         self.action_set = [(0,1), (0,-1), (1,0), (-1,0), (0,0)]
         
-        if(layout == None): self.layout = self.layout0
+        if(layout == None): self.layout = self.layout1
         else: self.layout = layout
         
         self.reset()
@@ -56,6 +57,9 @@ class Env(rl.env.DiscreteEnv):
             player = self.players[index]
             if player.type == 'Player':
                 if not self.is_valid(index, x, y, state, action):
+                    # If at goal state, do nothing
+                    if self.layout[0][y][x] == 'G':
+                        return state, 0
                     raise ValueError("Invalid action")
                 else:
                     new_position = (x + action[0], y + action[1])
@@ -67,8 +71,8 @@ class Env(rl.env.DiscreteEnv):
                 break
         
         for i, (index, x, y) in enumerate(state):
-            player = self.players[index]
-            if player.type == 'Enemy':
+            enemy = self.players[index]
+            if enemy.type == 'Enemy':
                 valid_actions = [action for action in self.action_set if self.is_valid(index, x, y, state, action)]
                 
                 if len(valid_actions) > 0:
@@ -79,11 +83,16 @@ class Env(rl.env.DiscreteEnv):
                     state = list(state)
                     state[i] = (index, new_position[0], new_position[1])
                     state = tuple(state)
-                    reward += self.layout[1][new_position[1]][new_position[0]]
+                    
+                    for index_, x_, y_ in state:
+                        if self.players[index_].type == 'Player':
+                            if (x_, y_) == (new_position[0], new_position[1]):
+                                reward -= 1
+                                break
         
         return state, reward
     
-    def is_valid(self, index, x, y, state,action):
+    def is_valid(self, index, x, y, state, action):
         player = self.players[index]
         
         if self.layout[0][y][x] == 'G':
@@ -106,23 +115,22 @@ class Env(rl.env.DiscreteEnv):
             # Check if the direction is restricted
             match action:
                 case (0,0):
-                    if self.layout[0][new_position[1]][new_position[0]] in ['^','v','<','>']:
-                        return False
+                    return True
                 case (0,1):
-                    if self.layout[0][new_position[1]][new_position[0]] in ['v','<','>']:
+                    if self.layout[0][y][x] in ['v','<','>']:
                         return False
                 case (0,-1):
-                    if self.layout[0][new_position[1]][new_position[0]] in ['^','<','>']:
+                    if self.layout[0][y][x] in ['^','<','>']:
                         return False
                 case (1,0):
-                    if self.layout[0][new_position[1]][new_position[0]] in ['^','v','<']:
+                    if self.layout[0][y][x] in ['^','v','<']:
                         return False
                 case (-1,0):
-                    if self.layout[0][new_position[1]][new_position[0]] in ['^','>','^']:
+                    if self.layout[0][y][x] in ['^','>','^']:
                         return False
         
         # Check if new position is occupied by an enemy
-        for index, x ,y in state:
+        for index, x , y in state:
             player_ = self.players[index]
             if player_.type == 'Enemy':
                 if (x,y) == new_position:
@@ -151,7 +159,10 @@ class Env(rl.env.DiscreteEnv):
                 for action in self.action_set:
                     if self.is_valid(index, x, y, state, action):
                         actions.append(action)
-                
+        
+        if actions == []:
+            actions.append(None)
+        
         return actions
     
     # Reset state by returning initial state
@@ -197,30 +208,46 @@ class Env(rl.env.DiscreteEnv):
                 elif player.type == "Player":
                     state_.append((index, x, y))
             state_ = tuple(state_)
+            
+            def Q_to_color(Q):
+                min_ = np.min([np.min(self.layout[1]), -1])
+                max_ = np.max(self.layout[1])
+                
+                if Q <= 0:
+                    return (255 + int(255*(Q-min_)/min_), 0, 0)
+                if Q > 0:
+                    return (0, 255 + int(255*(Q-(max_+0.001))/(max_+0.001)), 0)
+            
             # state_ = agent.state
             def up():
-                self.display.draw_polygon([(int(x*gs), int(y*gs)),(int(x*gs+gs), int(y*gs)),(int(x*gs+gs/2), int(y*gs+gs/2))], width=width)
+                color = Q_to_color(agent.Q[(state_, ((0,-1),))])
+                self.display.draw_polygon([(int(x*gs), int(y*gs)),(int(x*gs+gs), int(y*gs)),(int(x*gs+gs/2), int(y*gs+gs/2))], width=width, color = color)
                 self.display.draw_text(str(round(agent.Q[(state_, ((0,-1),))],2)),
                                         (x*gs + gs/2, y*gs + width),
                                         (255,255,255),
                                         align = "center-top",
                                         font_size = self.grid_scale//6)
             def right():
-                self.display.draw_polygon([(int(x*gs+gs), int(y*gs+gs)),(int(x*gs+gs), int(y*gs)), (int(x*gs+gs/2), int(y*gs+gs/2))], width=width)
+                color = Q_to_color(agent.Q[(state_, ((1,0),))])
+                self.display.draw_polygon([(int(x*gs+gs), int(y*gs+gs)),(int(x*gs+gs), int(y*gs)), (int(x*gs+gs/2), int(y*gs+gs/2))], width=width, color = color)
                 self.display.draw_text(str(round(agent.Q[(state_, ((1,0),))],2)),
                                         (x*gs + gs - width, y*gs + gs/2),
                                         (255,255,255),
                                         align = "center-right",
-                                        font_size = self.grid_scale//6)  
+                                        font_size = self.grid_scale//6,
+                                        angle = -90)  
             def left():
-                self.display.draw_polygon([(int(x*gs),  int(y*gs)),(int(x*gs), int(y*gs+gs)),(int(x*gs+gs/2), int(y*gs+gs/2))], width=width)
+                color = Q_to_color(agent.Q[(state_, ((-1,0),))])
+                self.display.draw_polygon([(int(x*gs),  int(y*gs)),(int(x*gs), int(y*gs+gs)),(int(x*gs+gs/2), int(y*gs+gs/2))], width=width, color = color)
                 self.display.draw_text(str(round(agent.Q[(state_, ((-1,0),))],2)),
                                         (x*gs + width, y*gs + gs/2),
                                         (255,255,255),
                                         align = "center-left",
-                                        font_size = self.grid_scale//6)           
+                                        font_size = self.grid_scale//6,
+                                        angle = 90)           
             def down():
-                self.display.draw_polygon([(int(x*gs+gs), int(y*gs+gs)),(int(x*gs), int(y*gs+gs)),(int(x*gs+gs/2), int(y*gs+gs/2))], width=width)
+                color = Q_to_color(agent.Q[(state_, ((0,1),))])
+                self.display.draw_polygon([(int(x*gs+gs), int(y*gs+gs)),(int(x*gs), int(y*gs+gs)),(int(x*gs+gs/2), int(y*gs+gs/2))], width=width, color = color)
                 self.display.draw_text(str(round(agent.Q[(state_, ((0,1),))],2)),
                                         (x*gs + gs/2, y*gs + gs - width),
                                         (255,255,255),
@@ -274,23 +301,27 @@ class Env(rl.env.DiscreteEnv):
         
         for index, x, y in agent.state:
             player = self.players[index]
-            if(player.type == 'Player'):
-                        self.display.draw_sphere((x*self.grid_scale + self.grid_scale//2, y*self.grid_scale + self.grid_scale//2), self.grid_scale//3, (0,100,0), width=3)
-                        self.display.draw_text('P', (x*self.grid_scale + self.grid_scale//2, y*self.grid_scale + self.grid_scale//2),
-                                               (255,255,255), align = "center", font_size = self.grid_scale//4)
-            elif(player.type == 'Enemy'):
+            if(player.type == 'Enemy'):
                 self.display.draw_sphere((x*self.grid_scale + self.grid_scale//2, y*self.grid_scale + self.grid_scale//2), self.grid_scale//3, (100,0,0), width=3)
                 self.display.draw_text('E', (x*self.grid_scale + self.grid_scale//2, y*self.grid_scale + self.grid_scale//2),
                                         (255,255,255), align = "center", font_size = self.grid_scale//4)
+            elif(player.type == 'Player'):
+                        self.display.draw_sphere((x*self.grid_scale + self.grid_scale//2, y*self.grid_scale + self.grid_scale//2), self.grid_scale//3, (0,100,0), width=3)
+                        self.display.draw_text('P', (x*self.grid_scale + self.grid_scale//2, y*self.grid_scale + self.grid_scale//2),
+                                               (255,255,255), align = "center", font_size = self.grid_scale//4)
+            
         
         self.display.update()
         
         # Pygame equivalent to n actions per second (aps)
-        pygame.time.wait(1000//self.aps)
+        # pygame.time.wait(1000//self.aps)
         
         return self.display.eventHandler()
     
 class PlayModePolicy(rl.policy.Policy):
+    
+    def __init__(self, env):
+        super().__init__(env)
         
     def get_action(self, agent) -> bool:
         
@@ -301,14 +332,19 @@ class PlayModePolicy(rl.policy.Policy):
             key_released = self.env.display.key_released
             
             actions = self.env.A(agent.state)
+            print(agent.state, actions)
 
             if(key_released[pygame.K_UP%512] == True): 
-                if (0,-1) in actions: return [(0,-1)]
+                if (0,-1) in actions:
+                    return [(0,-1)]
             elif(key_released[pygame.K_DOWN%512] == True): 
-                if (0,1) in actions: return [(0,1)]
+                if (0,1) in actions:
+                    return [(0,1)]
             elif(key_released[pygame.K_LEFT%512] == True):
-                if (-1,0) in actions: return [(-1,0)]
+                if (-1,0) in actions:
+                    return [(-1,0)]
             elif(key_released[pygame.K_RIGHT%512] == True):
-                if (1,0) in actions: return [(1,0)]
+                if (1,0) in actions:
+                    return [(1,0)]
             elif(key_released[pygame.K_TAB%512] == True):
                 return [(0,0)]

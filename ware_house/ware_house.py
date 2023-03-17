@@ -24,10 +24,10 @@ class Env(rl.env.DiscreteEnv):
         demand = np.random.randint(0, self.n)
         
         # Holding cost
-        cost = np.abs(self.h*(state + actions[0] - demand))
+        cost = max(0,(self.h*(state + actions[0] - demand)))
         
         # Lost sales penalty
-        cost += np.abs(self.p*(demand - state - actions[0]))
+        cost += max(0,(self.p*(demand - state - actions[0])))
         
         # Fixed ordering cost
         # cost += self.k*actions[0]
@@ -35,7 +35,7 @@ class Env(rl.env.DiscreteEnv):
         
         next_state = state + actions[0] - min(demand, state + actions[0])
             
-        reward = -cost
+        reward = cost
         
         return next_state, reward
     
@@ -53,13 +53,58 @@ class Env(rl.env.DiscreteEnv):
     def reset(self) -> None:
         return 0
         
-    def init_render(self):
-        pass
-    
-    def render(self, state):
+    def init_render(self, grid_scale = 50):
+        self.grid_scale = grid_scale
         
-        print("Current state:", state)
-        print("Max inventory:", self.n, "\n")
+        self.width = (self.n+1)*self.grid_scale + self.grid_scale
+        self.height = (self.n+1)*self.grid_scale
+
+        self.display = rl.display.displayHandler(self.width, self.height)
+        
+    
+    def render(self, agent):
+        gs = self.grid_scale
+        min_q = 1e10
+        max_q = 0
+        
+        color_r = [(i, 0, 0) for i in np.linspace(255, 0, int(self.n/2 + 1))]
+        color_g = [(0, i, 0) for i in np.linspace(0, 255, int(self.n/2 + 1))]
+        color = color_r[:-1] + color_g
+        for a in range(self.n+1):
+            for s in range(self.n+1):
+                if(a <= self.n-s):
+                    q = agent.Q[(s,a)]
+                    
+                    if q < min_q: min_q = q
+                    elif q > max_q: max_q = q
+        
+        for a in range(self.n+1):
+            for s in range(self.n+1):
+                if(a <= self.n-s):
+                    q = agent.Q[(s,a)]
+                    
+                    # if q < min_q: min_q = q
+                    # elif q > max_q: max_q = q
+                    color_index = int((q-min_q)/((max_q - min_q +1e-05) / len(color)))  
+                    color_index = min(color_index, self.n)
+                    self.display.draw_square((a*gs + gs/2, s*gs + gs/2), (gs, gs), color[color_index])
+                    self.display.draw_text(str(round(q, 2)), (a*gs + gs/2, s*gs + gs/2), (255,255,255), align="center")
+                else:
+                    self.display.draw_square((a*gs + gs/2, s*gs + gs/2), (gs, gs), (0,0,0))
+        
+        q_range = np.linspace(min_q, max_q, self.n+1)
+        
+        for s in range(self.n+1):
+            self.display.draw_square(((self.n+1)*gs + gs/2, s*gs + gs/2), (gs, gs), color[s], width = 10)
+            self.display.draw_text(str(round(q_range[s], 2)), ((self.n+1)*gs + gs/2, s*gs + gs/2), (255,255,255), align="center")
+
+        self.display.update()
+        
+        
+        return self.display.eventHandler()
+    
+    def is_terminal(self, state) -> bool:
+        return False
     
     def get_transistion_probabilities(self, state, action):
         
