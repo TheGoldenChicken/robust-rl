@@ -12,11 +12,107 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from IPython.display import clear_output
+import itertools
+from collections import defaultdict
+
+# TODO: MAKE IT SO WILL ONLY CONSIDER ACTIONS THAT ARE OF THE SAME AS CURRENTLY
+# SubSymbolic AI? Knowing the effect of action and just calcuting the noise instead of the transition probabilities
+# noise = mean(abs(state - next_state) - effect_of_action)
+# TODO: FIX CREATE_GRUD_KEYS BY ADDING GET_STATE_DIM AND GET_STATE_MAX_MIN AND GET_STATE_ACTIONS functions
+def create_grid_keys(fineness, actions=1):
+    """
+    Generates positions representing the center of squares used in the grid for NN purposes
+    Generates grid with keys equal to finess^state_dim
+
+    returns: List of (state_dim) tuples containing the keys for a grid
+    """
+    # Should get [[state_dim_1_min,state_dim_1_max], [state_dim_2_min,state_dim_2_max]]
+    #max_min = self.env.get_max_min_state()
+
+    # Dummy var - for testing purposes
+    max_min = [[-200, 200], [0, 600]]
+
+    all_state_dim_lists = []
+    for state_dim in max_min:
+        curr_state_dim_list = []
+        # From min in state_dim to max in state_dim...
+        # With a jump equal to the max distance in each state_dim over the fineness chosen (n squares per dim)
+        width = sum(abs(r) for r in state_dim)/fineness
+        for i in range(state_dim[0], state_dim[1], int(sum(abs(r) for r in state_dim)/fineness)):
+            curr_state_dim_list.append(i)
+        all_state_dim_lists.append(curr_state_dim_list)
+    all_combs = list(itertools.product(*all_state_dim_lists))
+
+    return np.array(all_combs), np.array(all_state_dim_lists)
 
 class SumoNormalAgent:
-    def __init__(self):
-        self.replay_buffer = {}
+    def __init__(self, fineness, obs_dim, replay_size,batch_size, num_actions):
+        self.grid_keys, self.grid_list = create_grid_keys(fineness)
+        # Dictionary of dictionaries of actions
+        # Creates actions * fineness^state_dim different bins
+        self.replay_buffer = {r: {i: ReplayBuffer(obs_dim, replay_size, batch_size) for i in self.grid_keys}
+                              for r in range(num_actions)}
 
+        self.normal_dists = {i: (0,1) for i in self.replay_buffer.keys()}
+    def get_normal_dist(self, action, pos):
+    def get_KNN(self,action, pos, K=0, neighbour_grids=0):
+        # Calc squared_dists
+        # Return key with lowest squared_dist
+
+        # # Get nearest grid_keys
+        # # Then get K nearest neighbours in the r nearest grid_keys from replay_buffer
+        # # THEN pass them to the get_normal_dist
+
+        # Get squared_dists to each of the grid_keys
+        squared_dists = np.sum((pos - self.grid_keys)**2, axis=1)
+        # nearest_grid = self.grid_keys[np.argmin(squared_dists)] # Old code - found only the closest grid location
+        nearest_grids = self.grid_keys[np.argpartition(squared_dists, neighbour_grids)]
+
+        # If we don't want to get the K neareset neighbours - and just wanna explore
+        if K == 0:
+            return nearest_grids
+
+        # TODO: Find way to look into r nearest grids in grid_keys (perhaps index grid_keys in a smart way?)
+            # Perhaps have grid_keys be a literal grid? With the i'th element being the i // Fineness row and the i % fineness column?
+            # Next, get all elements in those grids, get the squared dists and find the elements belonging to the K nearest
+            # Pass this to get_normal_dist
+
+        # TODO: Find a not retarded way to do what goes on below
+        if nearest_grids != 0:
+            dim_loc = (self.grid_list[i].index(nearest_grids[i]) for i in self.grid_list)
+            max_min_idxs = [(min(0, dim_loc[i] - neighbour_grids), max(len(self.grid_list)-1, dim_loc[i] + neighbour_grids)) for i in dim_loc]
+            all_grid_locations = [self.grid_keys[max_min_idxs[i][0]: max_min_idxs[i][1]] for i in max_min_idxs]
+            all_grids_to_search = list(itertools.product(*all_grid_locations))
+
+        # TODO: So what we really want, is getting a single dict with a numpy array for obs, rew, action, next_obs, so on
+            # But what we have is a bunch of dicts, each with their own numpy arrays
+            # Now, I GUESS that we could just take the numpy arrays from the dicts and concatenate them to a single one of the dicts
+            # OR we can remake the replay_buffers to instead of having a replay_buffer for each element in the dict, we have a singel
+            # replay_buffer, where the keys just say which pointer range to look at
+            # So each grid (assuming rth grid, and i size for replay_buffer), gets pointer space r*i:r*i+i
+            # This just begs the question: How do we make tuples link to pointer spaces? A seperate dict?
+            # Also, this puts increased presure onn a single object? But removes need for a dict....
+
+        dd = defaultdict(list)
+
+        for d in (self.replay_buffer[i] for i in all_grids_to_search):
+            for key, value in d.items():
+                dd[key].append(value)
+        # ATTENTION: RIGHT NOW IS JUSTS NORMAL LISTS, REMEMBER TO CHANGE TO NUMPY ARRAYS!!!
+
+        # all_points = np.concatenate([])
+
+
+            # Essentielt dette som de to ovenstående linjer erstatter...
+            # x_loc = self.grid_list[0].index(nearest_grids[0])
+            # y_loc = self.grid_list[1].index(nearest_grids[1])
+            # x_min, x_max = min(0, x_loc-neighbour_grids)
+            # y_min, y_max = min(0, y_loc-neighbour_grids)
+
+            all_neighbour_grids = list(itertools.product(*all_state_dim_lists))
+
+        KNN = list(self.replay_buffer[action].keys())[np.argpartition(squared_dists, K)]
+        return keys[np.argmin(squared_dists)]
 
 
 class Network(nn.Module):
@@ -35,7 +131,44 @@ class Network(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward method implementation."""
         return self.layers(x)
+class ReplayBuffer:
+    """A simple numpy replay buffer."""
 
+    def __init__(self, obs_dim: int, size: int, batch_size: int = 32):
+        self.obs_buf = np.zeros([size, obs_dim], dtype=np.float32)
+        self.next_obs_buf = np.zeros([size, obs_dim], dtype=np.float32)
+        self.acts_buf = np.zeros([size], dtype=np.float32)
+        self.rews_buf = np.zeros([size], dtype=np.float32)
+        self.done_buf = np.zeros(size, dtype=np.float32)
+        self.max_size, self.batch_size = size, batch_size
+        self.ptr, self.size, = 0, 0
+
+    def store(
+        self,
+        obs: np.ndarray,
+        act: np.ndarray,
+        rew: float,
+        next_obs: np.ndarray,
+        done: bool,
+    ):
+        self.obs_buf[self.ptr] = obs
+        self.next_obs_buf[self.ptr] = next_obs
+        self.acts_buf[self.ptr] = act
+        self.rews_buf[self.ptr] = rew
+        self.done_buf[self.ptr] = done
+        self.ptr = (self.ptr + 1) % self.max_size
+        self.size = min(self.size + 1, self.max_size)
+
+    def sample_batch(self) -> Dict[str, np.ndarray]:
+        idxs = np.random.choice(self.size, size=self.batch_size, replace=False)
+        return dict(obs=self.obs_buf[idxs],
+                    next_obs=self.next_obs_buf[idxs],
+                    acts=self.acts_buf[idxs],
+                    rews=self.rews_buf[idxs],
+                    done=self.done_buf[idxs])
+
+    def __len__(self) -> int:
+        return self.size
 class RegularDQN:
     def __init__(self, replay_size, state_dim, action_dim, batch_size, env,target_update, epsilon_decay, max_epsilon=1.0, min_epsilon=0.1, gamma=0.99):
         self.state_buffer = np.zeros([replay_size, state_dim], dtype=np.float32)
