@@ -41,7 +41,8 @@ def create_grid_keys(fineness, actions=1):
         for i in range(state_dim[0], state_dim[1], int(sum(abs(r) for r in state_dim)/fineness)):
             curr_state_dim_list.append(i)
         all_state_dim_lists.append(curr_state_dim_list)
-    all_combs = list(itertools.product(*all_state_dim_lists))
+    # Sorted sorts in lexiographical order, meaning it sorts for first item first, then second, then third, etc.
+    all_combs = sorted(list(itertools.product(*all_state_dim_lists)))
 
     return np.array(all_combs), np.array(all_state_dim_lists)
 
@@ -55,6 +56,9 @@ class SumoNormalAgent:
 
         self.normal_dists = {i: (0,1) for i in self.replay_buffer.keys()}
     def get_normal_dist(self, action, pos):
+
+    def fit_value_polynomial(self):
+
     def get_KNN(self,action, pos, K=0, neighbour_grids=0):
         # Calc squared_dists
         # Return key with lowest squared_dist
@@ -79,6 +83,9 @@ class SumoNormalAgent:
 
         # TODO: Find a not retarded way to do what goes on below
         if nearest_grids != 0:
+            # Gets the location of the current grid, useful for getting which partition to look in
+            dim_loc_1d = np.where(self.grid_keys == nearest_grids)
+            
             dim_loc = (self.grid_list[i].index(nearest_grids[i]) for i in self.grid_list)
             max_min_idxs = [(min(0, dim_loc[i] - neighbour_grids), max(len(self.grid_list)-1, dim_loc[i] + neighbour_grids)) for i in dim_loc]
             all_grid_locations = [self.grid_keys[max_min_idxs[i][0]: max_min_idxs[i][1]] for i in max_min_idxs]
@@ -93,15 +100,17 @@ class SumoNormalAgent:
             # This just begs the question: How do we make tuples link to pointer spaces? A seperate dict?
             # Also, this puts increased presure onn a single object? But removes need for a dict....
 
+        # Dette samler bare indholdet af alle dicts i en
         dd = defaultdict(list)
-
         for d in (self.replay_buffer[i] for i in all_grids_to_search):
             for key, value in d.items():
                 dd[key].append(value)
-        # ATTENTION: RIGHT NOW IS JUSTS NORMAL LISTS, REMEMBER TO CHANGE TO NUMPY ARRAYS!!!
+        # ATTENTION: RIGHT NOW IS JUSTS NORMAL LIST, REMEMBER TO CHANGE TO NUMPY ARRAYS!!!
+        # Ignore Pycharm fucking up down here, iz alright
+        for key,value in dd.items():
+            dd[key] = np.array(dd[key])
 
-        # all_points = np.concatenate([])
-
+        return dd
 
             # Essentielt dette som de to ovenstående linjer erstatter...
             # x_loc = self.grid_list[0].index(nearest_grids[0])
@@ -110,9 +119,11 @@ class SumoNormalAgent:
             # y_min, y_max = min(0, y_loc-neighbour_grids)
 
             all_neighbour_grids = list(itertools.product(*all_state_dim_lists))
+        #
+        # KNN = list(self.replay_buffer[action].keys())[np.argpartition(squared_dists, K)]
+        # return keys[np.argmin(squared_dists)]
 
-        KNN = list(self.replay_buffer[action].keys())[np.argpartition(squared_dists, K)]
-        return keys[np.argmin(squared_dists)]
+
 
 
 class Network(nn.Module):
@@ -169,6 +180,21 @@ class ReplayBuffer:
 
     def __len__(self) -> int:
         return self.size
+
+class TheCoolerReplayBuffer(ReplayBuffer):
+    """
+    Replay buffer more optimal for grid-based replay-buffering
+    """
+    def __init__(self, obs_dim, size, batch_size, fineness):
+        super().__init__(obs_dim, size, batch_size)
+        self.partitions = fineness^obs_dim
+        self.max_size = size*self.partitions
+        self.ptr, self.size = [0] * self.partitions, [0] * self.partitions
+
+    def get_from_dim(self, dims):
+
+
+
 class RegularDQN:
     def __init__(self, replay_size, state_dim, action_dim, batch_size, env,target_update, epsilon_decay, max_epsilon=1.0, min_epsilon=0.1, gamma=0.99):
         self.state_buffer = np.zeros([replay_size, state_dim], dtype=np.float32)
