@@ -70,6 +70,17 @@ class SumoNormalAgent:
         nearest_grid = self.grid_keys[(squared_dists[:neighbours+1])]
         return nearest_grid
 
+# This should work for finding neighbouring grids, but only for 2 dimensions...
+    # And, is ugly :((((
+# for i in range(-neighbour_grids, neighbour_grids+1 # inclusive,exclusive)
+    # for r in range(-neighbour_grids, neighbour_grids+1)
+        # next_idx = current_idx + i + r*fineness
+        # if next_idx >= 0:
+            # if next_idx < len(self.grid_list):
+                # all_neighbour_grids.append(next_idx)
+
+
+
     def get_neighbour_grids(self, current_grid, neighbour_grids):
         # Gets neighbouring grid [x, y] locations from current grid [x, y] location
 
