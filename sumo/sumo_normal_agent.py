@@ -37,6 +37,7 @@ def create_grid_keys(fineness, actions=1):
         curr_state_dim_list = []
         # From min in state_dim to max in state_dim...
         # With a jump equal to the max distance in each state_dim over the fineness chosen (n squares per dim)
+        # Lige overvej Calles integer division her, husk at bruge width!!! //
         width = sum(abs(r) for r in state_dim)/fineness
         for i in range(state_dim[0], state_dim[1], int(sum(abs(r) for r in state_dim)/fineness)):
             curr_state_dim_list.append(i)
@@ -56,8 +57,31 @@ class SumoNormalAgent:
 
         self.normal_dists = {i: (0,1) for i in self.replay_buffer.keys()}
     def get_normal_dist(self, action, pos):
-
+        pass
     def fit_value_polynomial(self):
+        pass
+
+    def get_closest_grids(self, current_pos, neighbours=0, euclidian=0):
+        # Returns [x, y] location of the nearest grid...
+
+        squared_dists = np.sort(np.sum((current_pos - self.grid_keys)**2, axis=1))
+
+
+        nearest_grid = self.grid_keys[(squared_dists[:neighbours+1])]
+        return nearest_grid
+
+    def get_neighbour_grids(self, current_grid, neighbour_grids):
+        # Gets neighbouring grid [x, y] locations from current grid [x, y] location
+
+        # Get the index of the current grid_position
+        current_grid_idx = np.where(self.grid_list==current_grid)
+        neighbour_grid_idxs = []
+        for i in
+
+        # Just get all where squared distance to current grid is smaller than given distance
+
+        dim_loc = (self.grid_list[i].index(nearest_grids[i]) for i in self.grid_list)
+        max_min_idxs = [(min(0, dim_loc[i] - neighbour_grids), max(len(self.grid_list) - 1, dim_loc[i] + neighbour_grids)) for i indim_loc]
 
     def get_KNN(self,action, pos, K=0, neighbour_grids=0):
         # Calc squared_dists
@@ -73,6 +97,7 @@ class SumoNormalAgent:
         nearest_grids = self.grid_keys[np.argpartition(squared_dists, neighbour_grids)]
 
         # If we don't want to get the K neareset neighbours - and just wanna explore
+        # Måske dele op til at have get_nearest_grids
         if K == 0:
             return nearest_grids
 
