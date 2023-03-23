@@ -41,7 +41,7 @@ class Env(rl.env.DiscreteEnv):
     
     # Function that returns the available actions
     def A(self, state):
-        return np.arange(self.n - state + 1)
+        return tuple(np.arange(self.n - state + 1))
     
     def goal_test(self, state) -> bool:
         raise NotImplementedError("ContinuousEnv.goal_test() is not implemented")
@@ -120,5 +120,41 @@ class Env(rl.env.DiscreteEnv):
         return p
     
     def get_states(self) -> list:
-        return np.arange(self.n + 1)
+        return tuple(np.arange(self.n + 1))
     
+
+class EnvNonUniform(Env):
+    def __init__(self, playerOptions, n = 10, h = 1, p = 2, k = 3, b = 1, m = 0) -> None:
+        super().__init__(playerOptions, n, h, p, k)
+        
+        self.b = b
+        self.m = m
+
+        self.p = p
+        
+    def step(self, state : tuple, actions : list[tuple]) -> tuple[list[tuple],list[int]]:
+        # Random uniformly distributed demand between 0 and n
+        demand_ratio = np.array([(self.b+1)/(self.n+1) \
+                                if x == self.m or x == self.m + 1 \
+                                else (self.n - 1 - 2*self.b)/(self.n**2 - 1) \
+                                for x in range(self.n)])
+
+        demand = int(np.random.choice(np.arange(self.n),
+                                  size = 1,
+                                  p = demand_ratio/sum(demand_ratio))[0])
+        
+        # Holding cost
+        cost = max(0,(self.h*(state + actions[0] - demand)))
+        
+        # Lost sales penalty
+        cost += max(0,(self.p*(demand - state - actions[0])))
+        
+        # Fixed ordering cost
+        # cost += self.k*actions[0]
+        if(actions[0] > 0): cost += self.k
+        
+        next_state = state + actions[0] - min(demand, state + actions[0])
+            
+        reward = cost
+        
+        return next_state, reward

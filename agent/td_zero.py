@@ -29,9 +29,9 @@ class TDZero(rl.agent.ShallowAgent):
         self.state = state_
         action_ = self.policy.get_action(self)
         
-        self.Q[(state, action)] += self.lr()*(reward
-                                                + self.gamma*self.Q[(state_, action_)]
-                                                - self.Q[(state, action)]) 
+        self.Q[(state, *action)] += self.lr()*(reward
+                                                + self.gamma*self.Q[(state_, *action_)]
+                                                - self.Q[(state, *action)]) 
         
         return False
         

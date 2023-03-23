@@ -1,12 +1,15 @@
+#%% Imports
 import rl.manager
 from ware_house import ware_house
 from agent.robust_distributional_agent import robust_distributional_agent
+from agent.replay_agent import replay_agent
 import numpy as np
 import matplotlib.pyplot as plt
 import rl.policy
 import pickle
+from collections import defaultdict
 
-
+#%% Training
 env = ware_house.Env(playerOptions = None)
 agent = robust_distributional_agent(env)
 manager = rl.manager.Manager(agent, render = True)
@@ -19,16 +22,90 @@ Q = [list(agent.Q.values()),list(agent.Q.keys())]
 with open('Q_values.pickle', 'wb') as handle:
     pickle.dump(Q, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-# # Action value function
-img = np.zeros((env.n+1, env.n+1))
-for i in agent.Q.keys():
-    img[i[0],i[1]] = agent.Q[i]
+#%% Testing
 
-plt.imshow(img)
-plt.colorbar()
+class policy_optimal:
 
-# Save the image
-plt.savefig("Q_function.png")
+    def get_action(self, agent):
+        if(agent.state <= 2):
+            return [8-agent.state]
+        else:
+            return [0]
+
+class policy_robust:
+
+    def get_action(self, agent):
+        if(agent.state <= 4):
+            return [7-agent.state]
+        else:
+            return [0]
+
+
+# Load the Q values
+with open('Q_values.pickle', 'rb') as handle:
+    Q_unpacked = pickle.load(handle)
+
+Q = defaultdict(lambda : 0)
+for value, key in zip(Q_unpacked[0], Q_unpacked[1]):
+    Q[key] = value
+
+fig, ax = plt.subplots(1, 4, figsize = (20, 5))
+
+n = 10
+for i, b in enumerate([1, 1.5, 2, 2.5]):
+    for m in range(0, n):
+        env_non_uniform = ware_house.EnvNonUniform(playerOptions = None, n = n, b = 1, m = 0)
+        policy = rl.policy.EpsilonGreedy(env_non_uniform, epsilon = 0, decay = 1)
+        agent_converged = replay_agent(env_non_uniform, policy)
+
+        optimal = policy_optimal()
+        robust = policy_robust()
+
+        agent_optimal = replay_agent(env_non_uniform, optimal)
+        agent_robust = replay_agent(env_non_uniform, robust)
+
+        manager_converged = rl.manager.Manager(agent_converged, render = False)
+        manager_optimal = rl.manager.Manager(agent_optimal, render = False)
+        manager_robust = rl.manager.Manager(agent_robust, render = False)
+
+        print(f"Evaluating: b = {b}, m = {m}")
+        manager_converged.run(iterations = 2000)
+        manager_optimal.run(iterations = 2000)
+        manager_robust.run(iterations = 2000)
+
+        
+        mean_return_converged = np.mean([np.mean(value) for value in agent_converged.results.values()])
+        mean_return_optimal = np.mean([np.mean(value) for value in agent_optimal.results.values()])
+        mean_return_robust = np.mean([np.mean(value) for value in agent_robust.results.values()])
+        
+        ax[i].plot(m, mean_return_converged, 'o', color = 'blue')
+        ax[i].plot(m, mean_return_optimal, 'o', color = 'red')
+        ax[i].plot(m, mean_return_robust, 'o', color = 'green')
 
 plt.show()
+
+
+#%%
+
+from agent.td_zero import TDZero
+
+env = ware_house.Env(playerOptions = None)
+policy = rl.policy.EpsilonGreedy(env, epsilon = 0.05, decay = 1)
+agent = TDZero(env, policy, gamma = 0.95)
+manager = rl.manager.Manager(agent, render = True)
+
+manager.run(iterations = 100000)
+
+# # # Action value function
+# img = np.zeros((env.n+1, env.n+1))
+# for i in agent.Q.keys():
+#     img[i[0],i[1]] = agent.Q[i]
+
+# plt.imshow(img)
+# plt.colorbar()
+
+# # Save the image
+# plt.savefig("Q_function.png")
+
+# plt.show()
 

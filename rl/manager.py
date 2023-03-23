@@ -10,15 +10,18 @@ class Manager:
     
     # Return iteration number
     def run(self, iterations = None):
-        
+
         def iteration():
-            if(self.agent.next()): return True
+            if(self.agent.next()):
+                print("next returned true")
+                return True
             
             if(self.render): self.agent.env.render(self.agent)
             
             if self.agent.env.is_terminal(self.agent.state):
-                self.agent.state = self.agent.env.reset()
-                return False
+                print("state was terminal")
+                return True
+            return False
         
         if(iterations == None):
             i = 0
