@@ -19,15 +19,21 @@ from collections import defaultdict
 # SubSymbolic AI? Knowing the effect of action and just calcuting the noise instead of the transition probabilities
 # noise = mean(abs(state - next_state) - effect_of_action)
 # TODO: FIX CREATE_GRUD_KEYS BY ADDING GET_STATE_DIM AND GET_STATE_MAX_MIN AND GET_STATE_ACTIONS functions
-def create_grid_keys(fineness, actions=1):
+def create_grid_keys(fineness, max_min=None, actions=1):
+
     """
+    :param fineness: Number of grid points per dimension
+    :param max_min: list of dim lists where each list contains [state_min, state_max] valueus
+    :param actions: # TODO SEE IF YOU CAN'T REMOVE THIS
+    :return: all grid key combinations (numpy array), numpy array containing dim lists of fineness size with all grid locations along each dimension
+
     Generates positions representing the center of squares used in the grid for NN purposes
     Generates grid with keys equal to finess^state_dim
 
     returns: List of (state_dim) tuples containing the keys for a grid
     """
     # Should get [[state_dim_1_min,state_dim_1_max], [state_dim_2_min,state_dim_2_max]]
-    #max_min = self.env.get_max_min_state()
+
 
     # Dummy var - for testing purposes
     max_min = [[-200, 200], [0, 600]]
@@ -35,6 +41,7 @@ def create_grid_keys(fineness, actions=1):
     all_state_dim_lists = []
     for state_dim in max_min:
         curr_state_dim_list = []
+
         # From min in state_dim to max in state_dim...
         # With a jump equal to the max distance in each state_dim over the fineness chosen (n squares per dim)
         # Lige overvej Calles integer division her, husk at bruge width!!! //
@@ -42,14 +49,17 @@ def create_grid_keys(fineness, actions=1):
         for i in range(state_dim[0], state_dim[1], int(sum(abs(r) for r in state_dim)/fineness)):
             curr_state_dim_list.append(i)
         all_state_dim_lists.append(curr_state_dim_list)
+
     # Sorted sorts in lexiographical order, meaning it sorts for first item first, then second, then third, etc.
     all_combs = sorted(list(itertools.product(*all_state_dim_lists)))
 
     return np.array(all_combs), np.array(all_state_dim_lists)
 
 class SumoNormalAgent:
-    def __init__(self, fineness, obs_dim, replay_size,batch_size, num_actions):
+    def __init__(self, fineness, obs_dim, replay_size, batch_size, num_actions):
+        self.fineness = fineness
         self.grid_keys, self.grid_list = create_grid_keys(fineness)
+
         # Dictionary of dictionaries of actions
         # Creates actions * fineness^state_dim different bins
         self.replay_buffer = {r: {i: ReplayBuffer(obs_dim, replay_size, batch_size) for i in self.grid_keys}
@@ -62,13 +72,14 @@ class SumoNormalAgent:
         pass
 
     def get_closest_grids(self, current_pos, neighbours=0, euclidian=0):
-        # TODO: MAKE THIS RETURN ONLY THE CLOSEST_GRID (not multiple), people will misuse that (not in a good way)
-        # Implement actual euclidian, not this cursed squared distance... doesn't scale well, as you probably know
+        # TODO Implement actual euclidian, not this cursed squared distance... doesn't scale well, as you probably know
         # Returns [x, y] location of the nearest grid...
 
-        squared_dists = np.sort(np.sum((current_pos - self.grid_keys)**2, axis=1))
+        squared_dists = np.sum((current_pos - self.grid_keys)**2, axis=1)
+        #squared_dists = np.sort(np.sum((current_pos - self.grid_keys)**2, axis=1))
 
-        nearest_grid = self.grid_keys[(squared_dists[:neighbours+1])]
+        nearest_grid = self.grid_keys[np.argmin(squared_dists)]
+        #nearest_grid = self.grid_keys[(squared_dists[:neighbours+1])]
         return nearest_grid
 
 
@@ -238,7 +249,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
     Replay buffer more optimal for grid-based replay-buffering
     """
     def __init__(self, obs_dim, size, batch_size, fineness, num_actions):
-        self.partitions = fineness^obs_dim
+        self.partitions = (fineness^obs_dim)*num_actions
         self.max_size = size*self.partitions
         self.max_partition_size = size
 
@@ -247,12 +258,15 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         self.ptr, self.size = [0] * self.partitions, [0] * self.partitions
 
     # TODO: TEST THIS, NOT SURE THIS FUCKER'LL WORK BECAUSE __getitem__ normally doesn't accept multiple idxs...
+    # TODO: REMEMBER THISI FUCKER TAKES INDICES FROM MULTI_DIM INTERPRETER, U NEED TO MULTIPLY BY SOMETHING
+        # Fixed?
     def __getitem__(self, idx):
-        return dict(obs=self.obs_buf[idx: self.size[idx]],
-                    next_obs=self.next_obs_buf[idx: self.size[idx]],
-                    acts=self.obs_buf[idx: self.size[idx]],
-                    rews=self.obs_buf[idx: self.size[idx]],
-                    done=self.obs_buf[idx: self.size[idx]])
+        start, stop = idx*self.max_partition_size+
+        return dict(obs=self.obs_buf[idx*self.max_partition_size: idx*self.max_partition_size+self.size[idx]],
+                    next_obs=self.next_obs_buf[idx*self.max_partition_size: idx*self.max_partition_size+self.size[idx]],
+                    acts=self.obs_buf[idx*self.max_partition_size: idx*self.max_partition_size+self.size[idx]],
+                    rews=self.obs_buf[idx*self.max_partition_size: idx*self.max_partition_size+self.size[idx]],
+                    done=self.obs_buf[idx*self.max_partition_size: idx*self.max_partition_size+self.size[idx]])
 
     def sample_randomly(self, size=None) -> Dict[str, np.ndarray]:
         """
