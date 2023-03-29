@@ -19,15 +19,18 @@ class Env(rl.env.DiscreteEnv):
         self.state_size = 0
     
     # Return the next state and reward
-    def step(self, state : tuple, actions : list[tuple]) -> tuple[list[tuple],list[int]]:
+    def step(self, state : tuple, actions : list[tuple], d = None) -> tuple[list[tuple],list[int]]:
         # Random uniformly distributed demand between 0 and n
-        demand = np.random.randint(0, self.n)
+        if d is None:
+            demand = np.random.randint(0, self.n)
+        else:
+            demand = d
         
         # Holding cost
-        cost = max(0,(self.h*(state + actions[0] - demand)))
+        cost = max(0,self.h*(state + actions - demand))
         
         # Lost sales penalty
-        cost += max(0,(self.p*(demand - state - actions[0])))
+        cost += max(0,self.p*(demand - state - actions[0]))
         
         # Fixed ordering cost
         # cost += self.k*actions[0]
@@ -35,13 +38,13 @@ class Env(rl.env.DiscreteEnv):
         
         next_state = state + actions[0] - min(demand, state + actions[0])
             
-        reward = cost
+        reward = -cost
         
-        return next_state, reward
+        return int(next_state), int(reward)
     
     # Function that returns the available actions
     def A(self, state):
-        return tuple(np.arange(self.n - state + 1))
+        return tuple([tuple([i]) for i in range(self.n - state + 1)])
     
     def goal_test(self, state) -> bool:
         raise NotImplementedError("ContinuousEnv.goal_test() is not implemented")
@@ -70,22 +73,15 @@ class Env(rl.env.DiscreteEnv):
         color_r = [(i, 0, 0) for i in np.linspace(255, 0, int(self.n/2 + 1))]
         color_g = [(0, i, 0) for i in np.linspace(0, 255, int(self.n/2 + 1))]
         color = color_r[:-1] + color_g
-        for a in range(self.n+1):
-            for s in range(self.n+1):
-                if(a <= self.n-s):
-                    q = agent.Q[(s,a)]
-                    
-                    if q < min_q: min_q = q
-                    elif q > max_q: max_q = q
+
+        min_q = min(agent.Q.values())
+        max_q = max(agent.Q.values())
         
         for a in range(self.n+1):
             for s in range(self.n+1):
                 if(a <= self.n-s):
-                    q = agent.Q[(s,a)]
-                    
-                    # if q < min_q: min_q = q
-                    # elif q > max_q: max_q = q
-                    color_index = int((q-min_q)/((max_q - min_q +1e-05) / len(color)))  
+                    q = agent.Q[s,(a,)]
+                    color_index = int((q-min_q) * len(color)/(max_q - min_q + 1e-05))  
                     color_index = min(color_index, self.n)
                     self.display.draw_square((a*gs + gs/2, s*gs + gs/2), (gs, gs), color[color_index])
                     self.display.draw_text(str(round(q, 2)), (a*gs + gs/2, s*gs + gs/2), (255,255,255), align="center")
@@ -115,7 +111,7 @@ class Env(rl.env.DiscreteEnv):
             
             next_state, reward = self.step(state, action, d)
             
-            p[(next_state, reward)] += 1/num_states
+            p[(int(next_state), int(reward))] += 1/num_states
         
         return p
     
