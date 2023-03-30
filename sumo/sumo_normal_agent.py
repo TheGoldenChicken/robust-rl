@@ -1,3 +1,7 @@
+# TODO: WE HAVE A PROBLEM!
+# TODO: ACTIONS!!! CAN COME AS NUMPY ARRAYS??? WTFFFF
+# TODO: MAKE THE WHOLE THING WORK IN CASE ACTIONS COME AS NUMPY ARRAYS AND NOT INTEGERS, THAT WOULD BE STUPIDDDD
+# TODO GRIDKEYS: Some way of adding variable fineness to the different grid keys
 import numpy as np
 import torch
 from sumo import sumo_pp
@@ -15,16 +19,14 @@ from IPython.display import clear_output
 import itertools
 from collections import defaultdict
 
-# TODO: MAKE IT SO WILL ONLY CONSIDER ACTIONS THAT ARE OF THE SAME AS CURRENTLY
-# SubSymbolic AI? Knowing the effect of action and just calcuting the noise instead of the transition probabilities
-# noise = mean(abs(state - next_state) - effect_of_action)
-# TODO: FIX CREATE_GRUD_KEYS BY ADDING GET_STATE_DIM AND GET_STATE_MAX_MIN AND GET_STATE_ACTIONS functions
-def create_grid_keys(fineness, max_min=None, actions=1):
 
+# SubSymbolic AI? Knowing the effect of action and just calcuting the noise instead of the transition probabilities
+def create_grid_keys(fineness, max_min=None, actions=1):
     """
     :param fineness: Number of grid points per dimension
     :param max_min: list of dim lists where each list contains [state_min, state_max] valueus
     :param actions: # TODO SEE IF YOU CAN'T REMOVE THIS
+    :param tb# TODO: REMOVE THIS (trash-border): Meant to create a single encompassing border that lumps all out-of-boundary observations into it, agent will have shit data here, but it shouldn't be here anyways
     :return: all grid key combinations (numpy array), numpy array containing dim lists of fineness size with all grid locations along each dimension
 
     Generates positions representing the center of squares used in the grid for NN purposes
@@ -33,9 +35,8 @@ def create_grid_keys(fineness, max_min=None, actions=1):
     returns: List of (state_dim) tuples containing the keys for a grid
     """
     # Should get [[state_dim_1_min,state_dim_1_max], [state_dim_2_min,state_dim_2_max]]
-
-
     # Dummy var - for testing purposes
+
     max_min = [[-200, 200], [0, 600]]
 
     all_state_dim_lists = []
@@ -45,8 +46,8 @@ def create_grid_keys(fineness, max_min=None, actions=1):
         # From min in state_dim to max in state_dim...
         # With a jump equal to the max distance in each state_dim over the fineness chosen (n squares per dim)
         # Lige overvej Calles integer division her, husk at bruge width!!! //
-        width = sum(abs(r) for r in state_dim)/fineness
-        for i in range(state_dim[0], state_dim[1], int(sum(abs(r) for r in state_dim)/fineness)):
+        width = int(sum(abs(r) for r in state_dim)/fineness)
+        for i in range(state_dim[0], state_dim[1], width):
             curr_state_dim_list.append(i)
         all_state_dim_lists.append(curr_state_dim_list)
 
@@ -59,17 +60,11 @@ class SumoNormalAgent:
     def __init__(self, fineness, obs_dim, replay_size, batch_size, num_actions):
         self.fineness = fineness
         self.grid_keys, self.grid_list = create_grid_keys(fineness)
+        self.state_min, self.state_max = [-200, 200], [0, 600] # Something like this
+        # self.state_min, self.state_max = self.env.get_max_min()
 
-        # Dictionary of dictionaries of actions
-        # Creates actions * fineness^state_dim different bins
-        self.replay_buffer = {r: {i: ReplayBuffer(obs_dim, replay_size, batch_size) for i in self.grid_keys}
-                              for r in range(num_actions)}
+        #self.replay_buffer = TheCoolerReplayBuffer()
 
-        self.normal_dists = {i: (0,1) for i in self.replay_buffer.keys()}
-    def get_normal_dist(self, action, pos):
-        pass
-    def fit_value_polynomial(self):
-        pass
 
     def get_closest_grids(self, current_pos, neighbours=0, euclidian=0):
         # TODO Implement actual euclidian, not this cursed squared distance... doesn't scale well, as you probably know
@@ -89,25 +84,36 @@ class SumoNormalAgent:
 
         # Get the index of the current grid_position
         grid_index = np.where(self.grid_list == current_grid)
+        dims = len(self.state_max)
 
         # TODO: ATTACH FINENESS TO THE CLASS ITSELF
         # TODO: FIND THE WAY TO GET SELF.DIM
-        multi_index = single_dim_interpreter(grid_index, fineness=self.fineness, dim=self.dim)
+        multi_index = single_dim_interpreter(grid_index, fineness=self.fineness, dim=dims)
         neighbours_multi_index = neighbours(P=multi_index, neighbours=neighbour_grids,
-                                            maxx=self.self.fineness-1, minn=0)
+                                            maxx=self.fineness-1, minn=0)
         neighbours_single_index = [multi_dim_interpreter(i, fineness=self.fineness, dim=None)
                                    for i in neighbours_multi_index]
 
         return neighbours_single_index
 
-    def get_KNN(self, action, pos, K=0, neighbour_grids=0):
+
+    def get_KNN(self, pos, action, K=0, neighbour_grids=0):
+        """
+        Get K-nearest neighbours for a given pos based on state
+        :param pos: Current pos (state) to look based on
+        :param action: Only look up places in the replay buffer that have an action corresponding to current action
+        :param K: K neighbours to find
+        :param neighbour_grids: Number of neighbouring grids next to current to look at
+        :return:
+        """
         # KNN = list(self.replay_buffer[action].keys())[np.argpartition(squared_dists, K)]
         # return keys[np.argmin(squared_dists)]
         # TODO: Make work for multiple actions
 
         closest_grid = self.get_closest_grids(pos, neighbours=0)
         idxs_to_look = self.get_neighbour_grids(closest_grid, neighbour_grids=neighbour_grids)
-        all_points = self.replay_buffer[idxs_to_look]
+
+        all_points = self.replay_buffer[self.replay_buffer.create_partition_idxs(idxs_to_look, action)]
 
         all_points_of_interest = all_points['obs']
         # Finally, NN will be KNN among the all_points_of_interest, and we can use these for the purposes of sampling...
@@ -248,33 +254,85 @@ class TheCoolerReplayBuffer(ReplayBuffer):
     """
     Replay buffer more optimal for grid-based replay-buffering
     """
-    def __init__(self, obs_dim, size, batch_size, fineness, num_actions):
-        self.partitions = (fineness^obs_dim)*num_actions
-        self.max_size = size*self.partitions
+    def __init__(self, obs_dim, size, batch_size, fineness, num_actions, state_max, state_min, tb=True):
+        self.partitions = (fineness^obs_dim)*num_actions + 1*tb
+        self.max_size = size*self.partitions # Max size per action
         self.max_partition_size = size
+        self.state_max, self.state_min = state_max, state_min
+        self.tb = tb # Trash-buffer, ensures that states out-of-scope are not thrown together with valuable states *in scope*
 
         # Have to call super here so ptr won't get replaced...
         super().__init__(obs_dim, self.max_size, batch_size)
         self.ptr, self.size = [0] * self.partitions, [0] * self.partitions
 
-    # TODO: TEST THIS, NOT SURE THIS FUCKER'LL WORK BECAUSE __getitem__ normally doesn't accept multiple idxs...
-    # TODO: REMEMBER THISI FUCKER TAKES INDICES FROM MULTI_DIM INTERPRETER, U NEED TO MULTIPLY BY SOMETHING
-        # Fixed?
-    def __getitem__(self, idx):
-        start, stop = idx*self.max_partition_size+
-        return dict(obs=self.obs_buf[idx*self.max_partition_size: idx*self.max_partition_size+self.size[idx]],
-                    next_obs=self.next_obs_buf[idx*self.max_partition_size: idx*self.max_partition_size+self.size[idx]],
-                    acts=self.obs_buf[idx*self.max_partition_size: idx*self.max_partition_size+self.size[idx]],
-                    rews=self.obs_buf[idx*self.max_partition_size: idx*self.max_partition_size+self.size[idx]],
-                    done=self.obs_buf[idx*self.max_partition_size: idx*self.max_partition_size+self.size[idx]])
-
-    def sample_randomly(self, size=None) -> Dict[str, np.ndarray]:
+    def __getitem__(self, idxs) -> Dict[str, np.ndarray]:
+        return dict(obs=self.obs_buf[idxs],
+                    next_obs=self.next_obs_buf[idxs],
+                    acts=self.obs_buf[idxs],
+                    rews=self.obs_buf[idxs],
+                    done=self.obs_buf[idxs])
+    def __len__(self):
         """
-        Old school sample randomly from all avaliable, no matter grid_location data
+        Returns total size across all partitions
+        """
+        return sum(self.size)
+
+    def store(
+        self,
+        obs: np.ndarray,
+        act: np.ndarray,
+        rew: float,
+        next_obs: np.ndarray,
+        done: bool,
+        idx: int
+        ):
+        """
+        Store new observation
+        Idx here refers to which partition to place in (based on current observation location)
+        :type idx: int
+        :param obs:
+        :type done: object
+        """
+
+        if self.tb and ((obs < self.state_min).any() and (obs > self.state_max).any()):
+            idx = len(self.size) - 1 # The trash observation goes in the trash can
+
+        # todo: remove shitty solution here, since right now, we only consider action arrays of single elements
+        action = act.tolist().index(1)
+        # idx to store at, based
+        # TODO: Make a lambda out of this?
+        teh_idx = idx * self.max_partition_size + action * self.max_size + self.ptr[idx]
+
+        self.obs_buf[teh_idx] = obs
+        self.next_obs_buf[idx] = next_obs
+        self.acts_buf[idx] = act
+        self.rews_buf[idx] = rew
+        self.done_buf[idx] = done
+        self.ptr[idx] = (self.ptr[idx] + 1) % self.max_partition_size
+        self.size[idx] = min(self.size[idx] + 1, self.max_partition_size)
+
+
+    def create_partition_idxs(self, idx: list, action: int=0) -> list:
+        """
+        Creates indices to grab from memory based on partition indices
+        :param idx: List of indices corresponding to which parititons to retrieve from
+        :param action: Action to grab memory based on, each action grabs indices one self.max_size further ahead
+        :return: list of indices to be used in __getitem__
+        """
+
+        marker = self.max_partition_size + action*self.max_size
+        # Don't worry about the list comprehension outside, that's just to flatten the bastard
+        idxs = [item for sublist in [list(range(i * marker, i * marker + self.size[idx])) for i in idx]
+                for item in sublist]
+        return idxs
+
+
+    def sample_randomly_idxs(self, size=None):
+        """
+        Old school sample randomly from all avaliable, no matter grid_location data (or action)
         :param size: how many points to sample
-        :return:
+        :return: list of idxs where randomly sampled
         """
-
 
         if size==None:
             size=self.batch_size
@@ -284,17 +342,21 @@ class TheCoolerReplayBuffer(ReplayBuffer):
                 for i in range(self.partitions)]
         assert len(pop_idxs) >= size # No point trying to sample if we don't have enough datapoints...
         idxs = np.random.choice(pop_idxs, size)
-        return dict(obs=self.obs_buf[idxs],
-                    next_obs=self.next_obs_buf[idxs],
-                    acts=self.obs_buf[idxs],
-                    rews=self.obs_buf[idxs],
-                    done=self.obs_buf[idxs])
+        return idxs
 
 
 
-    # Do we really redefine the dundermethod?
 
-    def get_from_dim(self, dims):
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -14,6 +14,12 @@ class the_cooler_list(list):
 ls = the_cooler_list()
 # Husk at tif'je actions hertil det skal introduceres p[ en god m[de
 idxs = [list(range(idx*max_partition_length + action*: idx*max_partition_length+size[idx])) for i in idxs]
+#
+# return dict(obs=self.obs_buf[idx * self.max_partition_size: idx * self.max_partition_size + self.size[idx]],
+#             next_obs=self.next_obs_buf[idx * self.max_partition_size: idx * self.max_partition_size + self.size[idx]],
+#             acts=self.obs_buf[idx * self.max_partition_size: idx * self.max_partition_size + self.size[idx]],
+#             rews=self.obs_buf[idx * self.max_partition_size: idx * self.max_partition_size + self.size[idx]],
+#             done=self.obs_buf[idx * self.max_partition_size: idx * self.max_partition_size + self.size[idx]])
 
 # # def create_grid_keys(fineness, actions=2):
 # #     """
