@@ -48,57 +48,24 @@ class robust_distributional_agent(rl.agent.ShallowAgent):
                     return get_not_nan(tol)
             return get_not_nan(tol)
             
-            # x = x0
-            # for i in range(max_iter):
-            #     f_prime = lambda x : (f(x+tol)-f(x-tol))/(2*tol)
-            #     grad = f_prime(x)
-            #     if(abs(f_prime(x)) < tol): break
-            #     x += grad
-            #     if(x <= 0):
-            #         if(grad < 0): return tol
-            #             # return get_not_nan(tol)
-            #         else: x = tol
-            #     # if(np.isnan(np.array(x))):
-            #     #     return get_not_nan(tol)
-            # return x
-        
         def fDelta_r(N, reward):
-            # reward = -reward # Flip since we use a reward function and not a cost
-            r_max = max(-reward/0.05)
+            # r_max = max(-reward/0.05)
             
             def part_1(alpha):
-                r = reward[:2**(N+1)]
-
+                r = reward[:2**(N+1)+1]
                 return -alpha*(np.log(1/(2**(N+1))) + np.log(1/alpha) \
                                + np.logaddexp.reduce(-r)) - alpha*self.delta
-                # return -alpha*(np.log(1/(2**(N+1))) + r_max + \
-                #     np.logaddexp.reduce(-r/alpha - r_max)) - alpha*self.delta
 
             def part_2(alpha):
-                r = reward[:(2**N)*2:2]
-
+                r = reward[2:(2**N)*2+1:2]
+                if len(r) == 0: r = np.array([0])
                 return -alpha*(np.log(1/(2**N)) + np.log(1/alpha) \
                                + np.logaddexp.reduce(-r)) - alpha*self.delta
-            
-                # return -alpha*(np.log(1/(2**N)) + r_max + \
-                #     np.logaddexp.reduce(-r/alpha - r_max)) - alpha*self.delta
 
             def part_3(alpha):
-                r = np.roll(reward,1)[:(2**N)*2:2]
-                
+                r = np.roll(reward,1)[:(2**N)*2+1:2]
                 return -alpha*(np.log(1/(2**N)) + np.log(1/alpha) \
                                + np.logaddexp.reduce(-r)) - alpha*self.delta
-
-                # return -alpha*(np.log(1/(2**N)) + r_max + \
-                #     np.logaddexp.reduce(-r/alpha - r_max)) - alpha*self.delta
-
-
-            # part_1_ = lambda alpha : -alpha*(np.log(1/(2**(N+1))) + r_max + \
-            #     np.log(sum([np.exp(-reward[i]/alpha-r_max) for i in range(2**(N+1))]) + 1e-10)) - alpha*self.delta
-            # part_2_ = lambda alpha : -alpha*(np.log(1/(2**N)) + r_max + \
-            #     np.log(sum([np.exp(-reward[2*i]/alpha-r_max) for i in range(2**N)]) + 1e-10)) - alpha*self.delta
-            # part_3_ = lambda alpha : -alpha*(np.log(1/(2**N)) + r_max + \
-            #     np.log(sum([np.exp(-reward[2*i-1]/alpha-r_max) for i in range(2**N)]) + 1e-10)) - alpha*self.delta
 
             Delta_r = part_1(locate_maxima(lambda x : part_1(x), x0 = 1))
             Delta_r -= 1/2 * part_2(locate_maxima(lambda x : part_2(x), x0 = 1))
@@ -108,43 +75,26 @@ class robust_distributional_agent(rl.agent.ShallowAgent):
         
         def fDelta_q(N, state_):
             
-            # v_max = max([np.exp(-max([self.Q[s_, b] / 0.05 for b in self.env.A(s_)])) \
-            #                                                for s_ in state_])
-            
             def part_1(beta):
-                s_ = tuple(state_[:2**(N+1)])
-
+                s_ = tuple(state_[:2**(N+1)+1])
                 # Array of max Q values for each state in s_
                 Q_max = np.array([max([self.Q[s_i, b] for b in self.env.A(s_i)]) for s_i in s_])
 
                 return -beta*(np.log(1/(2**(N+1)))+np.log(1/beta)+np.logaddexp.reduce(-Q_max)) - beta*self.delta
 
-                # return -beta*(np.log(1/(2**N+1)) + v_max + \
-                #     np.logaddexp.reduce(-Q_max/beta)-v_max + 1e-10) - beta*self.delta
-            
             def part_2(beta):
-                s_ = tuple(state_[:(2**N)*2:2])
-
+                s_ = tuple(state_[2:(2**N)*2+1:2])
+                if len(s_) == 0: s_ = np.array([0])
                 Q_max = np.array([max([self.Q[s_i, b] for b in self.env.A(s_i)]) for s_i in s_])
 
                 return -beta*(np.log(1/(2**N))+np.log(1/beta)+np.logaddexp.reduce(-Q_max)) - beta*self.delta
 
-
-                # A_set = [tuple(self.env.A(i)) for i in s_]
-                # return -beta*(np.log(1/(2**N)) + v_max + \
-                #     np.logaddexp.reduce([-max([self.Q[s_[i], b] / beta for b in A]) for i, A in enumerate(A_set)])-v_max +1e-10) - beta*self.delta
-            
             def part_3(beta):
-                s_ = tuple(np.roll(state_,1)[:(2**N)*2:2])
-
+                s_ = tuple(state_[:(2**N)*2+1:2])
                 Q_max = np.array([max([self.Q[s_i, b] for b in self.env.A(s_i)]) for s_i in s_])
 
                 return -beta*(np.log(1/(2**N))+np.log(1/beta)+np.logaddexp.reduce(-Q_max)) - beta*self.delta
 
-                # A_set = [tuple(self.env.A(i)) for i in s_]
-                # return -beta*(np.log(1/(2**N)) + v_max + \
-                #     np.logaddexp.reduce([-max([self.Q[s_[i], b] / beta for b in A]) for i, A in enumerate(A_set)])-v_max +1e-10) - beta*self.delta
-            
             Delta_q = part_1(locate_maxima(lambda x : part_1(x), x0 = 1))
             Delta_q -= 1/2 * part_2(locate_maxima(lambda x : part_2(x), x0 = 1))
             Delta_q -= 1/2 * part_3(locate_maxima(lambda x : part_3(x), x0 = 1))
@@ -160,11 +110,11 @@ class robust_distributional_agent(rl.agent.ShallowAgent):
             for action in actions:
                 p = lambda n : self.epsilon*(1-self.epsilon)**n
 
-                max_p = 25 # <- No reason to sample for p(>25) since p(25) = 1.5e-8
-                prop_adjust = sum([p(i) for i in np.arange(0,max_p)])
-                N = np.random.choice(np.arange(0,max_p), 1, replace = False, p = [p(i)/prop_adjust for i in np.arange(0,max_p)])
-                N = N[0]
-                
+                max_p = 100
+                # prop_adjust = sum([p(i) for i in np.arange(0,max_p)])
+                N = np.random.choice(np.arange(0,max_p), 1, replace = True,
+                                     p = [p(i) for i in np.arange(0,max_p)])[0]
+                # print()
                 if(N >= 15): print("\n>>> N:", N, "| p(N) =", p(N), "| Action:", action, "| State:", state)
                 
                 samples = np.array([self.env.step(state, action) for _ in range(2**(N+1))])
@@ -180,16 +130,18 @@ class robust_distributional_agent(rl.agent.ShallowAgent):
                 
                 Q_[state,action] = (1-alpha_t)*self.Q[state, action] + alpha_t*T_rob_e
         
-        converged = True
-        # Check convergence
-        for sa, q in self.Q.items():
-            if abs(q - Q_[sa]) > self.tol:
-                converged = False
-                break
+        Q_diffs = []
+        for key in self.Q.keys():
+            Q_diffs.append(np.abs(self.Q[key]-Q_[key]))
+        distance = np.max(Q_diffs)
+        
+        if distance < self.tol:
+            print(">>> (CONVERGED) Diff Inf Norm:", distance)
+            return True
+        elif(self.t%100 == 0):
+            print(">>> Diff Inf Norm:", distance)
         
         self.Q = Q_
         
-        
-        if(converged): return True
         return False
     
