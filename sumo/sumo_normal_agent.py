@@ -2,6 +2,8 @@
 # TODO: ACTIONS!!! CAN COME AS NUMPY ARRAYS??? WTFFFF
 # TODO: MAKE THE WHOLE THING WORK IN CASE ACTIONS COME AS NUMPY ARRAYS AND NOT INTEGERS, THAT WOULD BE STUPIDDDD
 # TODO GRIDKEYS: Some way of adding variable fineness to the different grid keys
+    # Must be done in create_grid_keys
+    # Must change mult_dim og single_dim intepreter til at passe med forskellige fineness
 import numpy as np
 import torch
 from sumo import sumo_pp
@@ -18,10 +20,10 @@ import torch.optim as optim
 from IPython.display import clear_output
 import itertools
 from collections import defaultdict
+# TODO: Det der skal lægges til INdex af action skal ændres til at være sum(actions) hvis actions er en liste
 
-
-# SubSymbolic AI? Knowing the effect of action and just calcuting the noise instead of the transition probabilities
-def create_grid_keys(fineness, max_min=None, actions=1):
+# SubSymbolic AI? Knowing the effect of action and just calculating the noise instead of the transition probabilities
+def create_grid_keys(fineness, max_min, actions=1):
     """
     :param fineness: Number of grid points per dimension
     :param max_min: list of dim lists where each list contains [state_min, state_max] valueus
@@ -254,7 +256,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
     """
     Replay buffer more optimal for grid-based replay-buffering
     """
-    def __init__(self, obs_dim, size, batch_size, fineness, num_actions, state_max, state_min, tb=True):
+    def __init__(self, obs_dim, size, batch_size, fineness, num_actions, state_max=np.infty, state_min=-np.infty, tb=True):
         self.partitions = (fineness^obs_dim)*num_actions + 1*tb
         self.max_size = size*self.partitions # Max size per action
         self.max_partition_size = size
@@ -343,20 +345,6 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         assert len(pop_idxs) >= size # No point trying to sample if we don't have enough datapoints...
         idxs = np.random.choice(pop_idxs, size)
         return idxs
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
