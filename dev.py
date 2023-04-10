@@ -2,23 +2,31 @@ import itertools
 import numpy as np
 from typing import Dict, List, Tuple
 
-class TheCoolerList():
-    def __init__(self):
-        self.szs = [0] * 8
 
-    def __len__(self, idx:int=2):
-        return sum(self.szs)
-    def __getitem__(self, idx):
-        print(type(idx))
-        print("first", idx[0])
-        print("second", idx[1])
 
-ls = TheCoolerList()
+dim_1 = [0, 800]
 
-ls.szs[2] = 5
-ls.szs[1] = 5
-print(len(ls))
 
+
+
+
+# class TheCoolerList():
+#     def __init__(self):
+#         self.szs = [0] * 8
+#
+#     def __len__(self, idx:int=2):
+#         return sum(self.szs)
+#     def __getitem__(self, idx):
+#         print(type(idx))
+#         print("first", idx[0])
+#         print("second", idx[1])
+#
+# ls = TheCoolerList()
+#
+# ls.szs[2] = 5
+# ls.szs[1] = 5
+# print(len(ls))
+#
 
 
 # Husk at tif'je actions hertil det skal introduceres p[ en god m[de

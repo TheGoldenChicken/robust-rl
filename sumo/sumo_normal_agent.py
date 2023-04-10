@@ -58,6 +58,7 @@ def create_grid_keys(fineness, max_min, actions=1):
     # Should get [[state_dim_1_min,state_dim_1_max], [state_dim_2_min,state_dim_2_max]]
     # Dummy var - for testing purposes
 
+    # TODO: REMOVE THIS WHEN DONE TESTING
     max_min = [[-200, 200], [0, 600]]
 
     all_state_dim_lists = []
@@ -84,7 +85,7 @@ class SumoNormalAgent:
         self.env = env
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.max, self.min = max_min[0], max_min[1]
+        self.max, self.min = max_min[0], max_min[1] # TODO: fix how max_min is represented, see grid_keys
 
         self.grid_keys, self.grid_list = create_grid_keys(fineness)
         self.replay_buffer = TheCoolerReplayBuffer(state_dim, replay_buffer_size,batch_size=32, fineness=fineness,
@@ -532,10 +533,10 @@ class TheCoolerReplayBuffer(ReplayBuffer):
     """
     Replay buffer more optimal for grid-based replay-buffering
     """
-    def __init__(self, obs_dim, size, batch_size, fineness, num_actions, state_max=np.infty, state_min=-np.infty, tb=True):
+    def __init__(self, obs_dim, bin_size, batch_size, fineness, num_actions, state_max=np.infty, state_min=-np.infty, tb=True):
         self.partitions = (fineness^obs_dim)*num_actions + 1*tb
-        self.max_size = size*self.partitions # Max size per action
-        self.max_partition_size = size
+        self.max_size = bin_size*self.partitions # Max size per action
+        self.max_partition_size = bin_size
         self.state_max, self.state_min = state_max, state_min
         self.tb = tb # Trash-buffer, ensures that states out-of-scope are not thrown together with valuable states *in scope*
 
@@ -579,7 +580,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         :type done: object
         """
 
-        if self.tb and ((obs < self.state_min).any() and (obs > self.state_max).any()):
+        if self.tb and ((obs < self.state_min).any() or (obs > self.state_max).any()):
             idx = len(self.size) - 1 # The trash observation goes in the trash can
 
         # todo: remove shitty solution here, since right now, we only consider action arrays of single elements
