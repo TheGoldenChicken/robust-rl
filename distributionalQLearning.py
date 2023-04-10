@@ -27,7 +27,7 @@ def quadratic_to_gaus(A, b, c):
 
 def quadratic_approximation(X, y, beta = 1, alpha = 0):
     """
-    Approximate a quadratic function to a dataset using bayes inference.
+    Approximate a quadratic function to a dataset using bayesian inference.
     This function does not optimize the hyperparameters beta and alpha.
     Returns the parameter of a quadratic function.
 
