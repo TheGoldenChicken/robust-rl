@@ -1,7 +1,6 @@
 import numpy as np
 import itertools
 
-
 def create_grid_keys(fineness, max_min, actions=1):
     """
     :param fineness: Number of grid points per dimension
@@ -18,7 +17,8 @@ def create_grid_keys(fineness, max_min, actions=1):
     # Should get [[state_dim_1_min,state_dim_1_max], [state_dim_2_min,state_dim_2_max]]
     # Dummy var - for testing purposes
 
-    #max_min = [[-200, 200], [0, 600]]
+    # TODO: REMOVE THIS WHEN DONE TESTING
+    max_min = [[-200, 200], [0, 600]]
 
     all_state_dim_lists = []
     for state_dim in max_min:
@@ -36,9 +36,6 @@ def create_grid_keys(fineness, max_min, actions=1):
     all_combs = sorted(list(itertools.product(*all_state_dim_lists)))
 
     return np.array(all_combs), np.array(all_state_dim_lists)
-
-a, b = create_grid_keys(5, max_min=[[-1000,1000], [0, 500]])
-print(a)
 
 
 def single_dim_interpreter(idx, fineness, dim):
