@@ -1,5 +1,7 @@
 import numpy as np
 from typing import Dict, List, Tuple
+from sumo.sumo_utils import neighbours
+
 # TODO: CONSIDER MOVING GET_IDX TO THIS FUNCTION
 class ReplayBuffer:
     """A simple numpy replay buffer."""
@@ -12,7 +14,7 @@ class ReplayBuffer:
         self.done_buf = np.zeros(size, dtype=np.float32)
         self.max_size, self.batch_size = size, batch_size
         self.ptr, self.size, = 0, 0
-
+    
     def store(
         self,
         obs: np.ndarray,
@@ -47,15 +49,18 @@ class TheCoolerReplayBuffer(ReplayBuffer):
     Replay buffer more optimal for grid-based replay-buffering
     """
     def __init__(self, obs_dim, bin_size, batch_size, fineness, num_actions, state_max=np.infty, state_min=-np.infty, tb=True):
-        self.partitions = (fineness^obs_dim)*num_actions + 1*tb
-        self.max_size = bin_size*self.partitions # Max size per action
-        self.max_partition_size = bin_size
-        self.state_max, self.state_min = state_max, state_min
+        self.bins = (fineness**obs_dim)*num_actions + 1*tb
+        self.size_per_action = (fineness**obs_dim)*bin_size # Max size per action
+        self.total_size = bin_size*self.bins
+        self.max_bin_size = bin_size
+        self.state_max, self.state_min = state_max, state_min # Dim-wise max, min [max_0, max_1], [min_0, min_1]
         self.tb = tb # Trash-buffer, ensures that states out-of-scope are not thrown together with valuable states *in scope*
+        self.fineness = fineness
 
         # Have to call super here so ptr won't get replaced...
-        super().__init__(obs_dim, self.max_size, batch_size)
-        self.ptr, self.size = [0] * self.partitions, [0] * self.partitions
+        super().__init__(obs_dim, self.total_size, batch_size)
+        self.ptr, self.size = [0] * self.bins, [0] * self.bins
+        self.ptr, self.size = [0] * self.bins, [0] * self.bins
 
     def __getitem__(self, idxs) -> Dict[str, np.ndarray]:
         return dict(obs=self.obs_buf[idxs],
@@ -65,7 +70,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
                     done=self.obs_buf[idxs])
     def __len__(self):
         """
-        Returns total size across all partitions
+        Returns total size across all bins
         """
         return sum(self.size)
 
@@ -76,6 +81,33 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         """
         return self.size[idx]
 
+
+    def get_bin_idx(self, s, single_dim=False):
+        """
+        Given a location, return the bin in which to place it
+        :param s: Some kind of iterable representing the state
+        :param single_dim: basically whether or not you use it to store
+        :return: an int if not single_dim, otherwise a list
+        """
+        # TODO: MOVE THIS TO A SELF VARIABLE?
+        widths = [i / self.fineness for i in self.state_max]
+        idxs = [widths[i] // s_val for i, s_val in enumerate(s)]
+
+        if single_dim:
+            idxs = sum([r*self.fineness**i for i, r in enumerate(idxs)])
+
+        return idxs
+
+    def get_neighbour_bins(self, P, num_neighbours):
+        """
+        Gets all neighbours bins to a certain bin with multi index
+        """
+        neighbours_multi_index = neighbours(P=P, neighbours=num_neighbours, maxx=self.fineness-1, minn=0)
+
+        neighbours_single_idx = [sum([r*self.fineness**i for i, r in enumerate(current_neighbour)])
+                                 for current_neighbour in neighbours_multi_index]
+
+        return neighbours_single_idx
     def store(
         self,
         obs: np.ndarray,
@@ -87,7 +119,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         ):
         """
         Store new observation
-        Idx here refers to which partition to place in (based on current observation location)
+        Idx here refers to which bin to place in (based on current observation location)
         :type idx: int
         :param obs:
         :type done: object
@@ -95,33 +127,34 @@ class TheCoolerReplayBuffer(ReplayBuffer):
 
         if self.tb and ((obs < self.state_min).any() or (obs > self.state_max).any()):
             idx = len(self.size) - 1 # The trash observation goes in the trash can
+            teh_idx = idx * self.max_bin_size + self.ptr[idx] # We don't care what action it is...
 
-        # todo: remove shitty solution here, since right now, we only consider action arrays of single elements
-        action = act.tolist().index(1)
-        # idx to store at, based
-        # TODO: Make a lambda out of this?
-        teh_idx = idx * self.max_partition_size + action * self.max_size + self.ptr[idx]
+        else:
+            # TODO: Make a lambda out of this?
+            teh_idx = idx * self.max_bin_size + act * self.size_per_action + self.ptr[idx]
+
 
         self.obs_buf[teh_idx] = obs
-        self.next_obs_buf[idx] = next_obs
-        self.acts_buf[idx] = act
-        self.rews_buf[idx] = rew
-        self.done_buf[idx] = done
-        self.ptr[idx] = (self.ptr[idx] + 1) % self.max_partition_size
-        self.size[idx] = min(self.size[idx] + 1, self.max_partition_size)
+        self.next_obs_buf[teh_idx] = next_obs
+        self.acts_buf[teh_idx] = act
+        self.rews_buf[teh_idx] = rew
+        self.done_buf[teh_idx] = done
+        self.ptr[idx] = (self.ptr[idx] + 1) % self.max_bin_size
+        self.size[idx] = min(self.size[idx] + 1, self.max_bin_size)
 
 
-    def create_partition_idxs(self, idx: list, action: int=0) -> list:
+    def create_bin_idxs(self, idx: list, action: int=0) -> list:
         """
-        Creates indices to grab from memory based on partition indices
-        :param idx: List of indices corresponding to which parititons to retrieve from
+        Creates indices to grab all datapoints from bin based on indices of bins
+        :param idx: List of indices corresponding to which bins to retrieve from
         :param action: Action to grab memory based on, each action grabs indices one self.max_size further ahead
         :return: list of indices to be used in __getitem__
         """
 
-        marker = self.max_partition_size + action*self.max_size
+        marker = action*self.size_per_action
         # Don't worry about the list comprehension outside, that's just to flatten the bastard
-        idxs = [item for sublist in [list(range(i * marker, i * marker + self.size[idx])) for i in idx]
+        idxs = [item for sublist in
+                [list(range(i * self.max_bin_size + marker, i * self.max_bin_size + marker + self.size[i])) for i in idx]
                 for item in sublist]
         return idxs
 
@@ -137,8 +170,8 @@ class TheCoolerReplayBuffer(ReplayBuffer):
             size=self.batch_size
 
         # Get all populated indices in 1-d memory array
-        pop_idxs = [list(range(i*self.max_partition_size, i*self.max_partition_size+self.size[i]))
-                for i in range(self.partitions)]
+        pop_idxs = [list(range(i*self.max_bin_size, i*self.max_bin_size+self.size[i]))
+                for i in range(self.bins)]
         assert len(pop_idxs) >= size # No point trying to sample if we don't have enough datapoints...
         idxs = np.random.choice(pop_idxs, size)
         return idxs
