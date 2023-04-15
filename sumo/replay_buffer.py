@@ -3,6 +3,7 @@ from typing import Dict, List, Tuple
 from sumo.sumo_utils import neighbours
 
 # TODO: CONSIDER MOVING GET_IDX TO THIS FUNCTION
+# TODO: FIX POTENTIALLY BIG PROBLEM WITH REPLAY BUFFER NOT CORRECTLY WORKING FOR FINENESS = MAX, MIN DIM
 class ReplayBuffer:
     """A simple numpy replay buffer."""
 
@@ -42,6 +43,37 @@ class ReplayBuffer:
     def __len__(self) -> int:
         return self.size
 
+class TheSlightlyCoolerReplayBuffer(ReplayBuffer):
+
+    def __init__(self, obs_dim: int, size: int, batch_size: int = 32):
+        super().__init__(obs_dim, size, batch_size)
+
+    def sample_batch(self, all=True, action=None) -> Dict[str, np.ndarray]:
+        if not all:
+            idxs = np.random.choice(self.size, size=self.batch_size, replace=False)
+            return dict(obs=self.obs_buf[idxs],
+                        next_obs=self.next_obs_buf[idxs],
+                        acts=self.acts_buf[idxs],
+                        rews=self.rews_buf[idxs],
+                        done=self.done_buf[idxs])
+
+        if action is not None:
+            return dict(obs=self.obs_buf[:self.size],
+                        next_obs=self.next_obs_buf[:self.size],
+                        acts=self.acts_buf[:self.size],
+                        rews=self.rews_buf[:self.size],
+                        done=self.done_buf[:self.size])
+
+        else:
+            # Get the observations with the same action
+            same_action = self.acts_buf[:self.size] == action
+            return dict(obs=self.obs_buf[same_action],
+                        next_obs=self.next_obs_buf[same_action],
+                        acts=self.acts_buf[same_action],
+                        rews=self.rews_buf[same_action],
+                        done=self.done_buf[same_action])
+
+
 class TheCoolerReplayBuffer(ReplayBuffer):
     # TODO: Make functionality for more actions... You can pretty much just extend the 1-d array
     #  with one extra 1-d array for each action, same length as the whole shebang
@@ -49,6 +81,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
     Replay buffer more optimal for grid-based replay-buffering
     """
     def __init__(self, obs_dim, bin_size, batch_size, fineness, num_actions, state_max=np.infty, state_min=-np.infty, tb=True):
+        self.bins_per_action = (fineness**obs_dim)
         self.bins = (fineness**obs_dim)*num_actions + 1*tb
         self.size_per_action = (fineness**obs_dim)*bin_size # Max size per action
         self.total_size = bin_size*self.bins
@@ -82,7 +115,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         return self.size[idx]
 
 
-    def get_bin_idx(self, s, single_dim=False):
+    def get_bin_idx(self, s, single_dim=False, test=False):
         """
         Given a location, return the bin in which to place it
         :param s: Some kind of iterable representing the state
@@ -91,10 +124,24 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         """
         # TODO: MOVE THIS TO A SELF VARIABLE?
         widths = [i / self.fineness for i in self.state_max]
-        idxs = [widths[i] // s_val for i, s_val in enumerate(s)]
-
+        idxs = [int(s_val // widths[i]) for i, s_val in enumerate(s)]
         if single_dim:
             idxs = sum([r*self.fineness**i for i, r in enumerate(idxs)])
+
+        s = np.array(s)
+        if self.tb and ((s <= self.state_min).any() or (s >= self.state_max).any()):
+            idxs = len(self.size) - 1 # The trash observation goes in the trash can
+
+        if test:
+            widths = [i / self.fineness for i in self.state_max]
+            idxs = [int(s_val // widths[i]) for i, s_val in enumerate(s)]
+            if single_dim:
+                idxs = sum([r*self.fineness**i for i, r in enumerate(idxs)])
+
+            s = np.array(s)
+            if self.tb and ((s <= self.state_min).any() or (s >= self.state_max).any()):
+                idxs = len(self.size) - 1 # The trash observation goes in the trash can
+
 
         return idxs
 
@@ -115,7 +162,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         rew: float,
         next_obs: np.ndarray,
         done: bool,
-        idx: int=0 # Gotta set default value here so PyCharm doesn't shit itself
+        idx: int=0, # Gotta set default value here so PyCharm doesn't shit itself
         ):
         """
         Store new observation
@@ -125,14 +172,19 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         :type done: object
         """
 
-        if self.tb and ((obs < self.state_min).any() or (obs > self.state_max).any()):
+
+        # TODO: Since this is in both store and get_bin_idxs, perhaps move to only have it one of places
+        if self.tb and ((obs <= self.state_min).any() or (obs >= self.state_max).any()):
             idx = len(self.size) - 1 # The trash observation goes in the trash can
             teh_idx = idx * self.max_bin_size + self.ptr[idx] # We don't care what action it is...
 
         else:
             # TODO: Make a lambda out of this?
-            teh_idx = idx * self.max_bin_size + act * self.size_per_action + self.ptr[idx]
 
+            idx += act * self.bins_per_action
+            teh_idx = idx * self.max_bin_size + self.ptr[idx]
+
+        trash_obs = self.rews_buf[teh_idx] != 0
 
         self.obs_buf[teh_idx] = obs
         self.next_obs_buf[teh_idx] = next_obs
@@ -142,6 +194,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         self.ptr[idx] = (self.ptr[idx] + 1) % self.max_bin_size
         self.size[idx] = min(self.size[idx] + 1, self.max_bin_size)
 
+        return trash_obs
 
     def create_bin_idxs(self, idx: list, action: int=0) -> list:
         """

@@ -43,6 +43,7 @@ class Network(nn.Module):
         return self.layers(x)
 
 
+
 class SumoNormalAgent:
     # TODO: SWAP .INDEX FROM GRID_LIST TO GRID_KEYS (THEY ARE SORTED!!)
     def __init__(self, fineness, env, state_dim, action_dim, replay_buffer_size, max_min, epsilon_decay, max_epsilon=1.0, min_epsilon=0.1, gamma=0.99):
