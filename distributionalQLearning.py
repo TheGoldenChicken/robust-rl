@@ -1,5 +1,7 @@
+#%%
 import numpy as np
 from scipy.stats import multivariate_normal as normal
+from scipy.optimize import minimize, Bounds
 
 def quadratic_to_gaus(A, b, c):
     """
@@ -104,7 +106,7 @@ def int_two_exp_quadratic_product(A1, b1, c1, A2, b2, c2):
     mu2, Sigma2, k2, _ = quadratic_to_gaus(A2, b2, c2)
 
     # Compute the integral of the product of two gaussian
-    integral = k1*k2*normal(mu1, mu2, Sigma1+Sigma2)
+    integral = k1*k2*normal.pdf(mu1, mu2, Sigma1+Sigma2)
 
     return integral
 
@@ -113,6 +115,11 @@ def pre_supp_robust_estimator(mu, Sigma, X, y, beta, delta = 1):
     Computes values inside the suppremum for the robust estimator.
 
     :param: np.array mu: Mean of the gaussian function
+    :param: np.array Sigma: Covariance of the gaussian function
+    :param np.array X: Explanatory variable for the state value function (p)
+    :param np.array y: Response variable for the state value function (p)
+    :param float beta: Hyperparameter
+    :param float delta: Hyperparameter
     """
 
     # NOTE: Minus is missing (-y/beta) but the matrix becomes non-semi-definite.
@@ -121,6 +128,32 @@ def pre_supp_robust_estimator(mu, Sigma, X, y, beta, delta = 1):
     A, b, c = quadratic_approximation(X, y/beta)
     area = int_gaus_exp_quadratic_product(mu, Sigma, 1, A, b, c)
     return -beta*np.log(area)-beta*delta
+
+def robust_estimator(X_p, y_p, X_v, y_v, r, delta, gamma):
+    """
+    Estimate the robust_estimator using bayes inference to estimate, gaussian- and quadratic approximations.
+    
+    :param np.array X_p: Explanatory variable for the transition function, prev_obs and action: (s,a)
+    :param np.array y_p: Response variable for the transition function, next_obs: s'
+    :param np.array X_v: Explanatory variable for the state value function, next_obs: s'
+    :param np.array y_v: Response variable for the state value function, value_function v(s')
+    :param float delta: Max Kullback-Leibler divergence distance
+    :param float gamma: Discount factor
+    """
+    suppremum = None
+    mu = np.mean(y_p, axis=0)
+    Sigma = np.cov(y_p.T)
+
+    # Compute the suppremum for beta >= 0 of pre_supp_robust_estimator
+    f = lambda beta: pre_supp_robust_estimator(mu, Sigma, X_v, y_v, beta, delta)
+    bounds = Bounds(1e-03, np.inf)
+
+    # NOTE: Minimize and not maximize is used. This results in a infimum.
+    # NOTE: CHECK IF THIS IS CORRECT by using real data.
+    suppremum = minimize(fun = f, x0 = 1, method='nelder-mead', options={'xatol': 1e-3}, bounds=bounds)
+
+    return r + gamma*suppremum.fun
+
 
 """
 If run as main script then toy examples are run.
@@ -185,8 +218,5 @@ if __name__ == "__main__":
     plt.show()
 
 
-    f = lambda beta : pre_supp_robust_estimator(mu_2d, Sigma_2d, X_2d, y_2d, beta)
+    print(robust_estimator(X_1d, y_1d, X_1d, y_1d, 0, 0.1, 0.9))
 
-    plt.plot(np.linspace(0.1,10,10000), np.array([f(beta) for beta in np.linspace(0.1,10,10000)]))
-
-    # %%

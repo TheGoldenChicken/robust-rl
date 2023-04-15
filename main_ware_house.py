@@ -1,7 +1,8 @@
 #%% Imports
 import rl.manager
 from ware_house import ware_house
-from agent.robust_distributional_agent import robust_distributional_agent
+# from agent.robust_distributional_agent import robust_distributional_agent
+from agent.robust_distributional_agent_2 import robust_distributional_agent
 from agent.replay_agent import replay_agent
 import numpy as np
 import matplotlib.pyplot as plt
@@ -15,7 +16,7 @@ env = ware_house.Env(playerOptions = None)
 Q = []
 
 for i in range(5):
-    agent = robust_distributional_agent(env)
+    agent = robust_distributional_agent(env, tol = 0.01)
     manager = rl.manager.Manager(agent, render = True)
     print(f"iteration: {i}: " + str(manager.run(iterations = 10000)))
     print("total samples: " + str(agent.total_samples))
