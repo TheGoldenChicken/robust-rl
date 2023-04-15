@@ -1,19 +1,36 @@
-# import itertools
-# import numpy as np
+import itertools
+import numpy as np
+from typing import Dict, List, Tuple
 
 
-class the_cooler_list(list):
-    def __init__(self):
-        super().__init__()
 
-    def __getitem__(self, idx):
-        print(type(idx))
-        print("first", idx[0])
-        print("second", idx[1])
+dim_1 = [0, 800]
 
-ls = the_cooler_list()
+
+
+
+
+# class TheCoolerList():
+#     def __init__(self):
+#         self.szs = [0] * 8
+#
+#     def __len__(self, idx:int=2):
+#         return sum(self.szs)
+#     def __getitem__(self, idx):
+#         print(type(idx))
+#         print("first", idx[0])
+#         print("second", idx[1])
+#
+# ls = TheCoolerList()
+#
+# ls.szs[2] = 5
+# ls.szs[1] = 5
+# print(len(ls))
+#
+
+
 # Husk at tif'je actions hertil det skal introduceres p[ en god m[de
-idxs = [list(range(idx*max_partition_length + action*: idx*max_partition_length+size[idx])) for i in idxs]
+# idxs = [list(range(idx*max_partition_length + action*: idx*max_partition_length+size[idx])) for i in idxs]
 #
 # return dict(obs=self.obs_buf[idx * self.max_partition_size: idx * self.max_partition_size + self.size[idx]],
 #             next_obs=self.next_obs_buf[idx * self.max_partition_size: idx * self.max_partition_size + self.size[idx]],
