@@ -38,7 +38,7 @@ class Env(rl.env.DiscreteEnv):
         
         next_state = state + actions[0] - min(demand, state + actions[0])
             
-        reward = -cost
+        reward = cost
         
         return int(next_state), int(reward)
     
