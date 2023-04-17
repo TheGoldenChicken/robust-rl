@@ -4,6 +4,7 @@ from sumo.sumo_utils import neighbours
 
 # TODO: CONSIDER MOVING GET_IDX TO THIS FUNCTION
 # TODO: FIX POTENTIALLY BIG PROBLEM WITH REPLAY BUFFER NOT CORRECTLY WORKING FOR FINENESS = MAX, MIN DIM
+# Fix get_sample_idxs_from_bin potentially getting no specific action
 class ReplayBuffer:
     """A simple numpy replay buffer."""
 
@@ -15,7 +16,7 @@ class ReplayBuffer:
         self.done_buf = np.zeros(size, dtype=np.float32)
         self.max_size, self.batch_size = size, batch_size
         self.ptr, self.size, = 0, 0
-    
+
     def store(
         self,
         obs: np.ndarray,
@@ -95,6 +96,8 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         self.ptr, self.size = [0] * self.bins, [0] * self.bins
         self.ptr, self.size = [0] * self.bins, [0] * self.bins
 
+        self.num_actions = num_actions
+
     def __getitem__(self, idxs) -> Dict[str, np.ndarray]:
         return dict(obs=self.obs_buf[idxs],
                     next_obs=self.next_obs_buf[idxs],
@@ -114,12 +117,53 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         """
         return self.size[idx]
 
+    def sample_from_scratch(self, K, nn, specific_action=None, distance='Euclidian'):
+        """
+        The whole sampling shebang based on a random point in the current dataset
+        :param K: K nearest neighbours to sample based on (basically a batch_size
+        :param nn: number-neighbours how many grids to look in larger -> slower + more accurate approximations
+        :param specific_action: the action to sample based on, if not chosen, chooses random action
+        :param distance: which distance measure to use when getting KNN
+        :return:
+        """
+
+        if specific_action is None:
+            specific_action = np.random.randint(0,self.num_actions)
+
+        current_sample = self[self.sample_randomly_idxs(size=1)] # Sample to calc KNN from
+        current_bin_idx = self.get_bin_idx(current_sample['obs'], single_dim=False) # Idx of bin of current_sample
+        neighbour_bin_idxs = self.get_neighbour_bins(current_bin_idx, neighbours=nn) # Idx of neighbour bins of current_sample
+        samples = self[self.get_sample_idxs_from_bin(neighbour_bin_idxs, action=specific_action)] # Samples from neighbour_bins
+
+        KNN_samples = self.get_knn( current_sample=current_sample, samples=samples, K=K, distance=distance)
+
+        return KNN_samples
+
+    def get_knn(self, current_sample: dict, samples: dict, K: int, distance='Euclidian') -> dict:
+        """
+        Given a current sample and bunch of other samples, get K-nearest samples from bunch of other samples
+        Includes current sample
+        :param current_sample: Current sample to calculate distance from
+        :param samples: Other samples to find K nearest neighbours from
+        :param K: How many neighbours to find
+        :param distance: Distance measure to use
+        :return:
+        """
+
+        if current_sample is None:
+            current_sample = np.random.choice(samples['obs'], 1)
+
+        dists = [np.linalg.norm(current_sample, x) for x in samples['obs']]
+        idxs = np.argpartition(dists, K)[:K]
+        samples = {r: i[idxs] for r, i in samples.items()}
+
+        return samples
 
     def get_bin_idx(self, s, single_dim=False, test=False):
         """
         Given a location, return the bin in which to place it
         :param s: Some kind of iterable representing the state
-        :param single_dim: basically whether or not you use it to store
+        :param single_dim: basically whether or not you use it to store TRUE IF YOU'RE STORIN'
         :return: an int if not single_dim, otherwise a list
         """
         # TODO: MOVE THIS TO A SELF VARIABLE?
@@ -132,6 +176,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         if self.tb and ((s <= self.state_min).any() or (s >= self.state_max).any()):
             idxs = len(self.size) - 1 # The trash observation goes in the trash can
 
+        # TODO: REMOVE THIS WHEN DONE TESTING
         if test:
             widths = [i / self.fineness for i in self.state_max]
             idxs = [int(s_val // widths[i]) for i, s_val in enumerate(s)]
@@ -155,23 +200,20 @@ class TheCoolerReplayBuffer(ReplayBuffer):
                                  for current_neighbour in neighbours_multi_index]
 
         return neighbours_single_idx
-    def store(
-        self,
-        obs: np.ndarray,
-        act: np.ndarray,
-        rew: float,
-        next_obs: np.ndarray,
-        done: bool,
-        idx: int=0, # Gotta set default value here so PyCharm doesn't shit itself
-        ):
+
+    def store(self, obs: np.ndarray, act: np.ndarray, rew: float, next_obs: np.ndarray, done: bool,
+              idx=None, # Gotta set default value here so PyCharm doesn't shit itself
+              ):
         """
         Store new observation
         Idx here refers to which bin to place in (based on current observation location)
-        :type idx: int
+        :type idx: int or None
         :param obs:
         :type done: object
         """
 
+        if obs is None:
+            idx = self.get_bin_idx(obs, single_dim=True)
 
         # TODO: Since this is in both store and get_bin_idxs, perhaps move to only have it one of places
         if self.tb and ((obs <= self.state_min).any() or (obs >= self.state_max).any()):
@@ -180,10 +222,10 @@ class TheCoolerReplayBuffer(ReplayBuffer):
 
         else:
             # TODO: Make a lambda out of this?
-
             idx += act * self.bins_per_action
             teh_idx = idx * self.max_bin_size + self.ptr[idx]
-
+        
+        # Trahs_obs for testing
         trash_obs = self.rews_buf[teh_idx] != 0
 
         self.obs_buf[teh_idx] = obs
@@ -193,10 +235,11 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         self.done_buf[teh_idx] = done
         self.ptr[idx] = (self.ptr[idx] + 1) % self.max_bin_size
         self.size[idx] = min(self.size[idx] + 1, self.max_bin_size)
-
+        
+        # Only returned for testing purposes
         return trash_obs
 
-    def create_bin_idxs(self, idx: list, action: int=0) -> list:
+    def get_sample_idxs_from_bin(self, idx: list, action: int=0) -> list:
         """
         Creates indices to grab all datapoints from bin based on indices of bins
         :param idx: List of indices corresponding to which bins to retrieve from
@@ -210,7 +253,6 @@ class TheCoolerReplayBuffer(ReplayBuffer):
                 [list(range(i * self.max_bin_size + marker, i * self.max_bin_size + marker + self.size[i])) for i in idx]
                 for item in sublist]
         return idxs
-
 
     def sample_randomly_idxs(self, size=None):
         """

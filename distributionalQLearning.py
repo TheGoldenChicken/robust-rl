@@ -74,7 +74,7 @@ def int_gaus_exp_quadratic_product(mu, Sigma, k, A, b, c):
     :param np.array c: Coefficient of quadratic function
     """
     
-    # Convert the sqaured function to a gaussian function
+    # Convert the squared function to a gaussian function
     mu_, Sigma_, k_, _ = quadratic_to_gaus(A, b, c)
 
     # The product of two gaussian functions is a gaussian function
