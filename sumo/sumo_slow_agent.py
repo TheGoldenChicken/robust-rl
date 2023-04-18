@@ -142,9 +142,10 @@ class SumoSlowAgent:
 
     def update_model(self) -> torch.Tensor:
         """Update the model by gradient descent."""
+        k = 100
         important_sample = self.memory.sample_batch(all=False)
         samples = self.memory.sample_batch(action=important_sample['acts'])
-        indices = self.get_KNN(important_sample['obs'], samples['obs'], K=100)
+        indices = self.get_KNN(important_sample['obs'], samples['obs'], K=k)[:k]
         samples = {i: r[indices] for i, r in samples.items()}
 
         loss = self._compute_dqn_loss(samples)
@@ -245,9 +246,10 @@ class SumoSlowAgent:
         done = torch.FloatTensor(samples["done"].reshape(-1, 1)).to(device)
         # TODO: CHECK IF V(S) ESTIMATE IS BASED ON CURRENT OR NEXT STATE
         Q_vals = self.dqn(state) # Should all have the same action
-        robust_estimator = distributionalQLearning.robust_estimator(X_p=state, y_p=next_state, X_v=next_state,
-                                                 y_v=Q_vals.max(dim=1, keepdim=True)[0].detach(),
-                                                 r=reward, delta=0.5, gamma=self.gamma)
+        robust_estimator = distributionalQLearning.robust_estimator(X_p=samples['obs'], y_p=samples['next_obs'],
+                                                                    X_v=samples['next_obs'],
+                                                 y_v=Q_vals.max(dim=1, keepdim=True)[0].detach().cpu().numpy(),
+                                                 r=samples['rews'].reshape(-1,1), delta=0.5, gamma=self.gamma)
         mask = 1 - done # Remove effect from those that are done
         curr_q_value = Q_vals.gather(1, action)
 
