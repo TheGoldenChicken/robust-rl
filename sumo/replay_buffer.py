@@ -212,7 +212,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         :type done: object
         """
 
-        if obs is None:
+        if idx is None:
             idx = self.get_bin_idx(obs, single_dim=True)
 
         # TODO: Since this is in both store and get_bin_idxs, perhaps move to only have it one of places
