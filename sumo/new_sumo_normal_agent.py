@@ -8,7 +8,7 @@
 # TODO: Det der skal lægges til INdex af action skal ændres til at være sum(actions) hvis actions er en liste
 
 
-# from sumo import sumo_pp
+from sumo import sumo_pp
 import os
 from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
@@ -90,7 +90,7 @@ class SumoNormalAgent:
         """Select an action from the input state."""
         # epsilon greedy policy
         if self.epsilon > np.random.random():
-            selected_action = random.randint(0, self.action_dim)
+            selected_action = random.randint(0, self.action_dim-1) # Why is this not inclusive, exclusive??? Stupid
         else:
             selected_action = self.dqn(
                 torch.FloatTensor(state).to(self.device)
@@ -167,8 +167,8 @@ class SumoNormalAgent:
                 epsilons.append(self.epsilon)
 
             # plotting
-            if frame_idx % plotting_interval == 0:
-                self._plot(frame_idx, scores, losses, epsilons)
+            # if frame_idx % plotting_interval == 0:
+            #     self._plot(frame_idx, scores, losses, epsilons)
 
         self.env.close()
 
@@ -199,50 +199,83 @@ class SumoNormalAgent:
 
     def _compute_dqn_loss(self, samples: Dict[str, np.ndarray]) -> torch.Tensor:
         # TODO: Do this for each action, we don't wanna
-        # TODO: CONSIDER WHETHER WE CAN ACTUALLY TRAIN ONLINE VS OFFLINE...
+        # TODO: MAKE ROBUST ESTIMATOR WORK WITH TENSORS...
 
         device = self.device  # for shortening the following lines
-        state = torch.FloatTensor(samples["obs"]).to(device)
-        next_state = torch.FloatTensor(samples["next_obs"]).to(device)
+        state = samples["obs"]
+        next_state = samples["next_obs"]
         action = torch.LongTensor(samples["acts"].reshape(-1, 1)).to(device)
         reward = torch.FloatTensor(samples["rews"].reshape(-1, 1)).to(device)
         done = torch.FloatTensor(samples["done"].reshape(-1, 1)).to(device)
         # TODO: CHECK IF V(S) ESTIMATE IS BASED ON CURRENT OR NEXT STATE
-        Q_vals = self.dqn(state) # Should all have the same action
-        robust_estimator = distributionalQLearning.robust_estimator(X_p=samples['obs'], y_p=samples['next_obs'],
-                                                                    X_v=samples['next_obs'],
-                                                 y_v=Q_vals.max(dim=1, keepdim=True)[0].detach().cpu().numpy(),
-                                                 r=samples['rews'].reshape(-1,1), delta=0.5, gamma=self.gamma)
+        Q_vals = self.dqn(torch.FloatTensor(state).to(device)) # Should all have the same action
+        current_q_value = Q_vals.gather(1, action)
+        Q_vals = Q_vals.max(dim=1, keepdim=True)[0].detach().cpu().numpy()
+
+        # robust_estimator = distributionalQLearning.robust_estimator(X_p=samples['obs'], y_p=samples['next_obs'],
+        #                                                             X_v=samples['next_obs'], y_v=Q_vals,
+        #                                                             delta=0.5, gamma=self.gamma)
+
         mask = 1 - done # Remove effect from those that are done
         curr_q_value = Q_vals.gather(1, action)
 
         # calculate dqn loss
-        loss = F.smooth_l1_loss(curr_q_value, robust_estimator)
+        loss = F.smooth_l1_loss(curr_q_value, current_q_value)
 
         return loss
 
-    def _target_hard_update(self):
-        """Hard update: target <- local."""
-        self.dqn_target.load_state_dict(self.dqn.state_dict())
 
-    def _plot(
-            self,
-            frame_idx: int,
-            scores: List[float],
-            losses: List[float],
-            epsilons: List[float],
-    ):
-        """Plot the training progresses."""
-        clear_output(True)
-        plt.figure(figsize=(20, 5))
-        plt.subplot(131)
-        plt.title('frame %s. score: %s' % (frame_idx, np.mean(scores[-10:])))
-        plt.plot(scores)
-        plt.subplot(132)
-        plt.title('loss')
-        plt.plot(losses)
-        plt.subplot(133)
-        plt.title('epsilons')
-        plt.plot(epsilons)
-        plt.show()
+    # def _plot(
+    #         self,
+    #         frame_idx: int,
+    #         scores: List[float],
+    #         losses: List[float],
+    #         epsilons: List[float],
+    # ):
+    #     """Plot the training progresses."""
+    #     clear_output(True)
+    #     plt.figure(figsize=(20, 5))
+    #     plt.subplot(131)
+    #     plt.title('frame %s. score: %s' % (frame_idx, np.mean(scores[-10:])))
+    #     plt.plot(scores)
+    #     plt.subplot(132)
+    #     plt.title('loss')
+    #     plt.plot(losses)
+    #     plt.subplot(133)
+    #     plt.title('epsilons')
+    #     plt.plot(epsilons)
+    #     plt.show()
 
+if __name__ == "__main__":
+
+    # environment
+    env = sumo_pp.SumoPPEnv(line_length=500)
+
+    seed = 777
+
+
+    def seed_torch(seed):
+        torch.manual_seed(seed)
+        if torch.backends.cudnn.enabled:
+            torch.backends.cudnn.benchmark = False
+            torch.backends.cudnn.deterministic = True
+
+
+    np.random.seed(seed)
+    seed_torch(seed)
+
+    num_frames = 1000
+
+    # parameters
+    fineness = 100
+    state_dim = 1
+    action_dim = 3
+    batch_size = 64
+    replay_buffer_size = 500
+    max_min = [[500],[0]]
+    epsilon_decay = 1/2000
+
+    agent = SumoNormalAgent(fineness=fineness, env=env, state_dim=state_dim, action_dim=action_dim, batch_size=batch_size,
+                            replay_buffer_size=replay_buffer_size, max_min=max_min, epsilon_decay=epsilon_decay)
+
+    agent.train(num_frames)

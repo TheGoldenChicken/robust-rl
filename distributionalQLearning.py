@@ -90,7 +90,7 @@ def pre_sub_robust_estimator_prime(X_p,y_p,X_v,y_v,delta,gamma, tol = 1e-3):
                           pre_sub_robust_estimator(X_p,y_p,X_v,y_v,delta,gamma)(beta-tol))/ \
                           (2*tol)
 
-def robust_estimator(X_p,y_p,X_v,y_v,delta,gamma):
+def robust_estimator(X_p, y_p, X_v, y_v, delta, gamma):
     """
     X_p: Samples (s,a) corresponding to transistions.
     y_p: Transision probability p(s'|s,a)

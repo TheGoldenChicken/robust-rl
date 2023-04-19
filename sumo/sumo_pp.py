@@ -73,10 +73,11 @@ class SumoPPEnv:
         else:
             done = False
 
-        return self.sumo_position, reward, done, 'derp' # Final value is dummy for working with gym envs
+        return np.array([self.sumo_position]), reward, done, 'derp' # Final value is dummy for working with gym envs
 
     def reset(self):
         self.sumo_position = self.start_position
+        return np.array([self.sumo_position])
 
     def init_render(self):
         self.display = pygame.display.set_mode((self.width, self.height))

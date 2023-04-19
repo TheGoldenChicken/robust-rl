@@ -246,11 +246,16 @@ class SumoSlowAgent:
         done = torch.FloatTensor(samples["done"].reshape(-1, 1)).to(device)
         # TODO: CHECK IF V(S) ESTIMATE IS BASED ON CURRENT OR NEXT STATE
         Q_vals = self.dqn(state) # Should all have the same action
-        robust_estimator = distributionalQLearning.robust_estimator(X_p=samples['obs'], y_p=samples['next_obs'],
-                                                                    X_v=samples['next_obs'],
-                                                 y_v=Q_vals.max(dim=1, keepdim=True)[0].detach().cpu().numpy(),
-                                                 r=samples['rews'].reshape(-1,1), delta=0.5, gamma=self.gamma)
+
+        # robust_estimator = distributionalQLearning.robust_estimator(X_p=samples['obs'], y_p=samples['next_obs'],
+        #                                                             X_v=samples['next_obs'],
+        #                                          y_v=Q_vals.max(dim=1, keepdim=True)[0].detach().cpu().numpy(),
+        #                                         delta=0.5, gamma=self.gamma)
+
         mask = 1 - done # Remove effect from those that are done
+        robust_estimator = 5 # Dummy value
+        robust_estimator = reward + self.gamma * robust_estimator * mask
+
         curr_q_value = Q_vals.gather(1, action)
 
         # calculate dqn loss #TODO: CHECK WHY WE USE SMOOTH_L1_LOSS
