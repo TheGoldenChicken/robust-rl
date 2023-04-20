@@ -262,13 +262,9 @@ A = np.array([[1, 0], [0, 1]])
 b = np.array([0, 0])
 c = 0
 
-f1 = lambda beta, s_ : multivariate_normal.pdf(s_, mean = mu, cov = Sigma) * \
-                       np.exp((s_.T @ A @ s_ + b.T @ s_ + c) * (-1/beta))
-
 from itertools import product
 # Numerical multivariate integration over f1 with respect to s_ using Monte Carlo
-def monte_carlo_integration(f, beta, mean, cov, N):
-    f_ = lambda s_ : f(beta, s_)
+def monte_carlo_integration(f, mean, cov, N):
 
     x = []
     for i in range(len(mean)): # For each dimension
@@ -277,7 +273,7 @@ def monte_carlo_integration(f, beta, mean, cov, N):
                              num = N))
     x = np.array(list(product(*x)))
 
-    y = np.array([f_(x[i]) for i in range(N**len(mean))])
+    y = np.array([f(x[i]) for i in range(N**len(mean))])
 
     domain = np.prod([(cov[i,i]*10)/(N-1) for i in range(len(mean))])
 
@@ -290,6 +286,15 @@ f_norm = lambda beta, s_ : multivariate_normal.pdf(s_, mean = mu, cov = Sigma)
 
 # print("Integration estimate of f1:", monte_carlo_integration(f1, 1, mu, Sigma, N = 100))
 
+delta = 0.1
+
+def f1(beta):
+    f = lambda s_ : multivariate_normal.pdf(s_, mean = mu, cov = Sigma)*np.exp((s_.T @ A @ s_ + b.T @ s_ + c) * (-1/beta))
+    # tmp1 = multivariate_normal.pdf(s_, mean = mu, cov = Sigma)
+    # tmp2 = np.exp((s_.T @ A @ s_ + b.T @ s_ + c) * (-1/beta))
+
+    expectation = monte_carlo_integration(f, mu, Sigma, N = 100)
+    return -beta*np.log(expectation)-beta*delta
 
 def f2(beta):
     A_inv = np.linalg.inv(A)
@@ -299,11 +304,35 @@ def f2(beta):
     S_det = np.linalg.det(S)
     k = (np.exp(c/-beta)/np.exp(-(1/2)*m.T@S_inv@m))*np.sqrt(S_det*(2*np.pi)**len(m))
 
-    return k*multivariate_normal.pdf(mu, mean = m, cov = S+Sigma)
+    return -beta*np.log(k*multivariate_normal.pdf(mu, mean = m, cov = S+Sigma))-beta*delta
 
-print("Test to see if the integral of f2: ", f2(1))
+def f2_prime(beta):
 
-from matplotlib import pyplot as plt
+    A_inv = np.linalg.inv(A)
+    S = (beta/2)*A_inv
+    m = (-1/2)*b@A_inv
+    S_inv = np.linalg.inv(S)
+    S_det = np.linalg.det(S)
+    k = (np.exp(c/-beta)/np.exp(-(1/2)*m.T@S_inv@m))*np.sqrt(S_det*(2*np.pi)**len(m))
 
-X = np.linspace(0.01, 100, 1000)
-plt.plot(X, [-x*np.log(f2(x))-x*0.1 for x in X])
+    Sigma_inv = np.linalg.inv(Sigma)
+    Sigma_hat = np.linalg.inv(Sigma_inv + S_inv)
+    mu_hat = Sigma_hat@(Sigma_inv@mu+S_inv@m)
+    N_m = multivariate_normal.pdf(m, mean = mu, cov = S+Sigma)
+    tmp1 = -np.log(k*N_m)
+    tmp2 = (-1/beta)*(np.trace(A@Sigma_hat)+mu_hat.T@A@mu_hat + b.T@mu_hat + c)
+    tmp3 = -beta/N_m
+    return tmp1 + tmp2 + tmp3 - delta
+
+def f2_prime_approx(beta, tol):
+    return (f2(beta+tol) - f2(beta-tol))/2*tol
+
+print("f1(1,mu):", f1(1))
+print("f2(1):", f2(1))
+print("f2_prime(1):", f2_prime(1))
+print("f2_prime_approx(1):", f2_prime_approx(1, 1e-3))
+
+# from matplotlib import pyplot as plt
+
+# X = np.linspace(0.01, 100, 1000)
+# plt.plot(X, [-x*np.log(f2(x))-x*0.1 for x in X])
