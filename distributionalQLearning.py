@@ -8,7 +8,7 @@ def quadratic_approximation(X,y):
 
     # Compute the design matrix for the quadratic function for n-dimensions
     Phi = np.array([np.ones(X.shape[0]), *[X[:,i] for i in range(D)], *[X[:,i]*X[:,j] for i in range(D) for j in range(i,D)]]).T
-
+    Phi = -Phi
     # Compute the posteriror using linear algebra
     Sigma = np.linalg.inv(Phi.T@Phi)
     mu = Sigma@Phi.T@y
@@ -89,7 +89,7 @@ def maximize(f_prime, tol = 1e-3):
 def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1):
     ### Quadratic approximation ###
     A, b, c = quadratic_approximation(X_v, y_v)
-    A = -A
+
     ### Check if A is positive definite ###
     # We know it is semi- since A is always symmetric
     w, _ = np.linalg.eig(A)
