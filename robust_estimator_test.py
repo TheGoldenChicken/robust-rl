@@ -1,13 +1,13 @@
 import numpy as np
 from scipy.stats import multivariate_normal
 
-def quadratic_approximation(X,y):
+def quadratic_approximation(X,y,beta):
     ### Quadratic approximation using Bayesian linear regression ###
     # Hyperparameters: alpha = 0, beta = 1
     D = X.shape[1]
 
     # Compute the design matrix for the quadratic function for n-dimensions
-    Phi = np.array([np.ones(X.shape[0]), *[X[:,i] for i in range(D)], *[X[:,i]*X[:,j] for i in range(D) for j in range(i,D)]]).T
+    Phi = np.array([np.ones(X.shape[0])/(-beta), *[X[:,i]/(-beta) for i in range(D)], *[(X[:,i]*X[:,j])/(beta) for i in range(D) for j in range(i,D)]]).T
 
     # Compute the posteriror using linear algebra
     Sigma = np.linalg.inv(Phi.T@Phi)
@@ -25,13 +25,13 @@ def quadratic_approximation(X,y):
 
     return A, b, c
 
-def linear_approximation(X,y):
+def linear_approximation(X,y,beta):
     ### Linear approximation using Bayesian linear regression ###
     # Hyperparameters: alpha = 0, beta = 1
     D = X.shape[1]
 
     # Compute the design matrix for the linear function for n-dimensions
-    Phi = np.array([np.ones(X.shape[0]), *[X[:,i] for i in range(D)]]).T
+    Phi = np.array([np.ones(X.shape[0])/(-beta), *[X[:,i]/(-beta) for i in range(D)]]).T
 
     # Compute the posteriror using linear algebra
     Sigma = np.linalg.inv(Phi.T@Phi)
@@ -42,13 +42,13 @@ def linear_approximation(X,y):
 
     return b, c
 
-def expectation(A, b, c, beta, mu, Sigma):
+def expectation(A, b, c, mu, Sigma):
     A_inv = np.linalg.inv(A)
-    S = (beta/2)*A_inv
+    S = (-1/2)*A_inv
     m = (-b/2)@A_inv
     S_inv = np.linalg.inv(S)
     S_det = np.linalg.det(S)
-    k = (np.exp(c/-beta)*np.sqrt(S_det*(2*np.pi)**len(m))/np.exp(-(1/2)*m.T@S_inv@m))
+    k = (np.exp(c)*np.sqrt(S_det*(2*np.pi)**len(m))/np.exp(-(1/2)*m.T@S_inv@m))
 
     return k*multivariate_normal.pdf(mu, mean = m, cov = S+Sigma)
 
@@ -86,31 +86,31 @@ def maximize(f_prime, tol = 1e-3):
         else:
             return x_mid
 
-def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1):
+def pre_sub_robust_estimator(X_p,y_p,X_v,y_v,beta, delta = 0.1):
     ### Quadratic approximation ###
-    A, b, c = quadratic_approximation(X_v, y_v)
+    A, b, c = quadratic_approximation(X_v, y_v,beta)
 
     ### Check if A is positive definite ###
     # We know it is semi- since A is always symmetric
     w, _ = np.linalg.eig(A)
     if np.any(w < 0):
         # If any eigenvalue is negative, use linear approximation instead
-        b, c = linear_approximation(X_v, y_v)
+        b, c = linear_approximation(X_v, y_v,beta)
         A = np.identity(len(b))
 
     ### Gaussian approximation ###
-    # Compute the mean and covariance of the samples X_p, y_p
+    # Calculate mean and covariance of the X_p and y_p
     mu = np.mean(X_p, axis = 0)
     Sigma = np.cov(X_p.T)
 
     ### Pre supremum term ###
-    pre_sup = lambda beta : -beta*np.log(expectation(A, b, c, beta, mu, Sigma))-delta*beta
+    pre_sup = -beta*np.log(expectation(A, b, c, mu, Sigma))-delta*beta
 
     return pre_sup
 
 def pre_sub_robust_estimator_prime_approx(X_p,y_p,X_v,y_v, delta,tol = 1e-3):
-    return lambda beta : (pre_sub_robust_estimator(X_p,y_p,X_v,y_v,delta)(beta+tol)- \
-                          pre_sub_robust_estimator(X_p,y_p,X_v,y_v,delta)(beta-tol))/ \
+    return lambda beta : (pre_sub_robust_estimator(X_p,y_p,X_v,y_v,beta+tol,delta)- \
+                          pre_sub_robust_estimator(X_p,y_p,X_v,y_v,beta-tol,delta))/ \
                           (2*tol)
 
 def robust_estimator(X_p,y_p,X_v,y_v,delta):
@@ -135,69 +135,70 @@ def robust_estimator(X_p,y_p,X_v,y_v,delta):
 # b = np.array([0, 0])
 # c = 0
 
-# from scipy.stats import norm
-# import matplotlib.pyplot as plt
+from scipy.stats import norm
+import matplotlib.pyplot as plt
 
-# # # 1D dataset
-# # X_p = np.expand_dims(np.linspace(-1.5, 1.5, 100), axis=1)
-# # y_p = np.array([norm.pdf(x, loc = 0, scale = 1) + np.random.normal(0, 0.1, 1) for x in X_p])
-# # X_v = np.expand_dims(np.linspace(-1.5, 1.5, 100), axis=1)
-# # y_v = np.array([norm.pdf(x, loc = 0, scale = 1) + np.random.normal(0, 0.1, 1) for x in X_v])
+# # 1D dataset
+# X_p = np.expand_dims(np.linspace(-1.5, 1.5, 100), axis=1)
+# y_p = np.array([norm.pdf(x, loc = 0, scale = 1) + np.random.normal(0, 0.1, 1) for x in X_p])
+# X_v = np.expand_dims(np.linspace(-1.5, 1.5, 100), axis=1)
+# y_v = np.array([norm.pdf(x, loc = 0, scale = 1) + np.random.normal(0, 0.1, 1) for x in X_v])
 
-
-# # delta = 0.1
-# # plt.scatter(X_p.squeeze(), y_p.squeeze())
-# # print(robust_estimator(X_p,y_p,X_v,y_v,delta))
-
-# # # 2D dataset
-# # Sample randomly in 2D space
-# X_p = np.array([[np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)] for _ in range(100)])
-# # Sample randomly for 2D multivariate gaussian
-# y_p = multivariate_normal.pdf(X_p, mean = [0, 0], cov = [[3, 1], [1, 4]])
-# X_v = X_p
-# y_v = y_p
 
 # delta = 0.1
-# # 3D plot
-# fig = plt.figure()
-# ax = fig.add_subplot(111, projection='3d')
-# ax.scatter(X_p[:,0], X_p[:,1], y_p)
-
-# # 2D plot of quadratic approximation
-# A, b, c = quadratic_approximation(X_p, y_p)
-# X = np.linspace(-1.5, 1.5, 10)
-# Y = np.linspace(-1.5, 1.5, 10)
-
-# beta = 0.1
-# S = (beta/2)*np.linalg.inv(A)
-# m = (-b/2)@np.linalg.inv(A)
-# S_inv = np.linalg.inv(S)
-# S_det = np.linalg.det(S)
-# k = (np.exp(c/-beta)*np.sqrt((2*np.pi)**len(m)*S_det))/np.exp(-(1/2)*m.T@S_inv@m)
-
-
-# Z = np.array([[A[0,0]*x**2+2*A[0,1]*x*y+A[1,1]*y**2+b[0]*x+b[1]*y+c for x in X] for y in Y])
-# Z_ = np.array([[multivariate_normal.pdf([x,y], mean = m, cov = S) for x in X] for y in Y])
-# X, Y = np.meshgrid(X, Y)
-# ax.plot_surface(X, Y, Z, alpha=0.2, color = 'blue')
-# ax.plot_surface(X, Y, Z_, alpha=0.2, color = 'red')
-# plt.show()
+# plt.scatter(X_p.squeeze(), y_p.squeeze())
 # print(robust_estimator(X_p,y_p,X_v,y_v,delta))
-# pass
+
+# # 2D dataset
+# Sample randomly in 2D space
+X_p = np.array([[np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)] for _ in range(100)])
+# Sample randomly for 2D multivariate gaussian
+y_p = multivariate_normal.pdf(X_p, mean = [0, 0], cov = [[3, 1], [1, 4]])
+X_v = X_p
+y_v = y_p
+
+delta = 0.1
+# 3D plot
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.scatter(X_p[:,0], X_p[:,1], y_p)
+
+beta = 0.1
+# 2D plot of quadratic approximation
+A, b, c = quadratic_approximation(X_p, y_p,beta)
+X = np.linspace(-1.5, 1.5, 10)
+Y = np.linspace(-1.5, 1.5, 10)
+
+A_inv = np.linalg.inv(A)
+S = (-1/2)*A_inv
+m = (-b/2)@A_inv
+S_inv = np.linalg.inv(S)
+S_det = np.linalg.det(S)
+k = (np.exp(c)*np.sqrt(S_det*(2*np.pi)**len(m))/np.exp(-(1/2)*m.T@S_inv@m))
+
+
+Z = np.array([[A[0,0]*x**2+2*A[0,1]*x*y+A[1,1]*y**2+b[0]*x+b[1]*y+c for x in X] for y in Y])
+Z_ = np.array([[k*multivariate_normal.pdf([x,y], mean = m, cov = S) for x in X] for y in Y])
+X, Y = np.meshgrid(X, Y)
+ax.plot_surface(X, Y, Z, alpha=0.2, color = 'blue')
+ax.plot_surface(X, Y, Z_, alpha=0.2, color = 'red')
+plt.show()
+print(robust_estimator(X_p,y_p,X_v,y_v,delta))
+pass
 
 
 
 
-# # Plot the quadratic approximation
+# Plot the quadratic approximation
 
-# A, b, c = quadratic_approximation(X_v, y_v)
-# X = np.linspace(-1.5, 1.5, 100)
-# # if A < 0: A = np.array(0)
-# y = np.array([A*x**2+b*x+c for x in X])
-# plt.plot(X.squeeze(), y.squeeze())
+A, b, c = quadratic_approximation(X_v, y_v)
+X = np.linspace(-1.5, 1.5, 100)
+# if A < 0: A = np.array(0)
+y = np.array([A*x**2+b*x+c for x in X])
+plt.plot(X.squeeze(), y.squeeze())
 
-# # Plot a gaussian function with loc = 0 and scale = 1
-# X = np.linspace(-1.5, 1.5, 100)
-# plt.scatter(X.squeeze(), y.squeeze())
-# plt.plot(X.squeeze(), y_v.squeeze())
-# plt.show()
+# Plot a gaussian function with loc = 0 and scale = 1
+X = np.linspace(-1.5, 1.5, 100)
+plt.scatter(X.squeeze(), y.squeeze())
+plt.plot(X.squeeze(), y_v.squeeze())
+plt.show()
