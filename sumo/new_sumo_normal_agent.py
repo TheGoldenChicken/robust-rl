@@ -45,7 +45,7 @@ class Network(nn.Module):
 
 class SumoNormalAgent:
     def __init__(self, fineness, env, state_dim, action_dim, batch_size, replay_buffer_size, max_min, epsilon_decay,
-                 max_epsilon=1.0, min_epsilon=0.1, gamma=0.99):
+                 max_epsilon=1.0, min_epsilon=0.1, gamma=0.99, model_path=None):
         self.fineness = fineness
         self.env = env
         self.state_dim = state_dim
@@ -71,6 +71,10 @@ class SumoNormalAgent:
         )
 
         self.dqn = Network(state_dim, action_dim).to(self.device)
+
+        if model_path is not None:
+            self.dqn.load_state_dict(model_path)
+
         # self.dqn_target = Network(state_dim, action_dim).to(self.device) # Perhaps not needed
         # self.dqn_target.load_state_dict(self.dqn.state_dict())
         # self.dqn_target.eval()
@@ -126,7 +130,7 @@ class SumoNormalAgent:
 
         return loss.item()
 
-    def train(self, num_frames: int, plotting_interval: int = 200):
+    def train(self, num_frames: int, plotting_interval: int = 200, save_model=None):
         """Train the agent."""
         self.is_test = False
 
@@ -170,9 +174,17 @@ class SumoNormalAgent:
             # if frame_idx % plotting_interval == 0:
             #     self._plot(frame_idx, scores, losses, epsilons)
 
-        self.env.close()
+        print("Training complete")
 
-    def test(self, video_folder: str) -> None:
+        if save_model is not None:
+            try:
+                torch.save(self.dqn.state_dict(), save_model)
+            except:
+                print("ERROR! Could not save model!")
+
+        # self.env.close()
+
+    def test(self, render_after=False, video_folder: str='None') -> None:
         """Test the agent."""
         self.is_test = True
 
@@ -212,15 +224,16 @@ class SumoNormalAgent:
         current_q_value = Q_vals.gather(1, action)
         Q_vals = Q_vals.max(dim=1, keepdim=True)[0].detach().cpu().numpy()
 
-        # robust_estimator = distributionalQLearning.robust_estimator(X_p=samples['obs'], y_p=samples['next_obs'],
-        #                                                             X_v=samples['next_obs'], y_v=Q_vals,
-        #                                                             delta=0.5, gamma=self.gamma)
+        robust_estimator = distributionalQLearning.robust_estimator(X_p=samples['obs'], y_p=samples['next_obs'],
+                                                                    X_v=samples['next_obs'], y_v=Q_vals,
+                                                                    delta=0.5)
 
+        robust_estimator = reward + self.gamma * robust_estimator
         mask = 1 - done # Remove effect from those that are done
         curr_q_value = Q_vals.gather(1, action)
 
         # calculate dqn loss
-        loss = F.smooth_l1_loss(curr_q_value, current_q_value)
+        loss = F.smooth_l1_loss(curr_q_value, robust_estimator)
 
         return loss
 
