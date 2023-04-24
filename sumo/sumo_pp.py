@@ -49,6 +49,8 @@ class SumoPPEnv:
         self.current_action = 0 # 0, 1, 2, NOOP, left, right
         self.sprite_frame = 0
 
+        self.rendering = False
+
     def step(self, action):
         self.frame += 1
 
@@ -73,6 +75,9 @@ class SumoPPEnv:
         else:
             done = False
 
+        if self.rendering:
+            self.render()
+
         return np.array([self.sumo_position]), reward, done, 'derp' # Final value is dummy for working with gym envs
 
     def reset(self):
@@ -85,6 +90,10 @@ class SumoPPEnv:
         self.clock = pygame.time.Clock()
 
     def render(self):
+
+        if not self.rendering:
+            self.init_render()
+
         self.sprite_frame += 1
 
         if self.sprite_frame % self.render_frame_interval == 0:

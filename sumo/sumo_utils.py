@@ -97,7 +97,7 @@ def neighbours(P: tuple, neighbours: int=0, maxx=np.infty, minn=-np.infty) -> li
     """
 
     :param P: Point in n-dimensional cube:
-    :param neighbours: Number points out along all axis combinatinons to get neighbours:
+    :param neighbours: Number points out along all axis combinatinons to get neighbours 1 is all adjacent neighbours:
     :param maxx: Remove neighbours with coordaintes above this value (should be fineness-1)
     :param minn: Remove neighbours with coordiantes below this value (should be 0)
     :return: list of tuples that contain all neighbours
@@ -111,3 +111,6 @@ def neighbours(P: tuple, neighbours: int=0, maxx=np.infty, minn=-np.infty) -> li
     if minn != None:
         positions = [i for i in positions if min(i) >= minn]
     return positions
+
+if __name__ == "__main__":
+    print(neighbours(P=(1,1,1), neighbours=1))

@@ -6,7 +6,7 @@
 # Must be done in create_grid_keys
 # Must change mult_dim og single_dim intepreter til at passe med forskellige fineness
 # TODO: Det der skal lægges til INdex af action skal ændres til at være sum(actions) hvis actions er en liste
-
+# TODO: CONSIDER ADDING NUM_NIEGHBOURS (CHECK HOW MANY GRIDS) TO AGENT
 
 from sumo import sumo_pp
 import os
@@ -21,6 +21,7 @@ from sumo_utils import create_grid_keys, stencil, single_dim_interpreter, multi_
 from replay_buffer import TheCoolerReplayBuffer
 import random
 import distributionalQLearning
+from IPython.display import clear_output
 
 # SubSymbolic AI? Knowing the effect of action and just calculating the noise instead of the transition probabilities
 
@@ -63,7 +64,7 @@ class SumoNormalAgent:
         self.replay_buffer = TheCoolerReplayBuffer(state_dim, replay_buffer_size, batch_size=batch_size, fineness=fineness,
                                                    num_actions=action_dim, state_max=self.max, state_min=self.min)
 
-        self.batch_size = 64 # Nearest neighbours to update based on
+        self.batch_size = batch_size # Nearest neighbours to update based on
         self.number_neighbours = 2
 
         self.device = torch.device(
@@ -153,11 +154,14 @@ class SumoNormalAgent:
                 state = self.env.reset()
                 scores.append(score)
                 score = 0
-
+            there_is_data = False
             # if training is ready - Just check if current grid has like 10 points
             # # TODO: Find a better way of doing this
-            if all([self.replay_buffer.spec_len(i) >= self.batch_size for i in range(self.replay_buffer.bins)]):
-            #if self.replay_buffer.spec_len(self.current_grid) >= 10:
+
+            if frame_idx >= 5000:
+                i=5
+            # Problem here
+            if sum(self.replay_buffer.ripe_bins) >= 10: # How many ripe bins we require before starting to update
                 loss = self.update_model()
                 losses.append(loss)
                 update_cnt += 1
@@ -169,10 +173,12 @@ class SumoNormalAgent:
                     ) * self.epsilon_decay
                 )
                 epsilons.append(self.epsilon)
+                there_is_data = True
 
             # plotting
-            # if frame_idx % plotting_interval == 0:
-            #     self._plot(frame_idx, scores, losses, epsilons)
+            if frame_idx % plotting_interval == 0 and there_is_data:
+                self._plot(frame_idx, scores, losses, epsilons)
+                print(frame_idx, loss, self.epsilon)
 
         print("Training complete")
 
@@ -237,27 +243,26 @@ class SumoNormalAgent:
 
         return loss
 
-
-    # def _plot(
-    #         self,
-    #         frame_idx: int,
-    #         scores: List[float],
-    #         losses: List[float],
-    #         epsilons: List[float],
-    # ):
-    #     """Plot the training progresses."""
-    #     clear_output(True)
-    #     plt.figure(figsize=(20, 5))
-    #     plt.subplot(131)
-    #     plt.title('frame %s. score: %s' % (frame_idx, np.mean(scores[-10:])))
-    #     plt.plot(scores)
-    #     plt.subplot(132)
-    #     plt.title('loss')
-    #     plt.plot(losses)
-    #     plt.subplot(133)
-    #     plt.title('epsilons')
-    #     plt.plot(epsilons)
-    #     plt.show()
+    def _plot(
+            self,
+            frame_idx: int,
+            scores: List[float],
+            losses: List[float],
+            epsilons: List[float],
+    ):
+        """Plot the training progresses."""
+        clear_output(True)
+        plt.figure(figsize=(20, 5))
+        plt.subplot(131)
+        plt.title('frame %s. score: %s' % (frame_idx, np.mean(scores[-10:])))
+        plt.plot(scores)
+        plt.subplot(132)
+        plt.title('loss')
+        plt.plot(losses)
+        plt.subplot(133)
+        plt.title('epsilons')
+        plt.plot(epsilons)
+        plt.show()
 
 if __name__ == "__main__":
 
@@ -277,7 +282,7 @@ if __name__ == "__main__":
     np.random.seed(seed)
     seed_torch(seed)
 
-    num_frames = 1000
+    num_frames = 100000
 
     # parameters
     fineness = 100
@@ -292,3 +297,7 @@ if __name__ == "__main__":
                             replay_buffer_size=replay_buffer_size, max_min=max_min, epsilon_decay=epsilon_decay)
 
     agent.train(num_frames)
+
+
+
+# if all([self.replay_buffer.spec_len(i) >= self.batch_size for i in range(self.replay_buffer.bins)]):

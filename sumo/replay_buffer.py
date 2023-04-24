@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Dict, List, Tuple
-from sumo.sumo_utils import neighbours
+from sumo.sumo_utils import neighbours, single_dim_interpreter
 
 # TODO: CONSIDER MOVING GET_IDX TO THIS FUNCTION
 # TODO: FIX POTENTIALLY BIG PROBLEM WITH REPLAY BUFFER NOT CORRECTLY WORKING FOR FINENESS = MAX, MIN DIM
@@ -98,6 +98,11 @@ class TheCoolerReplayBuffer(ReplayBuffer):
 
         self.num_actions = num_actions
 
+        self.ripe_bins = [False] * (self.bins - 0*tb) # We don't let the trash_buffer be ripe # We technically don't, but this is easier
+        self.num_neighbours = 1
+        self.obs_dim = obs_dim
+
+        self.frame_idx = 0 # Debug value
     def __getitem__(self, idxs) -> Dict[str, np.ndarray]:
         return dict(obs=self.obs_buf[idxs],
                     next_obs=self.next_obs_buf[idxs],
@@ -117,22 +122,24 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         """
         return self.size[idx]
 
-    def sample_from_scratch(self, K, nn, specific_action=None, distance='Euclidian'):
+    def sample_from_scratch(self, K, nn, specific_action=None, distance='Euclidian', check_ripeness=True):
         """
+        Practically the only interface the agent should have with the replay_buffer (apart from dundermethods)
         The whole sampling shebang based on a random point in the current dataset
         :param K: K nearest neighbours to sample based on (basically a batch_size
         :param nn: number-neighbours how many grids to look in larger -> slower + more accurate approximations
         :param specific_action: the action to sample based on, if not chosen, chooses random action
         :param distance: which distance measure to use when getting KNN
+        :param check_ripeness: Whether to only sample from bins we know are in a ripe quarter
         :return:
         """
 
         if specific_action is None:
             specific_action = np.random.randint(0,self.num_actions)
 
-        current_sample = self[self.sample_randomly_idxs(size=1)] # Sample to calc KNN from
+        current_sample = self[self.sample_randomly_idxs(size=1, check_ripeness=check_ripeness)] # Sample to calc KNN from
         current_bin_idx = self.get_bin_idx(current_sample['obs'], single_dim=False) # Idx of bin of current_sample
-        neighbour_bin_idxs = self.get_neighbour_bins(current_bin_idx, neighbours=nn) # Idx of neighbour bins of current_sample
+        neighbour_bin_idxs = self.get_neighbour_bins(current_bin_idx, num_neighbours=nn) # Idx of neighbour bins of current_sample
         samples = self[self.get_sample_idxs_from_bin(neighbour_bin_idxs, action=specific_action)] # Samples from neighbour_bins
 
         KNN_samples = self.get_knn( current_sample=current_sample, samples=samples, K=K, distance=distance)
@@ -235,7 +242,22 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         self.done_buf[teh_idx] = done
         self.ptr[idx] = (self.ptr[idx] + 1) % self.max_bin_size
         self.size[idx] = min(self.size[idx] + 1, self.max_bin_size)
-        
+        self.frame_idx+= 1
+
+        # Update ripeness - When updated O(1) when not, adds O(1) best case, O(whatever, i'll find out later)
+        if not self.ripe_bins[idx]: # Don't want trash buffer things to contribute to ripeness - do we?
+            if self.frame_idx >= 1000:
+                i = 4
+
+            if self.size[idx] >= self.batch_size:
+                self.ripe_bins[idx] = True
+
+            # The single dim interpreter only checks for neighbours to this one bastard
+            elif sum([self.size[i + self.bins_per_action * act] for i in
+                      self.get_neighbour_bins(single_dim_interpreter
+                      (idx - self.bins_per_action * act, self.fineness, self.obs_dim), self.num_neighbours)]) >= self.batch_size:
+                self.ripe_bins[idx] = True
+
         # Only returned for testing purposes
         return trash_obs
 
@@ -254,7 +276,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
                 for item in sublist]
         return idxs
 
-    def sample_randomly_idxs(self, size=None):
+    def sample_randomly_idxs(self, size=None, check_ripeness=True):
         """
         Old school sample randomly from all avaliable, no matter grid_location data (or action)
         :param size: how many points to sample
@@ -265,11 +287,34 @@ class TheCoolerReplayBuffer(ReplayBuffer):
             size=self.batch_size
 
         # Get all populated indices in 1-d memory array
-        pop_idxs = [list(range(i*self.max_bin_size, i*self.max_bin_size+self.size[i]))
-                for i in range(self.bins)]
+        # If we check for ripeness, we only go through ripe arrays
+        if check_ripeness:
+            pop_idxs = [list(range(i*self.max_bin_size, i*self.max_bin_size+self.size[i]))
+                    for i in range(self.bins) if self.ripe_bins[i] is True]
+
+        else:
+            pop_idxs = [list(range(i*self.max_bin_size, i*self.max_bin_size+self.size[i]))
+                    for i in range(self.bins)]
         assert len(pop_idxs) >= size # No point trying to sample if we don't have enough datapoints...
         idxs = np.random.choice(pop_idxs, size)
         return idxs
 
-
+    # def update_ripeness(self):
+    #     """
+    #     Used to determine what bins are ripe for sampling
+    #     :return:
+    #     """
+    #
+    #     for i, r in enumerate(self.ripe_bins):
+    #         if not r: # If unripe, we check
+    #             if self.spec_len(i) >= self.batch_size:
+    #                 self.ripe_bins[i] = True
+    #                 continue
+    #
+    #             idx_no_action = r % self.bins_per_action
+    #             neighs = self.get_neighbour_bins(single_dim_interpreter(idx_no_action,self.fineness, self.obs_dim),
+    #                                                  num_neighbours=self.num_neighbours)
+    #
+    #             if sum([self.spec_len(i) for i in neighs]) >= self.batch_size:
+    #                 self.ripe_bins[i] = True
 
