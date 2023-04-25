@@ -81,7 +81,8 @@ class TheCoolerReplayBuffer(ReplayBuffer):
     """
     Replay buffer more optimal for grid-based replay-buffering
     """
-    def __init__(self, obs_dim, bin_size, batch_size, fineness, num_actions, state_max=np.infty, state_min=-np.infty, tb=True):
+    def __init__(self, obs_dim, bin_size, batch_size, fineness, num_actions, state_max=np.infty,
+                 state_min=-np.infty, tb=True, ripe_when=20):
         self.bins_per_action = (fineness**obs_dim)
         self.bins = (fineness**obs_dim)*num_actions + 1*tb
         self.size_per_action = (fineness**obs_dim)*bin_size # Max size per action
@@ -103,6 +104,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         self.obs_dim = obs_dim
 
         self.frame_idx = 0 # Debug value
+        self.ripe_when = ripe_when # Value to decide when a buffer is ripe or not
     def __getitem__(self, idxs) -> Dict[str, np.ndarray]:
         return dict(obs=self.obs_buf[idxs],
                     next_obs=self.next_obs_buf[idxs],
@@ -160,7 +162,8 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         if current_sample is None:
             current_sample = np.random.choice(samples['obs'], 1)
 
-        dists = [np.linalg.norm(current_sample, x) for x in samples['obs']]
+        dists = [np.linalg.norm(current_sample['obs'] - x) for x in samples['obs']]
+        K = min(K, len(samples['obs'])) - 1 # Subtract one to account for zero indexing (necessary?)
         idxs = np.argpartition(dists, K)[:K]
         samples = {r: i[idxs] for r, i in samples.items()}
 
@@ -246,6 +249,8 @@ class TheCoolerReplayBuffer(ReplayBuffer):
 
         # Update ripeness - When updated O(1) when not, adds O(1) best case, O(whatever, i'll find out later)
         if not self.ripe_bins[idx]: # Don't want trash buffer things to contribute to ripeness - do we?
+
+            # DEBUG
             if self.frame_idx >= 1000:
                 i = 4
 
@@ -255,7 +260,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
             # The single dim interpreter only checks for neighbours to this one bastard
             elif sum([self.size[i + self.bins_per_action * act] for i in
                       self.get_neighbour_bins(single_dim_interpreter
-                      (idx - self.bins_per_action * act, self.fineness, self.obs_dim), self.num_neighbours)]) >= self.batch_size:
+                      (idx - self.bins_per_action * act, self.fineness, self.obs_dim), self.num_neighbours)]) >= self.ripe_when:
                 self.ripe_bins[idx] = True
 
         # Only returned for testing purposes
@@ -286,17 +291,19 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         if size is None:
             size=self.batch_size
 
+
         # Get all populated indices in 1-d memory array
         # If we check for ripeness, we only go through ripe arrays
         if check_ripeness:
-            pop_idxs = [list(range(i*self.max_bin_size, i*self.max_bin_size+self.size[i]))
-                    for i in range(self.bins) if self.ripe_bins[i] is True]
+            # Just to flatten the fucker first - The whole item/sublist thingy... is it faster? Who knows
+            poppable_idxs = [item for sublist in [list(range(i*self.max_bin_size, i*self.max_bin_size+self.size[i]))
+                    for i in range(self.bins) if self.ripe_bins[i] is True] for item in sublist]
 
         else:
-            pop_idxs = [list(range(i*self.max_bin_size, i*self.max_bin_size+self.size[i]))
-                    for i in range(self.bins)]
-        assert len(pop_idxs) >= size # No point trying to sample if we don't have enough datapoints...
-        idxs = np.random.choice(pop_idxs, size)
+            poppable_idxs = [item for sublist in [list(range(i*self.max_bin_size, i*self.max_bin_size+self.size[i]))
+                    for i in range(self.bins)] for item in sublist]
+        assert len(poppable_idxs) >= size # No point trying to sample if we don't have enough datapoints...
+        idxs = np.random.choice(poppable_idxs, size)
         return idxs
 
     # def update_ripeness(self):

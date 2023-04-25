@@ -46,7 +46,7 @@ class Network(nn.Module):
 
 class SumoNormalAgent:
     def __init__(self, fineness, env, state_dim, action_dim, batch_size, replay_buffer_size, max_min, epsilon_decay,
-                 max_epsilon=1.0, min_epsilon=0.1, gamma=0.99, model_path=None):
+                 max_epsilon=1.0, min_epsilon=0.1, gamma=0.99, model_path=None, ripe_when=20):
         self.fineness = fineness
         self.env = env
         self.state_dim = state_dim
@@ -62,7 +62,7 @@ class SumoNormalAgent:
         # Not necessary anymore
         #self.grid_keys, self.grid_list = create_grid_keys(fineness)
         self.replay_buffer = TheCoolerReplayBuffer(state_dim, replay_buffer_size, batch_size=batch_size, fineness=fineness,
-                                                   num_actions=action_dim, state_max=self.max, state_min=self.min)
+                                                   num_actions=action_dim, state_max=self.max, state_min=self.min, ripe_when=ripe_when)
 
         self.batch_size = batch_size # Nearest neighbours to update based on
         self.number_neighbours = 2
@@ -226,7 +226,7 @@ class SumoNormalAgent:
         reward = torch.FloatTensor(samples["rews"].reshape(-1, 1)).to(device)
         done = torch.FloatTensor(samples["done"].reshape(-1, 1)).to(device)
         # TODO: CHECK IF V(S) ESTIMATE IS BASED ON CURRENT OR NEXT STATE
-        Q_vals = self.dqn(torch.FloatTensor(state).to(device)) # Should all have the same action
+        Q_vals = self.dqn(torch.Tensor(state).to(device)) # Should all have the same action
         current_q_value = Q_vals.gather(1, action)
         Q_vals = Q_vals.max(dim=1, keepdim=True)[0].detach().cpu().numpy()
 
@@ -288,13 +288,15 @@ if __name__ == "__main__":
     fineness = 100
     state_dim = 1
     action_dim = 3
-    batch_size = 64
+    batch_size = 20
     replay_buffer_size = 500
     max_min = [[500],[0]]
     epsilon_decay = 1/2000
+    ripe_when = 20
 
+    # TODO: PERHAPS JUST PASS A PREMADE REPLAY BUFFER TO THE SUMO AGENT TO AVOID SO MANY PARAMETERS?
     agent = SumoNormalAgent(fineness=fineness, env=env, state_dim=state_dim, action_dim=action_dim, batch_size=batch_size,
-                            replay_buffer_size=replay_buffer_size, max_min=max_min, epsilon_decay=epsilon_decay)
+                            replay_buffer_size=replay_buffer_size, max_min=max_min, epsilon_decay=epsilon_decay, ripe_when=ripe_when)
 
     agent.train(num_frames)
 
