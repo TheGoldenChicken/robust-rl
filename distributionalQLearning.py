@@ -89,7 +89,7 @@ def maximize(f_prime, tol = 1e-3):
 def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1):
     ### Quadratic approximation ###
     A, b, c = quadratic_approximation(X_v, y_v)
-
+    # TODO: IN SOME CASES, A BECOMES AN ARRAY OF [[NAN]], which fucks up the whole .eig thingy
     ### Check if A is positive definite ###
     # We know it is semi- since A is always symmetric
     w, _ = np.linalg.eig(A)

@@ -108,9 +108,9 @@ class TheCoolerReplayBuffer(ReplayBuffer):
     def __getitem__(self, idxs) -> Dict[str, np.ndarray]:
         return dict(obs=self.obs_buf[idxs],
                     next_obs=self.next_obs_buf[idxs],
-                    acts=self.obs_buf[idxs],
-                    rews=self.obs_buf[idxs],
-                    done=self.obs_buf[idxs])
+                    acts=self.acts_buf[idxs],
+                    rews=self.rews_buf[idxs],
+                    done=self.done_buf[idxs])
     def __len__(self):
         """
         Returns total size across all bins

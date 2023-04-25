@@ -68,7 +68,7 @@ class SumoNormalAgent:
         self.number_neighbours = 2
 
         self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu"
+            "cpu" if torch.cuda.is_available() else "cpu"
         )
 
         self.dqn = Network(state_dim, action_dim).to(self.device)
@@ -224,9 +224,11 @@ class SumoNormalAgent:
         next_state = samples["next_obs"]
         action = torch.LongTensor(samples["acts"].reshape(-1, 1)).to(device)
         reward = torch.FloatTensor(samples["rews"].reshape(-1, 1)).to(device)
-        done = torch.FloatTensor(samples["done"].reshape(-1, 1)).to(device)
+        # done = torch.FloatTensor(samples["done"].reshape(-1, 1)).to(device)
+        done = np.expand_dims(samples['done'], -1) # Don't think we need this as a tensor... So discount reshaping here
+
         # TODO: CHECK IF V(S) ESTIMATE IS BASED ON CURRENT OR NEXT STATE
-        Q_vals = self.dqn(torch.Tensor(state).to(device)) # Should all have the same action
+        Q_vals = self.dqn(torch.FloatTensor(state).to(device)) # Should all have the same action
         current_q_value = Q_vals.gather(1, action)
         Q_vals = Q_vals.max(dim=1, keepdim=True)[0].detach().cpu().numpy()
 
@@ -234,12 +236,13 @@ class SumoNormalAgent:
                                                                     X_v=samples['next_obs'], y_v=Q_vals,
                                                                     delta=0.5)
 
-        robust_estimator = reward + self.gamma * robust_estimator
-        mask = 1 - done # Remove effect from those that are done
-        curr_q_value = Q_vals.gather(1, action)
+        mask = 1 - done  # Remove effect from those that are done
+        robust_estimator = reward + self.gamma * robust_estimator * mask
+
+        # curr_q_value = Q_vals.gather(1, action) - Pretty sure we don't need this
 
         # calculate dqn loss
-        loss = F.smooth_l1_loss(curr_q_value, robust_estimator)
+        loss = F.smooth_l1_loss(current_q_value, robust_estimator)
 
         return loss
 
