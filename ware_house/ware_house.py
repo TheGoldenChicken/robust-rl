@@ -6,7 +6,7 @@ import rl.display
 
 class Env(rl.env.DiscreteEnv):
     
-    def __init__(self, playerOptions, n = 10, h = 1, p = 2, k = 3) -> None:
+    def __init__(self, n = 10, h = 1, p = 2, k = 3) -> None:
         super().__init__()
         
         self.n = n
@@ -33,7 +33,6 @@ class Env(rl.env.DiscreteEnv):
         cost += max(0,self.p*(demand - state - actions[0]))
         
         # Fixed ordering cost
-        # cost += self.k*actions[0]
         if(actions[0] > 0): cost += self.k
         
         next_state = state + actions[0] - min(demand, state + actions[0])
@@ -49,10 +48,6 @@ class Env(rl.env.DiscreteEnv):
     def goal_test(self, state) -> bool:
         raise NotImplementedError("ContinuousEnv.goal_test() is not implemented")
         
-        # Return True if the state is a goal state
-        return False
-    
-    # Reset state by returning initial state
     def reset(self) -> None:
         return 0
         
@@ -90,7 +85,10 @@ class Env(rl.env.DiscreteEnv):
         
         q_range = np.linspace(min_q, max_q, self.n+1)
         
-        for s in range(self.n+1):
+        if self.n%2 == 0:
+            n_ = self.n + 1
+        else: n_ = self.n
+        for s in range(n_):
             self.display.draw_square(((self.n+1)*gs + gs/2, s*gs + gs/2), (gs, gs), color[s], width = 10)
             self.display.draw_text(str(round(q_range[s], 2)), ((self.n+1)*gs + gs/2, s*gs + gs/2), (255,255,255), align="center")
 
@@ -120,8 +118,8 @@ class Env(rl.env.DiscreteEnv):
     
 
 class EnvNonUniform(Env):
-    def __init__(self, playerOptions, n = 10, h = 1, p = 2, k = 3, b = 1, m = 0) -> None:
-        super().__init__(playerOptions, n, h, p, k)
+    def __init__(self, n = 10, h = 1, p = 2, k = 3, b = 1, m = 0) -> None:
+        super().__init__(n, h, p, k)
         
         self.b = b
         self.m = m
@@ -146,7 +144,6 @@ class EnvNonUniform(Env):
         cost += max(0,(self.p*(demand - state - actions[0])))
         
         # Fixed ordering cost
-        # cost += self.k*actions[0]
         if(actions[0] > 0): cost += self.k
         
         next_state = state + actions[0] - min(demand, state + actions[0])
