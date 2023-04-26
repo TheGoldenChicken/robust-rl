@@ -1,6 +1,7 @@
 import os
 from typing import Dict, List, Tuple
 
+from sumo import sumo_pp
 import gym
 import matplotlib.pyplot as plt
 import numpy as np
@@ -43,7 +44,6 @@ class SumoSlowAgent:
         epsilon_decay (float): step size to decrease epsilon
         max_epsilon (float): max value of epsilon
         min_epsilon (float): min value of epsilon
-        target_update (int): period for target model's hard update
         gamma (float): discount factor
         dqn (Network): model to train and select actions
         dqn_target (Network): target model to update
@@ -57,7 +57,6 @@ class SumoSlowAgent:
             env: gym.Env,
             memory_size: int,
             batch_size: int,
-            target_update: int,
             epsilon_decay: float,
             max_epsilon: float = 1.0,
             min_epsilon: float = 0.1,
@@ -69,7 +68,6 @@ class SumoSlowAgent:
             env (gym.Env): openAI Gym environment
             memory_size (int): length of memory
             batch_size (int): batch size for sampling
-            target_update (int): period for target model's hard update
             epsilon_decay (float): step size to decrease epsilon
             lr (float): learning rate
             max_epsilon (float): max value of epsilon
@@ -89,7 +87,6 @@ class SumoSlowAgent:
         self.epsilon_decay = epsilon_decay
         self.max_epsilon = max_epsilon
         self.min_epsilon = min_epsilon
-        self.target_update = target_update
         self.gamma = gamma
         self.action_dim = action_dim
 
@@ -101,9 +98,6 @@ class SumoSlowAgent:
 
         # networks: dqn, dqn_target
         self.dqn = Network(obs_dim, action_dim).to(self.device)
-        self.dqn_target = Network(obs_dim, action_dim).to(self.device)
-        self.dqn_target.load_state_dict(self.dqn.state_dict())
-        self.dqn_target.eval()
 
         # optimizer
         self.optimizer = optim.Adam(self.dqn.parameters())
@@ -203,10 +197,6 @@ class SumoSlowAgent:
                 )
                 epsilons.append(self.epsilon)
 
-                # if hard update is needed
-                if update_cnt % self.target_update == 0:
-                    self._target_hard_update()
-
             # plotting
             if frame_idx % plotting_interval == 0:
                 self._plot(frame_idx, scores, losses, epsilons)
@@ -247,13 +237,11 @@ class SumoSlowAgent:
         # TODO: CHECK IF V(S) ESTIMATE IS BASED ON CURRENT OR NEXT STATE
         Q_vals = self.dqn(state) # Should all have the same action
 
-        # robust_estimator = distributionalQLearning.robust_estimator(X_p=samples['obs'], y_p=samples['next_obs'],
-        #                                                             X_v=samples['next_obs'],
-        #                                          y_v=Q_vals.max(dim=1, keepdim=True)[0].detach().cpu().numpy(),
-        #                                         delta=0.5, gamma=self.gamma)
+        robust_estimator = distributionalQLearning.robust_estimator(X_p=samples['obs'], y_p=samples['next_obs'],
+                                                                    X_v=samples['next_obs'], y_v=Q_vals.cpu().detach().numpy(),
+                                                                    delta=0.5)
 
         mask = 1 - done # Remove effect from those that are done
-        robust_estimator = 5 # Dummy value
         robust_estimator = reward + self.gamma * robust_estimator * mask
 
         curr_q_value = Q_vals.gather(1, action)
@@ -262,10 +250,6 @@ class SumoSlowAgent:
         loss = F.smooth_l1_loss(curr_q_value, robust_estimator)
 
         return loss
-
-    def _target_hard_update(self):
-        """Hard update: target <- local."""
-        self.dqn_target.load_state_dict(self.dqn.state_dict())
 
     def _plot(
             self,
@@ -293,27 +277,35 @@ class SumoSlowAgent:
 # env_id = "CartPole-v0"
 # env = gym.make(env_id)
 
-seed = 777
+if __name__ == "__main__":
 
-def seed_torch(seed):
-    torch.manual_seed(seed)
-    if torch.backends.cudnn.enabled:
-        torch.backends.cudnn.benchmark = False
-        torch.backends.cudnn.deterministic = True
+    # environment
+    env = sumo_pp.SumoPPEnv(line_length=500)
 
-np.random.seed(seed)
-seed_torch(seed)
-
-# parameters
-num_frames = 10000
-memory_size = 1000
-batch_size = 32
-target_update = 100
-epsilon_decay = 1 / 2000
-
-env = SumoPPEnv(line_length=500)
-
-agent = SumoSlowAgent(env, memory_size, batch_size, target_update, epsilon_decay)
+    seed = 777
 
 
-agent.train(num_frames)
+    def seed_torch(seed):
+        torch.manual_seed(seed)
+        if torch.backends.cudnn.enabled:
+            torch.backends.cudnn.benchmark = False
+            torch.backends.cudnn.deterministic = True
+
+
+    np.random.seed(seed)
+    seed_torch(seed)
+
+    num_frames = 100000
+
+    # parameters
+    fineness = 100
+    state_dim = 1
+    action_dim = 3
+    batch_size = 64
+    replay_buffer_size = 500
+    max_min = [[500],[0]]
+    epsilon_decay = 1/2000
+
+    agent = SumoSlowAgent(env=env, memory_size=100000, batch_size=batch_size, epsilon_decay=epsilon_decay)
+
+    agent.train(num_frames)

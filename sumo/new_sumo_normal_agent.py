@@ -6,7 +6,7 @@
 # Must be done in create_grid_keys
 # Must change mult_dim og single_dim intepreter til at passe med forskellige fineness
 # TODO: Det der skal lægges til INdex af action skal ændres til at være sum(actions) hvis actions er en liste
-
+# TODO: CONSIDER ADDING NUM_NIEGHBOURS (CHECK HOW MANY GRIDS) TO AGENT
 
 # from sumo import sumo_pp
 from sumo import sumo_pp
@@ -22,6 +22,7 @@ from sumo_utils import create_grid_keys, stencil, single_dim_interpreter, multi_
 from replay_buffer import TheCoolerReplayBuffer
 import random
 import distributionalQLearning
+from IPython.display import clear_output
 
 # SubSymbolic AI? Knowing the effect of action and just calculating the noise instead of the transition probabilities
 
@@ -46,7 +47,7 @@ class Network(nn.Module):
 
 class SumoNormalAgent:
     def __init__(self, fineness, env, state_dim, action_dim, batch_size, replay_buffer_size, max_min, epsilon_decay,
-                 max_epsilon=1.0, min_epsilon=0.1, gamma=0.99):
+                 max_epsilon=1.0, min_epsilon=0.1, gamma=0.99, model_path=None, ripe_when=20):
         self.fineness = fineness
         self.env = env
         self.state_dim = state_dim
@@ -62,16 +63,20 @@ class SumoNormalAgent:
         # Not necessary anymore
         #self.grid_keys, self.grid_list = create_grid_keys(fineness)
         self.replay_buffer = TheCoolerReplayBuffer(state_dim, replay_buffer_size, batch_size=batch_size, fineness=fineness,
-                                                   num_actions=action_dim, state_max=self.max, state_min=self.min)
+                                                   num_actions=action_dim, state_max=self.max, state_min=self.min, ripe_when=ripe_when)
 
-        self.batch_size = 64 # Nearest neighbours to update based on
+        self.batch_size = batch_size # Nearest neighbours to update based on
         self.number_neighbours = 2
 
         self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu"
+            "cpu" if torch.cuda.is_available() else "cpu"
         )
 
         self.dqn = Network(state_dim, action_dim).to(self.device)
+
+        if model_path is not None:
+            self.dqn.load_state_dict(model_path)
+
         # self.dqn_target = Network(state_dim, action_dim).to(self.device) # Perhaps not needed
         # self.dqn_target.load_state_dict(self.dqn.state_dict())
         # self.dqn_target.eval()
@@ -127,7 +132,7 @@ class SumoNormalAgent:
 
         return loss.item()
 
-    def train(self, num_frames: int, plotting_interval: int = 200):
+    def train(self, num_frames: int, plotting_interval: int = 200, save_model=None):
         """Train the agent."""
         self.is_test = False
 
@@ -150,11 +155,14 @@ class SumoNormalAgent:
                 state = self.env.reset()
                 scores.append(score)
                 score = 0
-
+            there_is_data = False
             # if training is ready - Just check if current grid has like 10 points
             # # TODO: Find a better way of doing this
-            if all([self.replay_buffer.spec_len(i) >= self.batch_size for i in range(self.replay_buffer.bins)]):
-            #if self.replay_buffer.spec_len(self.current_grid) >= 10:
+
+            if frame_idx >= 5000:
+                i=5
+            # Problem here
+            if sum(self.replay_buffer.ripe_bins) >= 10: # How many ripe bins we require before starting to update
                 loss = self.update_model()
                 losses.append(loss)
                 update_cnt += 1
@@ -166,14 +174,24 @@ class SumoNormalAgent:
                     ) * self.epsilon_decay
                 )
                 epsilons.append(self.epsilon)
+                there_is_data = True
 
             # plotting
-            # if frame_idx % plotting_interval == 0:
-            #     self._plot(frame_idx, scores, losses, epsilons)
+            if frame_idx % plotting_interval == 0 and there_is_data:
+                self._plot(frame_idx, scores, losses, epsilons)
+                print(frame_idx, loss, self.epsilon)
 
-        self.env.close()
+        print("Training complete")
 
-    def test(self, video_folder: str) -> None:
+        if save_model is not None:
+            try:
+                torch.save(self.dqn.state_dict(), save_model)
+            except:
+                print("ERROR! Could not save model!")
+
+        # self.env.close()
+
+    def test(self, render_after=False, video_folder: str='None') -> None:
         """Test the agent."""
         self.is_test = True
 
@@ -207,45 +225,48 @@ class SumoNormalAgent:
         next_state = samples["next_obs"]
         action = torch.LongTensor(samples["acts"].reshape(-1, 1)).to(device)
         reward = torch.FloatTensor(samples["rews"].reshape(-1, 1)).to(device)
-        done = torch.FloatTensor(samples["done"].reshape(-1, 1)).to(device)
+        # done = torch.FloatTensor(samples["done"].reshape(-1, 1)).to(device)
+        done = np.expand_dims(samples['done'], -1) # Don't think we need this as a tensor... So discount reshaping here
+
         # TODO: CHECK IF V(S) ESTIMATE IS BASED ON CURRENT OR NEXT STATE
         Q_vals = self.dqn(torch.FloatTensor(state).to(device)) # Should all have the same action
         current_q_value = Q_vals.gather(1, action)
         Q_vals = Q_vals.max(dim=1, keepdim=True)[0].detach().cpu().numpy()
 
-        # robust_estimator = distributionalQLearning.robust_estimator(X_p=samples['obs'], y_p=samples['next_obs'],
-        #                                                             X_v=samples['next_obs'], y_v=Q_vals,
-        #                                                             delta=0.5, gamma=self.gamma)
+        robust_estimator = distributionalQLearning.robust_estimator(X_p=samples['obs'], y_p=samples['next_obs'],
+                                                                    X_v=samples['next_obs'], y_v=Q_vals,
+                                                                    delta=0.5)
 
-        mask = 1 - done # Remove effect from those that are done
-        curr_q_value = Q_vals.gather(1, action)
+        mask = 1 - done  # Remove effect from those that are done
+        robust_estimator = reward + self.gamma * robust_estimator * mask
+
+        # curr_q_value = Q_vals.gather(1, action) - Pretty sure we don't need this
 
         # calculate dqn loss
-        loss = F.smooth_l1_loss(curr_q_value, current_q_value)
+        loss = F.smooth_l1_loss(current_q_value, robust_estimator)
 
         return loss
 
-
-    # def _plot(
-    #         self,
-    #         frame_idx: int,
-    #         scores: List[float],
-    #         losses: List[float],
-    #         epsilons: List[float],
-    # ):
-    #     """Plot the training progresses."""
-    #     clear_output(True)
-    #     plt.figure(figsize=(20, 5))
-    #     plt.subplot(131)
-    #     plt.title('frame %s. score: %s' % (frame_idx, np.mean(scores[-10:])))
-    #     plt.plot(scores)
-    #     plt.subplot(132)
-    #     plt.title('loss')
-    #     plt.plot(losses)
-    #     plt.subplot(133)
-    #     plt.title('epsilons')
-    #     plt.plot(epsilons)
-    #     plt.show()
+    def _plot(
+            self,
+            frame_idx: int,
+            scores: List[float],
+            losses: List[float],
+            epsilons: List[float],
+    ):
+        """Plot the training progresses."""
+        clear_output(True)
+        plt.figure(figsize=(20, 5))
+        plt.subplot(131)
+        plt.title('frame %s. score: %s' % (frame_idx, np.mean(scores[-10:])))
+        plt.plot(scores)
+        plt.subplot(132)
+        plt.title('loss')
+        plt.plot(losses)
+        plt.subplot(133)
+        plt.title('epsilons')
+        plt.plot(epsilons)
+        plt.show()
 
 if __name__ == "__main__":
 
@@ -265,18 +286,24 @@ if __name__ == "__main__":
     np.random.seed(seed)
     seed_torch(seed)
 
-    num_frames = 1000
+    num_frames = 100000
 
     # parameters
     fineness = 100
     state_dim = 1
     action_dim = 3
-    batch_size = 64
+    batch_size = 20
     replay_buffer_size = 500
     max_min = [[500],[0]]
     epsilon_decay = 1/2000
+    ripe_when = 20
 
+    # TODO: PERHAPS JUST PASS A PREMADE REPLAY BUFFER TO THE SUMO AGENT TO AVOID SO MANY PARAMETERS?
     agent = SumoNormalAgent(fineness=fineness, env=env, state_dim=state_dim, action_dim=action_dim, batch_size=batch_size,
-                            replay_buffer_size=replay_buffer_size, max_min=max_min, epsilon_decay=epsilon_decay)
+                            replay_buffer_size=replay_buffer_size, max_min=max_min, epsilon_decay=epsilon_decay, ripe_when=ripe_when)
 
     agent.train(num_frames)
+
+
+
+# if all([self.replay_buffer.spec_len(i) >= self.batch_size for i in range(self.replay_buffer.bins)]):
