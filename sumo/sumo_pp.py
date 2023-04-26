@@ -23,9 +23,9 @@ class SumoPPEnv:
 
     def __init__(self, line_length):
         self.line_length = line_length
-        self.start_position = self.line_length/5
+        self.start_position = self.line_length/5 # TODO: RANDOMIZE THIS
         self.sumo_position = self.start_position
-        self.hill_position = self.line_length/2
+        self.hill_position = self.line_length/2 # TODO: RANDOMIZE THIS
         self.cliff_position = self.hill_position + 10 # Where the sumo will fall down the cliff
         self.max_duration = 1000
 
@@ -33,6 +33,9 @@ class SumoPPEnv:
         self.noise_mean = 0 # Not meant to be changed, or introduces bias
         self.noise_var = self.sumo_speed / 2 # Higher var <-> More difficulty
         self.reward_function = lambda pos: 1/(pos - self.hill_position)**2 # 1 over squared istances from the hill
+
+        self.max_x = line_length # Terminates beyond this - Hill may not move beyond 10 of this position
+        self.min_x = 0 # Terminates beyond this
 
 
         # Used for rendering purposes
@@ -66,7 +69,7 @@ class SumoPPEnv:
 
         reward = self.reward_function(self.sumo_position)
 
-        if self.sumo_position >= self.cliff_position: # If to the right of cliff position -> Fall
+        if self.sumo_position >= self.cliff_position or self.sumo_position <= self.min_x: # If to the right of cliff position -> Fall
             done = True
             reward = 0 # Would like to set this lower, but don't know if it works like that
 

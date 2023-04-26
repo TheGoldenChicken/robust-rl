@@ -112,5 +112,13 @@ def neighbours(P: tuple, neighbours: int=0, maxx=np.infty, minn=-np.infty) -> li
         positions = [i for i in positions if min(i) >= minn]
     return positions
 
+def normalize_tensor(tensor, min, max):
+    """
+    Because pytorch doesn't have a good Christian min-max normalizer
+    :return: das normalized tensor
+    """
+    return (tensor - min)/(max - min)
+
+
 if __name__ == "__main__":
     print(neighbours(P=(1,1,1), neighbours=1))

@@ -17,11 +17,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from sumo_utils import create_grid_keys, stencil, single_dim_interpreter, multi_dim_interpreter, neighbours
+from sumo_utils import normalize_tensor
 from replay_buffer import TheCoolerReplayBuffer
 import random
 import distributionalQLearning
 from IPython.display import clear_output
+
 
 # SubSymbolic AI? Knowing the effect of action and just calculating the noise instead of the transition probabilities
 
@@ -51,7 +52,7 @@ class SumoNormalAgent:
         self.env = env
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.max, self.min = max_min[0], max_min[1]  # TODO: fix how max_min is represented, see grid_keys [[max_1, max_2], [min_1,min_2]]
+        self.max, self.min = np.array(max_min[0]), np.array(max_min[1])  # TODO: fix how max_min is represented, see grid_keys [[max_1, max_2], [min_1,min_2]]
 
         self.epsilon = max_epsilon
         self.epsilon_decay = epsilon_decay
@@ -90,6 +91,12 @@ class SumoNormalAgent:
 
         # To hold which grid it's currently at
         self.current_grid = 0
+
+        # Should work for tensors and numpy...
+        self.state_normalizer = lambda state: (state - self.max)/(self.max - self.min)
+
+        # Debugging
+        self.debug_losses = []
 
     def select_action(self, state: np.ndarray) -> np.ndarray:
         """Select an action from the input state."""
@@ -227,15 +234,30 @@ class SumoNormalAgent:
         # done = torch.FloatTensor(samples["done"].reshape(-1, 1)).to(device)
         done = np.expand_dims(samples['done'], -1) # Don't think we need this as a tensor... So discount reshaping here
 
+        state = self.state_normalizer(state)
+        next_state = self.state_normalizer(next_state)
+
         # TODO: CHECK IF V(S) ESTIMATE IS BASED ON CURRENT OR NEXT STATE
         Q_vals = self.dqn(torch.FloatTensor(state).to(device)) # Should all have the same action
         current_q_value = Q_vals.gather(1, action)
         Q_vals = Q_vals.max(dim=1, keepdim=True)[0].detach().cpu().numpy()
 
-        robust_estimator = distributionalQLearning.robust_estimator(X_p=samples['obs'], y_p=samples['next_obs'],
-                                                                    X_v=samples['next_obs'], y_v=Q_vals,
+        if np.any(np.isnan(Q_vals)):
+            i = 2
+        X_p=samples['obs']
+        y_p = samples['next_obs']
+        y_v = Q_vals
+        #  TODO: THE ROBUST ESTIMATOR DOES NOT FAIL THE SAME ITERATION AS IT GETS NAN, ONLY THE ONE AFTER THAT!!!
+        robust_estimator = distributionalQLearning.robust_estimator(X_p=state, y_p=next_state,
+                                                                    X_v=next_state, y_v=Q_vals,
                                                                     delta=0.5)
 
+        # robust_estimator = distributionalQLearning.robust_estimator(X_p=samples['obs'], y_p=samples['next_obs'],
+        #                                                             X_v=samples['next_obs'], y_v=Q_vals,
+        #                                                             delta=0.5)
+
+        print(f'X_p: {np.mean(state)} \n y_p: {np.mean(next_state)} \n y_v: {np.mean(y_v)}')
+        print("Robust estimator", robust_estimator)
         mask = 1 - done  # Remove effect from those that are done
         robust_estimator = reward + self.gamma * robust_estimator * mask
 
@@ -243,6 +265,7 @@ class SumoNormalAgent:
 
         # calculate dqn loss
         loss = F.smooth_l1_loss(current_q_value, robust_estimator)
+        print(torch.mean(current_q_value), torch.mean(robust_estimator), loss.item())
 
         return loss
 
@@ -270,7 +293,8 @@ class SumoNormalAgent:
 if __name__ == "__main__":
 
     # environment
-    env = sumo_pp.SumoPPEnv(line_length=500)
+    line_length = 500
+    env = sumo_pp.SumoPPEnv(line_length=line_length)
 
     seed = 777
 
@@ -293,7 +317,7 @@ if __name__ == "__main__":
     action_dim = 3
     batch_size = 20
     replay_buffer_size = 500
-    max_min = [[500],[0]]
+    max_min = [[line_length],[0]]
     epsilon_decay = 1/2000
     ripe_when = 20
 

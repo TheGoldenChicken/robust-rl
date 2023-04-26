@@ -11,7 +11,7 @@ def quadratic_approximation(X,y):
 
     # Compute the posteriror using linear algebra
     Sigma = np.linalg.inv(Phi.T@Phi)
-    mu = Sigma@Phi.T@y
+    mu = Sigma@Phi.T@y # TODO: THIS HAS A TENDENCY TO RETURN NAN VALUES
 
     # Extract c, b, A from the fitted mean values.
     c = mu[0]
@@ -22,6 +22,9 @@ def quadratic_approximation(X,y):
         for j in range(i+1,D):
             A[i,j] = mu[D+1+i+j]
             A[j,i] = A[i,j]
+
+    if np.isnan(A):
+        i = 2
 
     return A, b, c
 

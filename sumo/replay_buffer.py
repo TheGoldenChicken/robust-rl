@@ -141,7 +141,9 @@ class TheCoolerReplayBuffer(ReplayBuffer):
 
         current_sample = self[self.sample_randomly_idxs(size=1, check_ripeness=check_ripeness)] # Sample to calc KNN from
         current_bin_idx = self.get_bin_idx(current_sample['obs'], single_dim=False) # Idx of bin of current_sample
-        neighbour_bin_idxs = self.get_neighbour_bins(current_bin_idx, num_neighbours=nn) # Idx of neighbour bins of current_sample
+        if current_bin_idx == 300:
+            i = 2
+        neighbour_bin_idxs = self.get_neighbour_bins(P=current_bin_idx, num_neighbours=nn) # Idx of neighbour bins of current_sample
         samples = self[self.get_sample_idxs_from_bin(neighbour_bin_idxs, action=specific_action)] # Samples from neighbour_bins
 
         KNN_samples = self.get_knn( current_sample=current_sample, samples=samples, K=K, distance=distance)
@@ -182,20 +184,22 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         if single_dim:
             idxs = sum([r*self.fineness**i for i, r in enumerate(idxs)])
 
+        # TODO: CURRENTLY BUG WHEN SAMPLING WHERE IT'LL RUN THIS INSTEAD
+        # ONLY MEANT TO BE RUN WHEN STORIN'
         s = np.array(s)
         if self.tb and ((s <= self.state_min).any() or (s >= self.state_max).any()):
             idxs = len(self.size) - 1 # The trash observation goes in the trash can
 
-        # TODO: REMOVE THIS WHEN DONE TESTING
-        if test:
-            widths = [i / self.fineness for i in self.state_max]
-            idxs = [int(s_val // widths[i]) for i, s_val in enumerate(s)]
-            if single_dim:
-                idxs = sum([r*self.fineness**i for i, r in enumerate(idxs)])
-
-            s = np.array(s)
-            if self.tb and ((s <= self.state_min).any() or (s >= self.state_max).any()):
-                idxs = len(self.size) - 1 # The trash observation goes in the trash can
+        # # TODO: REMOVE THIS WHEN DONE TESTING
+        # if test:
+        #     widths = [i / self.fineness for i in self.state_max]
+        #     idxs = [int(s_val // widths[i]) for i, s_val in enumerate(s)]
+        #     if single_dim:
+        #         idxs = sum([r*self.fineness**i for i, r in enumerate(idxs)])
+        #
+        #     s = np.array(s)
+        #     if self.tb and ((s <= self.state_min).any() or (s >= self.state_max).any()):
+        #         idxs = len(self.size) - 1 # The trash observation goes in the trash can
 
 
         return idxs
