@@ -255,11 +255,11 @@ from scipy.stats import multivariate_normal
 import numpy as np
 
 
-mu = np.array([0, 0])
+mu = np.array([1, 2])
 Sigma = np.array([[3, 1], [1, 4]])
 
 A = np.array([[1, 0], [0, 1]])
-b = np.array([0, 0])
+b = np.array([1, -1])
 c = 0
 
 from itertools import product
@@ -268,23 +268,21 @@ def monte_carlo_integration(f, mean, cov, N):
 
     x = []
     for i in range(len(mean)): # For each dimension
-        x.append(np.linspace(start = mean[i] - cov[i,i]*5,
-                             stop = mean[i] + cov[i,i]*5,
+        x.append(np.linspace(start = mean[i] - cov[i,i]*10,
+                             stop = mean[i] + cov[i,i]*10,
                              num = N))
     x = np.array(list(product(*x)))
 
     y = np.array([f(x[i]) for i in range(N**len(mean))])
 
-    domain = np.prod([(cov[i,i]*10)/(N-1) for i in range(len(mean))])
+    domain = np.prod([(cov[i,i]*20)/(N-1) for i in range(len(mean))])
 
     return np.sum(y*domain)
 
-f_norm = lambda beta, s_ : multivariate_normal.pdf(s_, mean = mu, cov = Sigma)
+f_norm = lambda s_ : multivariate_normal.pdf(s_, mean = mu, cov = Sigma)
 
-# print("Test to see if the integral of f_norm is 1:")
-# print("Monte Carlo integration:", monte_carlo_integration(f_norm, 1, mu, Sigma, N = 100))
-
-# print("Integration estimate of f1:", monte_carlo_integration(f1, 1, mu, Sigma, N = 100))
+print("Test to see if the integral of f_norm is 1:")
+print("Monte Carlo integration:", monte_carlo_integration(f_norm, mu, Sigma, N = 100))
 
 delta = 0.1
 
@@ -297,14 +295,15 @@ def f1(beta):
     return -beta*np.log(expectation)-beta*delta
 
 def f2(beta):
-    A_inv = np.linalg.inv(A)
-    S = (beta/2)*A_inv
-    m = (-1/2)*b@A_inv
-    S_inv = np.linalg.inv(S)
-    S_det = np.linalg.det(S)
-    k = (np.exp(c/-beta)/np.exp(-(1/2)*m.T@S_inv@m))*np.sqrt(S_det*(2*np.pi)**len(m))
 
-    return -beta*np.log(k*multivariate_normal.pdf(mu, mean = m, cov = S+Sigma))-beta*delta
+    Sigma_inv = np.linalg.inv(Sigma)
+    Sigma_tilde = np.linalg.inv(Sigma_inv+(2/beta)*A)
+    Sigma_tilde_inv = np.linalg.inv(Sigma_tilde)
+    mu_tilde = (mu.T@Sigma_inv+(-b.T/beta))@Sigma_tilde
+    k = np.sqrt(np.linalg.det(Sigma_tilde)/np.linalg.det(Sigma)) \
+        * np.exp((-1/2)*mu.T@Sigma_inv@mu+(1/2)*mu_tilde.T@Sigma_tilde_inv@mu_tilde+(c/-beta))
+    
+    return -beta*np.log(k)-beta*delta
 
 def f2_prime(beta):
 
@@ -327,12 +326,55 @@ def f2_prime(beta):
 def f2_prime_approx(beta, tol):
     return (f2(beta+tol) - f2(beta-tol))/2*tol
 
-print("f1(1,mu):", f1(1))
-print("f2(1):", f2(1))
+print("f1(1):", f1(2))
+print("f2(1):", f2(2))
 print("f2_prime(1):", f2_prime(1))
 print("f2_prime_approx(1):", f2_prime_approx(1, 1e-3))
+
+X = np.linspace(0.01, 100, 1000)
 
 # from matplotlib import pyplot as plt
 
 # X = np.linspace(0.01, 100, 1000)
 # plt.plot(X, [-x*np.log(f2(x))-x*0.1 for x in X])
+
+
+#%%
+import matplotlib.pyplot as plt
+
+mu = np.array([1, 2])
+Sigma = np.array([[3, 1], [1, 4]])
+
+A = np.array([[1, 0], [0, 1]])
+b = np.array([1, -1])
+c = 3
+
+beta = 1
+
+f = lambda x : multivariate_normal.pdf(x, mean = mu, cov = Sigma)*np.exp((x.T @ A @ x + b.T @ x + c) * (-1/beta))
+
+
+Sigma_inv = np.linalg.inv(Sigma)
+Sigma_tilde = np.linalg.inv(Sigma_inv+(2/beta)*A)
+Sigma_tilde_inv = np.linalg.inv(Sigma_tilde)
+mu_tilde = (mu.T@Sigma_inv+(-b.T/beta))@Sigma_tilde
+k = np.sqrt(np.linalg.det(Sigma_tilde)/np.linalg.det(Sigma)) \
+    * np.exp((-1/2)*mu.T@Sigma_inv@mu+(1/2)*mu_tilde.T@Sigma_tilde_inv@mu_tilde+(c/-beta))
+
+return -beta*np.log(k*multivariate_normal.pdf(mu, mean = mu_tilde, cov = Sigma_tilde))-beta*delta
+
+
+# 3D plot of f
+from mpl_toolkits import mplot3d
+fig = plt.figure()
+ax = plt.axes(projection='3d')
+
+x = np.linspace(-3, 3, 100)
+y = np.linspace(-3, 3, 100)
+X, Y = np.meshgrid(x, y)
+Z = np.array([f(np.array([X[i,j], Y[i,j]])) for i in range(len(x)) for j in range(len(y))]).reshape(len(x), len(y))
+
+ax.plot_surface(X, Y, Z, rstride=1, cstride=1,
+                cmap='viridis', edgecolor='none')
+ax.set_title('f')
+plt.show()

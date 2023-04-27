@@ -24,6 +24,11 @@ be normally distributed.
 Light introduction to RL in general and Robust 
 RL. Motivate the theory by discussing why RL has its 
 *can't take it out of the lab* downsides.
+    * **Reinforcement learning**  
+        * **Standard RL**  
+        Cover standard RL
+        * **Robust RL**  
+        Describe Robust learning af the difference from Standard RL
     * **Distributional Robust Q-learning**  
     Explain the Distributional Robust Q-learning paper. 
     Why is it relevant? What are the Upsides? What are 

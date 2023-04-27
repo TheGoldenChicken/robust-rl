@@ -46,14 +46,21 @@ def linear_approximation(X,y):
     return b, c
 
 def expectation(A, b, c, beta, mu, Sigma):
-    A_inv = np.linalg.inv(A)
-    S = (beta/2)*A_inv
-    m = (-b/2)@A_inv
-    S_inv = np.linalg.inv(S)
-    S_det = np.linalg.det(S)
-    k = (np.exp(c/-beta)*np.sqrt(S_det*(2*np.pi)**len(m))/np.exp(-(1/2)*m.T@S_inv@m))
+    # A_inv = np.linalg.inv(A)
+    # S = (beta/2)*A_inv
+    # m = (-b/2)@A_inv
+    # S_inv = np.linalg.inv(S)
+    # S_det = np.linalg.det(S)
+    # k = (np.exp(c/-beta)*np.sqrt(S_det*(2*np.pi)**len(m))/np.exp(-(1/2)*m.T@S_inv@m))
 
-    return k*multivariate_normal.pdf(mu, mean = m, cov = S+Sigma)
+    Sigma_inv = np.linalg.inv(Sigma)
+    Sigma_tilde = np.linalg.inv(Sigma_inv+(2/beta)*A)
+    Sigma_tilde_inv = np.linalg.inv(Sigma_tilde)
+    mu_tilde = (mu.T@Sigma_inv+(-b.T/beta))@Sigma_tilde
+    k = np.sqrt(np.linalg.det(Sigma_tilde)/np.linalg.det(Sigma)) \
+        * np.exp((-1/2)*mu.T@Sigma_inv@mu+(1/2)*mu_tilde.T@Sigma_tilde_inv@mu_tilde+(c/-beta))
+    
+    return k
 
 def maximize(f_prime, tol = 1e-3):
     """
@@ -91,20 +98,26 @@ def maximize(f_prime, tol = 1e-3):
 
 def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1):
     ### Quadratic approximation ###
-    A, b, c = quadratic_approximation(X_v, y_v)
-    # TODO: IN SOME CASES, A BECOMES AN ARRAY OF [[NAN]], which fucks up the whole .eig thingy
-    ### Check if A is positive definite ###
-    # We know it is semi- since A is always symmetric
-    w, _ = np.linalg.eig(A)
-    if np.any(w < 0):
-        # If any eigenvalue is negative, use linear approximation instead
-        b, c = linear_approximation(X_v, y_v)
-        A = np.identity(len(b))
+    # A, b, c = quadratic_approximation(X_v, y_v)
+    # # TODO: IN SOME CASES, A BECOMES AN ARRAY OF [[NAN]], which fucks up the whole .eig thingy
+    # ### Check if A is positive definite ###
+    # # We know it is semi- since A is always symmetric
+    # w, _ = np.linalg.eig(A)
+    # if np.any(w < 0):
+    #     # If any eigenvalue is negative, use linear approximation instead
+    #     b, c = linear_approximation(X_v, y_v)
+    #     A = np.zeros((len(b),len(b)))
+
+    b, c = linear_approximation(X_v, y_v)
+    A = np.zeros((len(b),len(b)))
 
     ### Gaussian approximation ###
     # Compute the mean and covariance of the samples X_p, y_p
     mu = np.mean(X_p, axis = 0)
     Sigma = np.cov(X_p.T)
+
+    # For 1D environments expand the dimensions for the covariance
+    if Sigma.shape == (): Sigma = np.expand_dims(np.expand_dims(Sigma, axis = 0),axis=0)
 
     ### Pre supremum term ###
     pre_sup = lambda beta : -beta*np.log(expectation(A, b, c, beta, mu, Sigma))-delta*beta
@@ -204,3 +217,5 @@ def robust_estimator(X_p,y_p,X_v,y_v,delta):
 # plt.scatter(X.squeeze(), y.squeeze())
 # plt.plot(X.squeeze(), y_v.squeeze())
 # plt.show()
+
+
