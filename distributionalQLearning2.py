@@ -59,6 +59,9 @@ def expectation(A, b, c, beta, mu, Sigma):
     mu_tilde = (mu.T@Sigma_inv+(-b.T/beta))@Sigma_tilde
     k = np.sqrt(np.linalg.det(Sigma_tilde)/np.linalg.det(Sigma)) \
         * np.exp((-1/2)*mu.T@Sigma_inv@mu+(1/2)*mu_tilde.T@Sigma_tilde_inv@mu_tilde+(c/-beta))
+    
+    if k == np.array([[np.inf]]):
+        k = np.array([[0]])
 
     return k
 
@@ -119,10 +122,17 @@ def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1):
     # For 1D environments expand the dimensions for the covariance
     if Sigma.shape == (): Sigma = np.expand_dims(np.expand_dims(Sigma, axis = 0),axis=0)
 
-    ### Pre supremum term ###
-    pre_sup = lambda beta : -beta*np.log(expectation(A, b, c, beta, mu, Sigma))-delta*beta
+    def estimator(beta):
+        Sigma_inv = np.linalg.inv(Sigma)
+        Sigma_tilde = np.linalg.inv(Sigma_inv+(2/beta)*A)
+        Sigma_tilde_inv = np.linalg.inv(Sigma_tilde)
+        mu_tilde = (mu.T@Sigma_inv+(-b.T/beta))@Sigma_tilde
+        k1 = np.sqrt(np.linalg.det(Sigma_tilde)/np.linalg.det(Sigma))
+        k2 = (-1/2)*mu.T@Sigma_inv@mu+(1/2)*mu_tilde.T@Sigma_tilde_inv@mu_tilde+(c/-beta)
+        
+        return - beta * (np.log(k1) + k2) - delta * beta
 
-    return pre_sup
+    return estimator
 
 def pre_sub_robust_estimator_prime_approx(X_p,y_p,X_v,y_v, delta,tol = 1e-3):
     return lambda beta : (pre_sub_robust_estimator(X_p,y_p,X_v,y_v,delta)(beta+tol)- \

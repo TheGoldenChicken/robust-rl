@@ -21,7 +21,7 @@ import torch.optim as optim
 from sumo_utils import normalize_tensor
 from replay_buffer import TheCoolerReplayBuffer
 import random
-import distributionalQLearning
+import distributionalQLearning2 as distributionalQLearning
 from IPython.display import clear_output
 
 
