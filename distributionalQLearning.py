@@ -142,6 +142,10 @@ def robust_estimator(X_p,y_p,X_v,y_v,delta):
     f_prime = pre_sub_robust_estimator_prime_approx(X_p,y_p,X_v,y_v,delta)
 
     beta_max = maximize(f_prime)
+
+    if np.isnan(f(beta_max)) or np.isinf(f(beta_max)):
+        i = 2
+
     return f(beta_max)
 
 # mu = np.array([0, 0])

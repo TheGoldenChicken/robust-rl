@@ -185,7 +185,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
             idxs = sum([r*self.fineness**i for i, r in enumerate(idxs)])
 
         # TODO: CURRENTLY BUG WHEN SAMPLING WHERE IT'LL RUN THIS INSTEAD
-        # ONLY MEANT TO BE RUN WHEN STORIN'
+        # ONLY MEANT TO BE RUN WHEN STORIN' 
         s = np.array(s)
         if self.tb and ((s <= self.state_min).any() or (s >= self.state_max).any()):
             idxs = len(self.size) - 1 # The trash observation goes in the trash can
@@ -301,11 +301,11 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         if check_ripeness:
             # Just to flatten the fucker first - The whole item/sublist thingy... is it faster? Who knows
             poppable_idxs = [item for sublist in [list(range(i*self.max_bin_size, i*self.max_bin_size+self.size[i]))
-                    for i in range(self.bins) if self.ripe_bins[i] is True] for item in sublist]
+                    for i in range(self.bins-self.tb) if self.ripe_bins[i] is True] for item in sublist]
 
         else:
             poppable_idxs = [item for sublist in [list(range(i*self.max_bin_size, i*self.max_bin_size+self.size[i]))
-                    for i in range(self.bins)] for item in sublist]
+                    for i in range(self.bins-self.tb)] for item in sublist]
         assert len(poppable_idxs) >= size # No point trying to sample if we don't have enough datapoints...
         idxs = np.random.choice(poppable_idxs, size)
         return idxs

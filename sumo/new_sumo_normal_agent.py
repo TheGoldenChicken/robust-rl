@@ -94,7 +94,7 @@ class SumoNormalAgent:
         self.current_grid = 0
 
         # Should work for tensors and numpy...
-        self.state_normalizer = lambda state: (state - self.max)/(self.max - self.min)
+        self.state_normalizer = lambda state: (state - self.min)/(self.max - self.min)
 
         # Debugging
         self.debug_losses = []
@@ -102,7 +102,7 @@ class SumoNormalAgent:
     def select_action(self, state: np.ndarray) -> np.ndarray:
         """Select an action from the input state."""
         # epsilon greedy policy
-        if self.epsilon > np.random.random():
+        if self.epsilon > np.random.random() and not self.is_test:
             selected_action = random.randint(0, self.action_dim-1) # Why is this not inclusive, exclusive??? Stupid
         else:
             selected_action = self.dqn(
@@ -197,6 +197,25 @@ class SumoNormalAgent:
                 print("ERROR! Could not save model!")
 
         # self.env.close()
+
+    def test(self, test_iterations, render, speed):
+        self.is_test = True # Prevent from taking random actions
+        state = self.env.reset()
+        scores = []
+        done = False
+
+        for i in test_iterations:
+            score = 0
+            while not done:
+                action = self.select_action(state)
+                next_state, reward, done = self.step(action)
+
+                state = next_state
+                score += reward
+
+            scores.append(score)
+
+        return scores
 
     def test(self, render_after=False, video_folder: str='None') -> None:
         """Test the agent."""

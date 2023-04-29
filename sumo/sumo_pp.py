@@ -33,6 +33,8 @@ class SumoPPEnv:
         self.noise_mean = 0 # Not meant to be changed, or introduces bias
         self.noise_var = self.sumo_speed / 2 # Higher var <-> More difficulty
         self.reward_function = lambda pos: 1/(pos - self.hill_position)**2 # 1 over squared istances from the hill
+        self.reward_function = lambda pos: -pos**2 + 4*self.hill_position*pos
+        self.reward_normalizer = lambda reward: reward/self.reward_function(self.hill_position)
 
         self.max_x = line_length # Terminates beyond this - Hill may not move beyond 10 of this position
         self.min_x = 0 # Terminates beyond this
@@ -67,7 +69,7 @@ class SumoPPEnv:
         self.sumo_position += self.sumo_speed * actual_action\
                               + np.random.normal(loc=self.noise_mean,scale=self.noise_var, size=1)[0]
 
-        reward = self.reward_function(self.sumo_position)
+        reward = self.reward_normalizer(self.reward_function(self.sumo_position))
 
         if self.sumo_position >= self.cliff_position or self.sumo_position <= self.min_x: # If to the right of cliff position -> Fall
             done = True
