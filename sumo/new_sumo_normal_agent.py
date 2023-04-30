@@ -150,9 +150,13 @@ class SumoNormalAgent:
         scores = []
         score = 0
 
+        current_episode_score = 0
+        episode_scores = []
+
         for frame_idx in range(1, num_frames + 1):
             action = self.select_action(state)
             next_state, reward, done = self.step(action)
+            current_episode_score += reward
 
             state = next_state
             score += reward
@@ -160,15 +164,14 @@ class SumoNormalAgent:
             # if episode ends
             if done:
                 state = self.env.reset()
+                done = False # Perhaps this should be done in the step function?
                 scores.append(score)
                 score = 0
-            there_is_data = False
-            # if training is ready - Just check if current grid has like 10 points
-            # # TODO: Find a better way of doing this
+                current_episode_score = 0
+                episode_scores.append(current_episode_score)
 
-            if frame_idx >= 5000:
-                i=5
-            # Problem here
+            # TODO: FIND A BETTER FUCKING WAY OF DOING THIS!
+            there_is_data = False
             if sum(self.replay_buffer.ripe_bins) >= 10: # How many ripe bins we require before starting to update
                 loss = self.update_model()
                 losses.append(loss)
@@ -186,7 +189,8 @@ class SumoNormalAgent:
             # plotting
             if frame_idx % plotting_interval == 0 and there_is_data:
                 self._plot(frame_idx, scores, losses, epsilons)
-                print(frame_idx, loss, self.epsilon)
+                #self._special_plot(episode_scores, epsilons, losses, frame_idx)
+                print(frame_idx, loss, self.epsilon, )
 
         print("Training complete")
 
@@ -198,14 +202,16 @@ class SumoNormalAgent:
 
         # self.env.close()
 
-    def test(self, test_iterations, render, speed):
+    def test(self, test_games=100, render_games: int=0, render_speed: int=60):
         self.is_test = True # Prevent from taking random actions
         state = self.env.reset()
         scores = []
         done = False
 
-        for i in test_iterations:
+        for i in range(test_games):
             score = 0
+            state = self.env.reset()
+            done = False
             while not done:
                 action = self.select_action(state)
                 next_state, reward, done = self.step(action)
@@ -215,32 +221,20 @@ class SumoNormalAgent:
 
             scores.append(score)
 
-        return scores
-
-    def test(self, render_after=False, video_folder: str='None') -> None:
-        """Test the agent."""
-        self.is_test = True
-
-        # for recording a video
-        naive_env = self.env
-        # self.env = gym.wrappers.RecordVideo(self.env, video_folder=video_folder)
-
+        self.env.init_render()
         state = self.env.reset()
-        done = False
-        score = 0
+        self.env.frame_rate = 60
+        for i in range(render_games):
+            state = self.env.reset()
+            done = False
+            while not done:
+                action = self.select_action(state)
+                next_state, reward, done = self.step(action)
+                self.env.render()
 
-        while not done:
-            action = self.select_action(state)
-            next_state, reward, done = self.step(action)
+                state = next_state
 
-            state = next_state
-            score += reward
-
-        print("score: ", score)
-        self.env.close()
-
-        # reset
-        self.env = naive_env
+        return scores
 
     def _compute_dqn_loss(self, samples: Dict[str, np.ndarray]) -> torch.Tensor:
         # TODO: Do this for each action, we don't wanna
@@ -276,8 +270,8 @@ class SumoNormalAgent:
         #                                                             X_v=samples['next_obs'], y_v=Q_vals,
         #                                                             delta=0.5)
 
-        print(f'X_p: {np.mean(state)} \n y_p: {np.mean(next_state)} \n y_v: {np.mean(y_v)}')
-        print("Robust estimator", robust_estimator)
+        # print(f'X_p: {np.mean(state)} \n y_p: {np.mean(next_state)} \n y_v: {np.mean(y_v)}')
+        # print("Robust estimator", robust_estimator)
         mask = 1 - done  # Remove effect from those that are done
         robust_estimator = reward + self.gamma * robust_estimator * mask
 
@@ -285,7 +279,7 @@ class SumoNormalAgent:
 
         # calculate dqn loss
         loss = F.smooth_l1_loss(current_q_value, robust_estimator)
-        print(torch.mean(current_q_value), torch.mean(robust_estimator), loss.item())
+        # print(torch.mean(current_q_value), torch.mean(robust_estimator), loss.item())
 
         return loss
 
@@ -310,6 +304,25 @@ class SumoNormalAgent:
         plt.plot(epsilons)
         plt.show()
 
+    # def _special_plot(self, episode_scores, epsilons, losses, frame_idx):
+    #     """
+    #     Episode-wise plotting function that should be deleted when Karl is done using
+    #     """
+    #     """Plot the training progresses."""
+    #     clear_output(True)
+    #     plt.figure(figsize=(20, 5))
+    #     plt.subplot(131)
+    #     plt.title('frame %s. score: %s' % (len(episode_scores), episode_scores))
+    #     plt.plot(np.arange(len(episode_scores)), episode_scores)
+    #     plt.subplot(132)
+    #     plt.title('loss')
+    #     plt.plot(losses)
+    #     plt.subplot(133)
+    #     plt.title('epsilons')
+    #     plt.plot(epsilons)
+    #     plt.show()
+
+
 if __name__ == "__main__":
 
     # environment
@@ -329,7 +342,7 @@ if __name__ == "__main__":
     np.random.seed(seed)
     seed_torch(seed)
 
-    num_frames = 100000
+    num_frames = 2000
 
     # parameters
     fineness = 100
@@ -338,7 +351,7 @@ if __name__ == "__main__":
     batch_size = 20
     replay_buffer_size = 500
     max_min = [[line_length],[0]]
-    epsilon_decay = 1/2000
+    epsilon_decay = 1/500
     ripe_when = 20
 
     # TODO: PERHAPS JUST PASS A PREMADE REPLAY BUFFER TO THE SUMO AGENT TO AVOID SO MANY PARAMETERS?
@@ -346,7 +359,7 @@ if __name__ == "__main__":
                             replay_buffer_size=replay_buffer_size, max_min=max_min, epsilon_decay=epsilon_decay, ripe_when=ripe_when)
 
     agent.train(num_frames)
-
-
-
+    scores = agent.test(test_games=1000, render_games=10)
+    i = 5
+    print(scores, np.mean(scores))
 # if all([self.replay_buffer.spec_len(i) >= self.batch_size for i in range(self.replay_buffer.bins)]):
