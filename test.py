@@ -361,7 +361,7 @@ mu_tilde = (mu.T@Sigma_inv+(-b.T/beta))@Sigma_tilde
 k = np.sqrt(np.linalg.det(Sigma_tilde)/np.linalg.det(Sigma)) \
     * np.exp((-1/2)*mu.T@Sigma_inv@mu+(1/2)*mu_tilde.T@Sigma_tilde_inv@mu_tilde+(c/-beta))
 
-return -beta*np.log(k*multivariate_normal.pdf(mu, mean = mu_tilde, cov = Sigma_tilde))-beta*delta
+# return -beta*np.log(k*multivariate_normal.pdf(mu, mean = mu_tilde, cov = Sigma_tilde))-beta*delta
 
 
 # 3D plot of f
@@ -378,3 +378,133 @@ ax.plot_surface(X, Y, Z, rstride=1, cstride=1,
                 cmap='viridis', edgecolor='none')
 ax.set_title('f')
 plt.show()
+
+
+#%%
+
+# Kullback leibler test
+import numpy as np
+from scipy.stats import multivariate_normal
+import matplotlib.pyplot as plt
+from itertools import product
+
+mu1 = np.array([1, 2])
+mu2 = np.array([2, 1])
+cov1 = np.array([[3, 1], [1, 4]])
+cov2 = np.array([[2, 0], [0, 2]])
+
+
+def kl_divergence(mu, m, Sigma, S):
+    det_Sigma = np.linalg.det(Sigma)
+    det_S = np.linalg.det(S)
+    S_inv = np.linalg.inv(S)
+
+    term1 = np.log(det_S/det_Sigma)+(m-mu).T@S_inv@(m-mu)+np.trace(S_inv@Sigma)-len(mu)
+    return (1/2)*term1
+
+print("exact", kl_divergence(mu1, mu2, cov1, cov2))
+
+# Interactivate plot with sliders for mu1, mu2, cov1, cov2
+from ipywidgets import interact, interactive, fixed, interact_manual
+import ipywidgets as widgets
+
+def f(mu1_x, mu1_y, mu2_x, mu2_y, cov1_xx, cov1_xy, cov1_yx, cov1_yy, cov2_xx, cov2_xy, cov2_yx, cov2_yy):
+    mu1 = np.array([mu1_x, mu1_y])
+    mu2 = np.array([mu2_x, mu2_y])
+    cov1 = np.array([[cov1_xx, cov1_xy], [cov1_yx, cov1_yy]])
+    cov2 = np.array([[cov2_xx, cov2_xy], [cov2_yx, cov2_yy]])
+    return kl_divergence(mu1, mu2, cov1, cov2)
+
+interact(f, mu1_x = widgets.FloatSlider(min=-5, max=5, step=0.1, value=1),
+            mu1_y = widgets.FloatSlider(min=-5, max=5, step=0.1, value=2),
+            mu2_x = widgets.FloatSlider(min=-5, max=5, step=0.1, value=2),
+            mu2_y = widgets.FloatSlider(min=-5, max=5, step=0.1, value=1),
+            cov1_xx = widgets.FloatSlider(min=0.1, max=5, step=0.1, value=3),
+            cov1_xy = widgets.FloatSlider(min=-5, max=5, step=0.1, value=1),
+            cov1_yx = widgets.FloatSlider(min=-5, max=5, step=0.1, value=1),
+            cov1_yy = widgets.FloatSlider(min=0.1, max=5, step=0.1, value=4),
+            cov2_xx = widgets.FloatSlider(min=0.1, max=5, step=0.1, value=2),
+            cov2_xy = widgets.FloatSlider(min=-5, max=5, step=0.1, value=0),
+            cov2_yx = widgets.FloatSlider(min=-5, max=5, step=0.1, value=0),
+            cov2_yy = widgets.FloatSlider(min=0.1, max=5, step=0.1, value=2))
+
+#%%
+# 2D plot of f
+from mpl_toolkits import mplot3d
+fig = plt.figure()
+ax = plt.axes(projection='3d')
+
+x = np.linspace(-5, 5, 100)
+y = np.linspace(-5, 5, 100)
+X, Y = np.meshgrid(x, y)
+Z = np.array([f(np.array([X[i,j], Y[i,j]])) for i in range(len(x)) for j in range(len(y))]).reshape(len(x), len(y))
+
+ax.plot_surface(X, Y, Z, rstride=1, cstride=1,
+                cmap='viridis', edgecolor='none')
+ax.set_title('f')
+plt.show()
+
+#%%
+
+from numpy import pi, sin
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider, Button, RadioButtons
+
+def signal(amp, freq):
+    return amp * sin(2 * pi * freq * t)
+
+axis_color = 'lightgoldenrodyellow'
+
+fig = plt.figure()
+ax = fig.add_subplot(111)
+
+# Adjust the subplots region to leave some space for the sliders and buttons
+fig.subplots_adjust(left=0.25, bottom=0.25)
+
+t = np.arange(0.0, 1.0, 0.001)
+amp_0 = 5
+freq_0 = 3
+
+# Draw the initial plot
+# The 'line' variable is used for modifying the line later
+[line] = ax.plot(t, signal(amp_0, freq_0), linewidth=2, color='red')
+ax.set_xlim([0, 1])
+ax.set_ylim([-10, 10])
+
+# Add two sliders for tweaking the parameters
+
+# Define an axes area and draw a slider in it
+amp_slider_ax  = fig.add_axes([0.25, 0.15, 0.65, 0.03], facecolor=axis_color)
+amp_slider = Slider(amp_slider_ax, 'Amp', 0.1, 10.0, valinit=amp_0)
+
+# Draw another slider
+freq_slider_ax = fig.add_axes([0.25, 0.1, 0.65, 0.03], facecolor=axis_color)
+freq_slider = Slider(freq_slider_ax, 'Freq', 0.1, 30.0, valinit=freq_0)
+
+# Define an action for modifying the line when any slider's value changes
+def sliders_on_changed(val):
+    line.set_ydata(signal(amp_slider.val, freq_slider.val))
+    fig.canvas.draw_idle()
+amp_slider.on_changed(sliders_on_changed)
+freq_slider.on_changed(sliders_on_changed)
+
+# Add a button for resetting the parameters
+reset_button_ax = fig.add_axes([0.8, 0.025, 0.1, 0.04])
+reset_button = Button(reset_button_ax, 'Reset', color=axis_color, hovercolor='0.975')
+def reset_button_on_clicked(mouse_event):
+    freq_slider.reset()
+    amp_slider.reset()
+reset_button.on_clicked(reset_button_on_clicked)
+
+# Add a set of radio buttons for changing color
+color_radios_ax = fig.add_axes([0.025, 0.5, 0.15, 0.15], facecolor=axis_color)
+color_radios = RadioButtons(color_radios_ax, ('red', 'blue', 'green'), active=0)
+def color_radios_on_clicked(label):
+    line.set_color(label)
+    fig.canvas.draw_idle()
+color_radios.on_clicked(color_radios_on_clicked)
+
+plt.show()
+
+#%%
