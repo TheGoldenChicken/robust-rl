@@ -44,7 +44,7 @@ class RobustSumoAgent(SumoAgent):
         # print("Robust estimator", robust_estimator)
 
         mask = 1 - done  # Remove effect from those that are done
-        robust_estimator = reward + self.gamma * robust_estimator * mask
+        robust_estimator = reward + self.gamma * robust_estimator * mask * -1
 
         # calculate dqn loss
         loss = F.smooth_l1_loss(current_q_value, robust_estimator)

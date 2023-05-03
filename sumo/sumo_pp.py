@@ -26,7 +26,8 @@ class SumoPPEnv:
         self.start_position = self.line_length/5 + np.random.randn()
         self.sumo_position = self.start_position
         self.hill_position = self.line_length/2 # + np.random.randn()
-        self.cliff_position = self.line_length # Where the sumo will fall down the cliff
+        self.cliff_position = self.hill_position + 50 # Where the sumo will fall down the cliff
+        self.cliff_position = self.line_length
         self.max_duration = 300 # Env terminates after this
         self.current_action = 0  # 0, 1, 2, NOOP, left, right
 
@@ -78,7 +79,7 @@ class SumoPPEnv:
             done = True
             reward = 0 # Would like to set this lower, but don't know if it works like that
 
-        if self.frame >= self.max_duration:
+        elif self.frame >= self.max_duration:
             done = True
             reward = 0
         else:
