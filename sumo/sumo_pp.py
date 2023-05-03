@@ -21,24 +21,24 @@ def drawImage(display, path, center, scale=None, angle=None):
 
 class SumoPPEnv:
 
-    def __init__(self, line_length):
+    def __init__(self, line_length=1000):
         self.line_length = line_length
-        self.start_position = self.line_length/5 # TODO: RANDOMIZE THIS
+        self.start_position = self.line_length/5 + np.random.randn()
         self.sumo_position = self.start_position
-        self.hill_position = self.line_length/2 # TODO: RANDOMIZE THIS
-        self.cliff_position = self.hill_position + 20 # Where the sumo will fall down the cliff
+        self.hill_position = self.line_length/2 # + np.random.randn()
+        self.cliff_position = self.line_length # Where the sumo will fall down the cliff
         self.max_duration = 300 # Env terminates after this
+        self.current_action = 0  # 0, 1, 2, NOOP, left, right
 
         self.sumo_speed = 5
         self.noise_mean = 0 # Not meant to be changed, or introduces bias
         self.noise_var = self.sumo_speed / 2 # Higher var <-> More difficulty
-        self.reward_function = lambda pos: 1/(pos - self.hill_position)**2 # 1 over squared istances from the hill
+        # self.reward_function = lambda pos: 1/(pos - self.hill_position)**2 # 1 over squared istances from the hill
         self.reward_function = lambda pos: -pos**2 + 2*self.hill_position*pos
         self.reward_normalizer = lambda reward: reward/self.reward_function(self.hill_position)
-
+        # self.reward_normalizer = lambda reward: reward * 1
         self.max_x = line_length # Terminates beyond this - Hill may not move beyond 10 of this position
         self.min_x = 0 # Terminates beyond this
-
 
         # Used for rendering purposes
         self.width = 1000
@@ -49,13 +49,15 @@ class SumoPPEnv:
         # TODO: Replace this stupid shit with stupid shit using the clock instead
         self.render_frame_interval = 10
         self.frame = 0
-        self.path = 'sumo_1.png'
-
-        self.current_action = 0 # 0, 1, 2, NOOP, left, right
+        self.path = 'images/sumo_1.png'
         self.sprite_frame = 0
-
         self.rendering = False
         self.frame_rate = 60
+
+        # For interfacing with agent
+        self.action_dim = 3
+        self.obs_dim = 1
+        self.max_min = [self.max_x, self.min_x]
 
     def step(self, action):
         self.frame += 1
@@ -76,15 +78,17 @@ class SumoPPEnv:
             done = True
             reward = 0 # Would like to set this lower, but don't know if it works like that
 
-        elif self.frame >= self.max_duration:
+        if self.frame >= self.max_duration:
             done = True
-            reward = 50
+            reward = 0
         else:
             done = False
 
         if self.rendering:
             self.render()
 
+        # return_val = self.sumo_position/1000
+        #return np.array([return_val]), reward, done, 'derp'
         return np.array([self.sumo_position]), reward, done, 'derp' # Final value is dummy for working with gym envs
 
     def reset(self):
@@ -105,14 +109,14 @@ class SumoPPEnv:
         self.sprite_frame += 1
 
         if self.sprite_frame % self.render_frame_interval == 0:
-            if self.path == 'sumo_2.png' or self.path == 'sumo_1.png':
-                self.path = 'sumo_3.png'
+            if self.path == 'images/sumo_2.png' or self.path == 'images/sumo_1.png':
+                self.path = 'images/sumo_3.png'
 
-            elif self.path == 'sumo_3.png':
-                self.path = 'sumo_2.png'
+            elif self.path == 'images/sumo_3.png':
+                self.path = 'images/sumo_2.png'
 
             if self.current_action == 0:
-                self.path = 'sumo_1.png'
+                self.path = 'images/sumo_1.png'
 
         self.clock.tick(self.frame_rate)
         pygame.display.flip() # Why this?
@@ -140,8 +144,6 @@ if __name__ == "__main__":
     #plt.plot(xs, ys)
     plt.plot(xs, env.reward_normalizer(ys))
     plt.show()
-    print(xs[500],ys[500], env.hill_position)
-    print(np.where(env.reward_normalizer(ys) == max(env.reward_normalizer(ys))))
     action = 0
     done = False
     episode_reward = 0
@@ -163,7 +165,7 @@ if __name__ == "__main__":
                     elif event.key == pygame.K_d:
                         action = 0
             next_state, reward, done, _ = env.step(action)
-            print(done)
+            print(reward, done, next_state)
             episode_reward += reward
             env.render()
 

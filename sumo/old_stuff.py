@@ -152,3 +152,24 @@ class Network(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward method implementation."""
         return self.layers(x)
+
+
+    # def update_ripeness(self):
+    #     """
+    #     Used to determine what bins are ripe for sampling
+    #     :return:
+    #     """
+    #
+    #     for i, r in enumerate(self.ripe_bins):
+    #         if not r: # If unripe, we check
+    #             if self.spec_len(i) >= self.batch_size:
+    #                 self.ripe_bins[i] = True
+    #                 continue
+    #
+    #             idx_no_action = r % self.bins_per_action
+    #             neighs = self.get_neighbour_bins(single_dim_interpreter(idx_no_action,self.fineness, self.obs_dim),
+    #                                                  num_neighbours=self.num_neighbours)
+    #
+    #             if sum([self.spec_len(i) for i in neighs]) >= self.batch_size:
+    #                 self.ripe_bins[i] = True
+
