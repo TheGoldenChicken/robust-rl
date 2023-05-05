@@ -9,9 +9,9 @@ from collections import defaultdict
 env = ware_house.Env(n = 10)
 
 Q = []
-
-for i in range(5):
-    agent = robust_distributional_agent(env, tol = 0.01)
+    
+for i in range(3):
+    agent = robust_distributional_agent(env, tol = 0.05)
     manager = rl.manager.Manager(agent, render = True)
     print(f"iteration: {i}: " + str(manager.run(iterations = 10000)))
     print("total samples: " + str(agent.total_samples))
@@ -32,7 +32,7 @@ for i in range(0, len(Q_unpacked), 2):
     for j in range(len(Q_unpacked[i])):
         Q[Q_unpacked[i+1][j]] += (1/(i//2+1))*(Q_unpacked[i][j]-Q[Q_unpacked[i+1][j]])
 
-env = ware_house.Env(playerOptions = None)
+env = ware_house.Env()
 
 # Convert Q values to policy values
 pi = defaultdict(float)

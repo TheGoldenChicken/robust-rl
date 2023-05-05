@@ -33,11 +33,11 @@ class Env(rl.env.DiscreteEnv):
         cost += max(0,self.p*(demand - state - actions[0]))
         
         # Fixed ordering cost
-        if(actions[0] > 0): cost += self.k
+        cost += self.k * (actions[0] > 0)
         
         next_state = state + actions[0] - min(demand, state + actions[0])
             
-        reward = cost
+        reward = -cost
         
         return int(next_state), int(reward)
     

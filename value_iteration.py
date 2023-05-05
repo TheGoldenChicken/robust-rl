@@ -10,7 +10,7 @@ class ValueIteration:
         self.Q = defaultdict(float)
         self.V = defaultdict(float)
 
-    def __call__(self, env, gamma = 0.99, tol = 1e-3):
+    def __call__(self, env, gamma = 0.9, tol = 1e-3):
 
         Delta = float('inf')
         
@@ -99,14 +99,14 @@ class policy_evaluation:
         return self.V
 
 import ware_house.ware_house as ware_house
-# env = ware_house.Env()
+env = ware_house.Env()
 
-# value_iter = ValueIteration()
-# pi = value_iter(env)
-# print("policy:", pi)
+value_iter = ValueIteration()
+pi = value_iter(env)
+print("policy:", pi)
 
 print("\n------------\n")
-
+#%%
 # env = ware_house.EnvNonUniform(b = 1, m = 0)
 policy_eval = policy_evaluation()
 

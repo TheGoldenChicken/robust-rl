@@ -27,8 +27,8 @@ class robust_distributional_agent(rl.agent.ShallowAgent):
         """
 
         sample_star = np.max(samples)
-
-        tmp1 = -x*(sample_star - np.log(2**K))
+        N = len(samples)
+        tmp1 = -x*(sample_star - np.log(N))# np.log(2**K))
         tmp2 = -x*np.logaddexp.reduce(-samples/x - sample_star)
         tmp3 = -x*self.delta
 
@@ -42,7 +42,7 @@ class robust_distributional_agent(rl.agent.ShallowAgent):
 
         return (self.f_stable(x+tol, samples, K) - self.f_stable(x-tol, samples, K)) / (2*tol)
 
-    def maximize(self, samples, K, tol = 1e-3):
+    def maximize(self, samples, K, tol = 1e-5):
         """
         Maximize f_stable with respect to x by using the derivative f_prime.
         Also note that f_prime is either monotonic decreasing or only has one maximum.
@@ -81,21 +81,24 @@ class robust_distributional_agent(rl.agent.ShallowAgent):
         The Delta_q function.
         """
         # Term 1
-        s_ = state_[:2**(N+1)+1]
+        # s_ = state_[:2**(N+1)+1]
+        s_ = state_[::2]
         Q_max = np.array([max([self.Q[s_i, b] for b in self.env.A(s_i)]) for s_i in s_])
 
         # Calculate the supremum of the first term
         sup_1 = self.f_stable(self.maximize(Q_max, N+1), Q_max, N+1)
 
         # Term 2
-        s_ = state_[1:(2**N)+1:2]
+        # s_ = state_[1:(2**N)+1:2]
+        s_ = state_[1::2]
         Q_max = np.array([max([self.Q[s_i, b] for b in self.env.A(s_i)]) for s_i in s_])
 
         # Calculate the supremum of the second term
         sup_2 = self.f_stable(self.maximize(Q_max, N), Q_max, N)
 
         # Term 3
-        s_ = state_[:(2**N)+1:2]
+        # s_ = state_[:(2**N)+1:2]
+        s_ = state_[::2]
         Q_max = np.array([max([self.Q[s_i, b] for b in self.env.A(s_i)]) for s_i in s_])
 
         # Calculate the supremum of the third term
@@ -108,30 +111,44 @@ class robust_distributional_agent(rl.agent.ShallowAgent):
         The Delta_r function.
         """
         # Term 1
-        r = reward[:2**(N+1)+1]
+        # r = reward[:2**(N+1)+1]
+        r = reward
 
         # Calculate the supremum of the first term
         sup_1 = self.f_stable(self.maximize(r, N+1), r, N+1)
 
         # Term 2
-        r = reward[1:(2**N)+1:2]
+        # r = reward[1:(2**N)+1:2]
+        r = reward[1::2]
 
         # Calculate the supremum of the second term
         sup_2 = self.f_stable(self.maximize(r, N), r, N)
 
         # Term 3
-        r = reward[:(2**N)+1:2]
+        # r = reward[:(2**N)+1:2]
+        r = reward[::2]
 
         # Calculate the supremum of the third term
         sup_3 = self.f_stable(self.maximize(r, N), r, N)
 
         return sup_1 - (1/2)*sup_2 - (1/2)*sup_3
 
+    def stop_rnd(self, e):
+        N = 0 # Pretty sure paper is buggy.
+        while True:
+            if np.random.rand() < e:
+                return N
+            N = N + 1
+
+    def stop_log_p(self, e, N):
+        return np.log(e) + np.log(1-e) * N
+
     def next(self):
         self.t += 1
         alpha_t = self.lr(self.t)
-        Q_ = defaultdict(lambda : 0)
+        # Q_ = defaultdict(lambda : 0)
         
+        total_inf_norm = 0
         for state in self.env.get_states():
             actions = self.env.A(state)
             for action in actions:
@@ -139,6 +156,9 @@ class robust_distributional_agent(rl.agent.ShallowAgent):
                 loc = -1
                 # Get N
                 N = geom.rvs(p = self.epsilon, loc = loc, size = 1)[0]
+                # N = self.stop_rnd(self.epsilon)
+                # p_N = self.epsilon * (1-self.epsilon)**N
+                # p_N = np.exp(self.stop_log_p(self.epsilon, N))
 
                 # Get 2**(N+1) samples from the environment
                 samples = np.array([self.env.step(state, action) for _ in range(2**(N+1))])
@@ -159,22 +179,28 @@ class robust_distributional_agent(rl.agent.ShallowAgent):
                 T_rob_e = R_rob + self.gamma*T_rob
                 
                 # Update the Q function
-                Q_[state,action] = (1-alpha_t)*self.Q[state, action] + alpha_t*T_rob_e
-        
-        # Check for convergence
-        Q_diffs = []
-        for key in self.Q.keys():
-            Q_diffs.append(np.abs(self.Q[key]-Q_[key]))
-        distance = np.max(Q_diffs)
+                new_Q = (1-alpha_t)*self.Q[state, action] + alpha_t*T_rob_e
+                
+                inf_norm = np.abs(new_Q - self.Q[state, action])
+                if inf_norm > total_inf_norm:
+                    total_inf_norm = inf_norm
+                
+                self.Q[state, action] = new_Q
+
+        # # Check for convergence
+        # Q_diffs = []
+        # for key in self.Q.keys():
+        #     Q_diffs.append(np.abs(self.Q[key]-Q_[key]))
+        # distance = np.max(Q_diffs)
         
         # Print the convergence information
-        if distance < self.tol:
-            print(">>> (CONVERGED) Diff Inf Norm:", distance, "| Total Samples:", self.total_samples)
+        if total_inf_norm < self.tol:
+            print(">>> (CONVERGED) Diff Inf Norm:", total_inf_norm, "| Total Samples:", self.total_samples)
             return True
         elif(self.t%100 == 0):
-            print(">>> Diff Inf Norm:", distance)
+            print(">>> Diff Inf Norm:", total_inf_norm)
         
-        # Update the old Q values with the new Q values
-        self.Q = Q_
+        # # Update the old Q values with the new Q values
+        # self.Q = Q_
         
         return False
