@@ -49,7 +49,7 @@ class SumoPPEnv:
         # TODO: Replace this stupid shit with stupid shit using the clock instead
         self.render_frame_interval = 10
         self.frame = 0
-        self.path = 'sumo_1.png'
+        self.path = 'sumo/sumo_1.png'
 
         self.current_action = 0 # 0, 1, 2, NOOP, left, right
         self.sprite_frame = 0

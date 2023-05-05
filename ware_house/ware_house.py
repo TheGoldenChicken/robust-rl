@@ -22,7 +22,7 @@ class Env(rl.env.DiscreteEnv):
     def step(self, state : tuple, actions : list[tuple], d = None) -> tuple[list[tuple],list[int]]:
         # Random uniformly distributed demand between 0 and n
         if d is None:
-            demand = np.random.randint(0, self.n)
+            demand = np.random.randint(0, self.n+1)
         else:
             demand = d
         
@@ -126,16 +126,19 @@ class EnvNonUniform(Env):
 
         self.p = p
         
-    def step(self, state : tuple, actions : list[tuple]) -> tuple[list[tuple],list[int]]:
+    def step(self, state : tuple, actions : list[tuple], d = None) -> tuple[list[tuple],list[int]]:
         # Random uniformly distributed demand between 0 and n
-        demand_ratio = np.array([(self.b+1)/(self.n+1) \
-                                if x == self.m or x == self.m + 1 \
-                                else (self.n - 1 - 2*self.b)/(self.n**2 - 1) \
-                                for x in range(self.n)])
+        if d is None:
+            demand_ratio = np.array([(self.b+1)/(self.n+1) \
+                                    if x == self.m or x == self.m + 1 \
+                                    else (self.n - 1 - 2*self.b)/(self.n**2 - 1) \
+                                    for x in range(self.n+1)])
 
-        demand = int(np.random.choice(np.arange(self.n),
-                                  size = 1,
-                                  p = demand_ratio/sum(demand_ratio))[0])
+            demand = int(np.random.choice(np.arange(self.n+1),
+                                    size = 1,
+                                    p = demand_ratio)[0])
+        else:
+            demand = d
         
         # Holding cost
         cost = max(0,(self.h*(state + actions[0] - demand)))
@@ -151,3 +154,22 @@ class EnvNonUniform(Env):
         reward = cost
         
         return next_state, reward
+
+    def get_transistion_probabilities(self, state, action):
+        
+        p = defaultdict(lambda : 0)
+        
+        num_states = len(self.get_states())
+        for d in range(num_states):
+
+            demand_ratio = np.array([(self.b+1)/(self.n+1) \
+                                    if x == self.m or x == self.m + 1 \
+                                    else (self.n - 1 - 2*self.b)/(self.n**2 - 1) \
+                                    for x in range(self.n+1)])
+            
+            next_state, reward = self.step(state, action, d)
+            
+            p[(int(next_state), int(reward))] += demand_ratio[d]
+        
+        return p
+    

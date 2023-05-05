@@ -326,7 +326,7 @@ class SumoNormalAgent:
 if __name__ == "__main__":
 
     # environment
-    line_length = 500
+    line_length = 1000
     env = sumo_pp.SumoPPEnv(line_length=line_length)
 
     seed = 777
@@ -342,7 +342,7 @@ if __name__ == "__main__":
     np.random.seed(seed)
     seed_torch(seed)
 
-    num_frames = 2000
+    num_frames = 5000
 
     # parameters
     fineness = 100
@@ -358,7 +358,7 @@ if __name__ == "__main__":
     agent = SumoNormalAgent(fineness=fineness, env=env, state_dim=state_dim, action_dim=action_dim, batch_size=batch_size,
                             replay_buffer_size=replay_buffer_size, max_min=max_min, epsilon_decay=epsilon_decay, ripe_when=ripe_when)
 
-    agent.train(num_frames)
+    agent.train(num_frames, plotting_interval=1000)
     scores = agent.test(test_games=1000, render_games=10)
     i = 5
     print(scores, np.mean(scores))
