@@ -58,7 +58,7 @@ class SumoAgent:
         self.training_ready = False
 
         self.device = torch.device(
-            "cpu" if torch.cuda.is_available() else "cpu"
+            "cuda" if torch.cuda.is_available() else "cpu"
         )
         self.dqn = Network(env.obs_dim, env.action_dim).to(self.device)
         if model_path is not None:
@@ -74,9 +74,10 @@ class SumoAgent:
         # Should work for tensors and numpy...
         self.state_normalizer = lambda state: (state - self.min)/(self.max - self.min)
 
-    def get_samples(self) -> dict:
+    def get_samples(self) -> tuple[dict, ]:
         """
         Should be updated for each individual agent type
+        returns: tuple[samples,current_samples] current_samples only if robust agent, samples is list in this case
         """
         raise(NotImplementedError)
         return samples
@@ -119,7 +120,7 @@ class SumoAgent:
         """Update the model by gradient descent."""
         samples = self.get_samples() # Get_samples needs to be set for each subclass
 
-        loss = self._compute_dqn_loss(samples)
+        loss = self._compute_dqn_loss(*samples)
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -153,9 +154,6 @@ class SumoAgent:
                 state = self.env.reset()
                 scores.append(score)
                 score = 0
-
-            if frame_idx >= 3000:
-                i = 2
 
             # Update whether we're ready to train
             if not self.training_ready:
@@ -199,22 +197,24 @@ class SumoAgent:
         """
         self.is_test = True # Prevent from taking random actions
         scores = []
+        avg_dists = []
 
         for i in range(test_games):
             score = 0
             state = self.env.reset()
             done = False
-
+            avg_dist = []
             # Changed here from training, since we play games till the end, not for a certain number of steps (frames)
             while not done:
                 action = self.select_action(state)
                 next_state, reward, done = self.step(action)
-
+                avg_dist.append(self.env.get_cliff_distance())
                 state = next_state
                 score += reward
 
+            avg_dists.append(np.mean(avg_dist))
             scores.append(score)
-
+        print(avg_dists)
         self.env.init_render()
         self.env.frame_rate = render_speed
 
@@ -227,8 +227,7 @@ class SumoAgent:
                 self.env.render()
 
                 state = next_state
-
-        return scores
+        return scores, avg_dists
 
 
     def _plot(
