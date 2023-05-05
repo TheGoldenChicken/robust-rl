@@ -5,7 +5,7 @@ from scipy.stats import geom
 
 class robust_distributional_agent(rl.agent.ShallowAgent):
     
-    def __init__(self, env, gamma = 0.9, delta = 1, epsilon = 0.5, tol = 0.05):
+    def __init__(self, env, gamma = 0.9, delta = 1, epsilon = 0.499, tol = 0.05):
         super().__init__(env)
         
         self.gamma = gamma
@@ -155,8 +155,8 @@ class robust_distributional_agent(rl.agent.ShallowAgent):
                 # Shift the location -1 to make it e(1-e)^N instead of e(1-e)^(N+1)
                 loc = -1
                 # Get N
-                N = geom.rvs(p = self.epsilon, loc = loc, size = 1)[0]
-                # N = self.stop_rnd(self.epsilon)
+                # N = geom.rvs(p = self.epsilon, loc = loc, size = 1)[0]
+                N = self.stop_rnd(self.epsilon)
                 # p_N = self.epsilon * (1-self.epsilon)**N
                 # p_N = np.exp(self.stop_log_p(self.epsilon, N))
 
@@ -171,7 +171,8 @@ class robust_distributional_agent(rl.agent.ShallowAgent):
                 Delta_r = self.fDelta_r(N, samples[:,1])
                 
                 # Calculate the probability of N
-                p_N = geom.pmf(N, p = self.epsilon, loc = loc)
+                # p_N = geom.pmf(N, p = self.epsilon, loc = loc)
+                p_N = np.exp(np.log(self.epsilon) + np.log(1-self.epsilon) * N)
 
                 # Calculate the robust estimate
                 R_rob = samples[0][1] + Delta_r/p_N
