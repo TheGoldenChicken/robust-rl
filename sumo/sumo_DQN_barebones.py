@@ -9,7 +9,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from IPython.display import clear_output
-from sumo.sumo_pp import SumoPPEnv
+from sumo_pp import SumoPPEnv
+import random
 
 class ReplayBuffer:
     """A simple numpy replay buffer."""
@@ -113,8 +114,8 @@ class DQNAgent:
             min_epsilon (float): min value of epsilon
             gamma (float): discount factor
         """
-        obs_dim = env.observation_space.shape[0]
-        action_dim = env.action_space.n
+        obs_dim = 1
+        action_dim = 3
 
         self.env = env
         self.memory = ReplayBuffer(obs_dim, memory_size, batch_size)
@@ -146,12 +147,12 @@ class DQNAgent:
 
         # mode: train / test
         self.is_test = False
-
+        self.frame = 0
     def select_action(self, state: np.ndarray) -> np.ndarray:
         """Select an action from the input state."""
         # epsilon greedy policy
         if self.epsilon > np.random.random():
-            selected_action = self.env.action_space.sample()
+            selected_action = random.randint(0, 3-1) # Why is this not inclusive, exclusive??? Stupid
         else:
             selected_action = self.dqn(
                 torch.FloatTensor(state).to(self.device)
@@ -199,10 +200,9 @@ class DQNAgent:
         for frame_idx in range(1, num_frames + 1):
             action = self.select_action(state)
             next_state, reward, done = self.step(action)
-
             state = next_state
             score += reward
-
+            self.frame += 1
             # if episode ends
             if done:
                 state = self.env.reset()
@@ -230,35 +230,36 @@ class DQNAgent:
             # plotting
             if frame_idx % plotting_interval == 0:
                 self._plot(frame_idx, scores, losses, epsilons)
+                # print(np.mean(scores))
 
-        self.env.close()
 
-    def test(self, video_folder: str) -> None:
-        """Test the agent."""
-        self.is_test = True
-
-        # for recording a video
-        # naive_env = self.env
-        # self.env = gym.wrappers.RecordVideo(self.env, video_folder=video_folder)
-
-        state = self.env.reset()
-        done = False
-        score = 0
-
-        while not done:
-            action = self.select_action(state)
-            next_state, reward, done = self.step(action)
-            env.render(mode = 'human')
-            state = next_state
-            score += reward
-
-        print("score: ", score)
-        self.env.close()
-
-        # reset
-        # self.env = naive_env
+    # def test(self, video_folder: str) -> None:
+    #     """Test the agent."""
+    #     self.is_test = True
+    #
+    #     # for recording a video
+    #     naive_env = self.env
+    #     self.env = gym.wrappers.RecordVideo(self.env, video_folder=video_folder)
+    #
+    #     state = self.env.reset()
+    #     done = False
+    #     score = 0
+    #
+    #     while not done:
+    #         action = self.select_action(state)
+    #         next_state, reward, done = self.step(action)
+    #
+    #         state = next_state
+    #         score += reward
+    #
+    #     print("score: ", score)
+    #     self.env.close()
+    #
+    #     # reset
+    #     self.env = naive_env
 
     def _compute_dqn_loss(self, samples: Dict[str, np.ndarray]) -> torch.Tensor:
+        self.frame += 1
         """Return dqn loss."""
         device = self.device  # for shortening the following lines
         state = torch.FloatTensor(samples["obs"]).to(device)
@@ -267,6 +268,8 @@ class DQNAgent:
         reward = torch.FloatTensor(samples["rews"].reshape(-1, 1)).to(device)
         done = torch.FloatTensor(samples["done"].reshape(-1, 1)).to(device)
 
+        #state = state/1000
+        #next_state = next_state/1000
         # G_t   = r + gamma * v(s_{t+1})  if state != Terminal
         #       = r                       otherwise
         curr_q_value = self.dqn(state).gather(1, action)
@@ -306,12 +309,53 @@ class DQNAgent:
         plt.plot(epsilons)
         plt.show()
 
+    def test(self, test_games=100, render_games: int=0, render_speed: int=60):
+        """
+        Test the agent
+        :param test_games: number of test games to get score from
+        :param render_games: number of rendered games to inspect qualitatively
+        :param render_speed: frame_rate of the rendered games
+        :return:
+        """
+        self.is_test = True # Prevent from taking random actions
+        scores = []
+
+        for i in range(test_games):
+            score = 0
+            state = self.env.reset()
+            done = False
+
+            # Changed here from training, since we play games till the end, not for a certain number of steps (frames)
+            while not done:
+                action = self.select_action(state)
+                next_state, reward, done = self.step(action)
+
+                state = next_state
+                score += reward
+
+            scores.append(score)
+
+        self.env.init_render()
+        self.env.frame_rate = render_speed
+
+        for i in range(render_games):
+            state = self.env.reset()
+            done = False
+            while not done:
+                action = self.select_action(state)
+                next_state, reward, done = self.step(action)
+                self.env.render()
+
+                state = next_state
+
+        return scores
 
 
 
 # environment
-env_id = "CartPole-v0"
-env = gym.make(env_id)
+# env_id = "CartPole-v0"
+# env = gym.make(env_id)
+env = SumoPPEnv(line_length=500)
 
 seed = 777
 
@@ -325,14 +369,14 @@ np.random.seed(seed)
 seed_torch(seed)
 
 # parameters
-num_frames = 6000
-memory_size = 1000
-batch_size = 32
-target_update = 100
+num_frames = 10000
+memory_size = 10000
+batch_size = 64
+target_update = 500
 epsilon_decay = 1 / 2000
 
 agent = DQNAgent(env, memory_size, batch_size, target_update, epsilon_decay)
 
 
 agent.train(num_frames)
-# agent.test(os.getcwd())
+agent.test(test_games=100, render_games=100)

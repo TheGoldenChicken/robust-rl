@@ -256,8 +256,9 @@ class SumoNormalAgent:
         current_q_value = Q_vals.gather(1, action)
         Q_vals = Q_vals.max(dim=1, keepdim=True)[0].detach().cpu().numpy()
 
-        if np.any(np.isnan(Q_vals)):
-            i = 2
+        if Q_vals[1] == Q_vals[0]:
+            i = 5
+
         X_p=samples['obs']
         y_p = samples['next_obs']
         y_v = Q_vals
@@ -342,16 +343,16 @@ if __name__ == "__main__":
     np.random.seed(seed)
     seed_torch(seed)
 
-    num_frames = 5000
+    num_frames = 12000
 
     # parameters
     fineness = 100
     state_dim = 1
     action_dim = 3
-    batch_size = 20
+    batch_size = 40
     replay_buffer_size = 500
-    max_min = [[line_length],[0]]
-    epsilon_decay = 1/500
+    max_min = [[env.cliff_position],[0]]
+    epsilon_decay = 1/1000
     ripe_when = 20
 
     # TODO: PERHAPS JUST PASS A PREMADE REPLAY BUFFER TO THE SUMO AGENT TO AVOID SO MANY PARAMETERS?

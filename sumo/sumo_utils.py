@@ -1,6 +1,7 @@
 import numpy as np
 import itertools
 
+
 def create_grid_keys(fineness, max_min, actions=1):
     """
     :param fineness: Number of grid points per dimension
@@ -14,11 +15,6 @@ def create_grid_keys(fineness, max_min, actions=1):
 
     returns: List of (state_dim) tuples containing the keys for a grid
     """
-    # Should get [[state_dim_1_min,state_dim_1_max], [state_dim_2_min,state_dim_2_max]]
-    # Dummy var - for testing purposes
-
-    # TODO: REMOVE THIS WHEN DONE TESTING
-    max_min = [[-200, 200], [0, 600]]
 
     all_state_dim_lists = []
     for state_dim in max_min:

@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.stats import multivariate_normal
-
+import sys
 def quadratic_approximation(X,y):
     ### Quadratic approximation using Bayesian linear regression ###
     # Hyperparameters: alpha = 0, beta = 1
@@ -35,9 +35,14 @@ def linear_approximation(X,y):
 
     # Compute the design matrix for the linear function for n-dimensions
     Phi = np.array([np.ones(X.shape[0]), *[X[:,i] for i in range(D)]]).T
-
+    print("RIGHT HERE", X.shape)
+    print(Phi.T@Phi)
     # Compute the posteriror using linear algebra
-    Sigma = np.linalg.inv(Phi.T@Phi)
+    if np.linalg.cond(Phi.T@Phi) < 1 / sys.float_info.epsilon:
+        Sigma = np.linalg.inv(Phi.T@Phi)
+    else:
+        i = 5
+        print("MDAE IT HEREEEE")
     mu = Sigma@Phi.T@y
 
     c = mu[0]
@@ -107,6 +112,7 @@ def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1):
     #     # If any eigenvalue is negative, use linear approximation instead
     #     b, c = linear_approximation(X_v, y_v)
     #     A = np.zeros((len(b),len(b)))
+
 
     b, c = linear_approximation(X_v, y_v)
     A = np.zeros((len(b),len(b)))

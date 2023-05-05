@@ -1,6 +1,5 @@
 import os
 from typing import Dict, List, Tuple
-
 from sumo import sumo_pp
 import gym
 import matplotlib.pyplot as plt
@@ -12,25 +11,9 @@ import torch.optim as optim
 from IPython.display import clear_output
 from replay_buffer import ReplayBuffer, TheSlightlyCoolerReplayBuffer
 import random
-import distributionalQLearning
 from sumo.sumo_pp import SumoPPEnv
-
-class Network(nn.Module):
-    def __init__(self, in_dim: int, out_dim: int):
-        """Initialization."""
-        super(Network, self).__init__()
-
-        self.layers = nn.Sequential(
-            nn.Linear(in_dim, 128),
-            nn.ReLU(),
-            nn.Linear(128, 128),
-            nn.ReLU(),
-            nn.Linear(128, out_dim)
-        )
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward method implementation."""
-        return self.layers(x)
+import distributionalQLearning2 as distributionalQLearning
+from network import Network
 
 
 class SumoSlowAgent:
@@ -92,7 +75,7 @@ class SumoSlowAgent:
 
         # device: cpu / gpu
         self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu"
+            "cpu" if torch.cuda.is_available() else "cpu"
         )
         print(self.device)
 
@@ -112,7 +95,7 @@ class SumoSlowAgent:
         """Select an action from the input state."""
         # epsilon greedy policy
         if self.epsilon > np.random.random():
-            selected_action = random.randint(0, self.action_dim)
+            selected_action = random.randint(0, self.action_dim-1)
         else:
             selected_action = self.dqn(
                 torch.FloatTensor(state).to(self.device)
@@ -173,15 +156,17 @@ class SumoSlowAgent:
         for frame_idx in range(1, num_frames + 1):
             action = self.select_action(state)
             next_state, reward, done = self.step(action)
-
+            reward = reward * -1
             state = next_state
             score += reward
 
             # if episode ends
             if done:
                 state = self.env.reset()
+                done = False # Perhaps this should be done in the step function?
                 scores.append(score)
                 score = 0
+                current_episode_score = 0
 
             # if training is ready
             if len(self.memory) >= 500:
@@ -203,28 +188,64 @@ class SumoSlowAgent:
 
         # self.env.close()
 
-    def test(self, video_folder: str="derp"):
-        """Test the agent."""
-        self.is_test = True
+    # def test(self, video_folder: str="derp"):
+    #     """Test the agent."""
+    #     self.is_test = True
+    #
+    #     # for recording a video
+    #     naive_env = self.env
+    #
+    #     state = self.env.reset()
+    #     done = False
+    #     score = 0
+    #
+    #     while not done:
+    #         action = self.select_action(state)
+    #         next_state, reward, done = self.step(action)
+    #
+    #         state = next_state
+    #         score += reward
+    #
+    #     print("score: ", score)
+    #     # self.env.close()
+    #     return score
+    #     # reset
 
-        # for recording a video
-        naive_env = self.env
-
+    def test(self, test_games=100, render_games: int=0, render_speed: int=60):
+        self.is_test = True # Prevent from taking random actions
         state = self.env.reset()
+        scores = []
         done = False
-        score = 0
 
-        while not done:
-            action = self.select_action(state)
-            next_state, reward, done = self.step(action)
+        for i in range(test_games):
+            score = 0
+            state = self.env.reset()
+            done = False
+            while not done:
+                action = self.select_action(state)
+                next_state, reward, done = self.step(action)
 
-            state = next_state
-            score += reward
+                state = next_state
+                score += reward
 
-        print("score: ", score)
-        # self.env.close()
-        return score
-        # reset
+            scores.append(score)
+
+        self.env.init_render()
+        state = self.env.reset()
+        self.env.frame_rate = 60
+        for i in range(render_games):
+            state = self.env.reset()
+            done = False
+            while not done:
+                action = self.select_action(state)
+                next_state, reward, done = self.step(action)
+                self.env.render()
+
+                state = next_state
+
+        return scores
+
+
 
     def _compute_dqn_loss(self, samples: Dict[str, np.ndarray]) -> torch.Tensor:
         """Return dqn loss."""
@@ -234,17 +255,21 @@ class SumoSlowAgent:
         action = torch.LongTensor(samples["acts"].reshape(-1, 1)).to(device)
         reward = torch.FloatTensor(samples["rews"].reshape(-1, 1)).to(device)
         done = torch.FloatTensor(samples["done"].reshape(-1, 1)).to(device)
+        done = done.detach().cpu().numpy()
+
+        # reward = reward.detach().cpu().numpy()
         # TODO: CHECK IF V(S) ESTIMATE IS BASED ON CURRENT OR NEXT STATE
         Q_vals = self.dqn(state) # Should all have the same action
+        curr_q_value = Q_vals.gather(1, action)
+        Q_vals = Q_vals.max(dim=1, keepdim=True)[0].detach().cpu().numpy()
 
         robust_estimator = distributionalQLearning.robust_estimator(X_p=samples['obs'], y_p=samples['next_obs'],
-                                                                    X_v=samples['next_obs'], y_v=Q_vals.cpu().detach().numpy(),
+                                                                    X_v=samples['next_obs'], y_v=Q_vals,
                                                                     delta=0.5)
 
         mask = 1 - done # Remove effect from those that are done
         robust_estimator = reward + self.gamma * robust_estimator * mask
 
-        curr_q_value = Q_vals.gather(1, action)
 
         # calculate dqn loss #TODO: CHECK WHY WE USE SMOOTH_L1_LOSS
         loss = F.smooth_l1_loss(curr_q_value, robust_estimator)
@@ -273,10 +298,6 @@ class SumoSlowAgent:
         plt.show()
 
 
-# environment
-# env_id = "CartPole-v0"
-# env = gym.make(env_id)
-
 if __name__ == "__main__":
 
     # environment
@@ -295,7 +316,7 @@ if __name__ == "__main__":
     np.random.seed(seed)
     seed_torch(seed)
 
-    num_frames = 100000
+    num_frames = 8000
 
     # parameters
     fineness = 100
@@ -309,3 +330,4 @@ if __name__ == "__main__":
     agent = SumoSlowAgent(env=env, memory_size=100000, batch_size=batch_size, epsilon_decay=epsilon_decay)
 
     agent.train(num_frames)
+    scores = agent.test(test_games=10, render_games=20)

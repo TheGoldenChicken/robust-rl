@@ -4,11 +4,10 @@ from sumo.sumo_utils import neighbours, single_dim_interpreter
 
 # TODO: CONSIDER MOVING GET_IDX TO THIS FUNCTION
 # TODO: FIX POTENTIALLY BIG PROBLEM WITH REPLAY BUFFER NOT CORRECTLY WORKING FOR FINENESS = MAX, MIN DIM
-# Fix get_sample_idxs_from_bin potentially getting no specific action
 class ReplayBuffer:
     """A simple numpy replay buffer."""
 
-    def __init__(self, obs_dim: int, size: int, batch_size: int = 32):
+    def __init__(self, obs_dim: int, size: int, batch_size: int = 32, ready_when=500):
         self.obs_buf = np.zeros([size, obs_dim], dtype=np.float32)
         self.next_obs_buf = np.zeros([size, obs_dim], dtype=np.float32)
         self.acts_buf = np.zeros([size], dtype=np.float32)
@@ -16,6 +15,7 @@ class ReplayBuffer:
         self.done_buf = np.zeros(size, dtype=np.float32)
         self.max_size, self.batch_size = size, batch_size
         self.ptr, self.size, = 0, 0
+        self.ready_when = ready_when
 
     def store(
         self,
@@ -43,6 +43,9 @@ class ReplayBuffer:
 
     def __len__(self) -> int:
         return self.size
+
+    def training_ready(self) -> bool:
+        return self.size >= self.ready_when
 
 class TheSlightlyCoolerReplayBuffer(ReplayBuffer):
 
@@ -76,13 +79,11 @@ class TheSlightlyCoolerReplayBuffer(ReplayBuffer):
 
 
 class TheCoolerReplayBuffer(ReplayBuffer):
-    # TODO: Make functionality for more actions... You can pretty much just extend the 1-d array
-    #  with one extra 1-d array for each action, same length as the whole shebang
     """
     Replay buffer more optimal for grid-based replay-buffering
     """
     def __init__(self, obs_dim, bin_size, batch_size, fineness, num_actions, state_max=np.infty,
-                 state_min=-np.infty, tb=True, ripe_when=20):
+                 state_min=-np.infty, tb=True, ripe_when=None, ready_when=10, num_neighbours=2):
         self.bins_per_action = (fineness**obs_dim)
         self.bins = (fineness**obs_dim)*num_actions + 1*tb
         self.size_per_action = (fineness**obs_dim)*bin_size # Max size per action
@@ -100,11 +101,17 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         self.num_actions = num_actions
 
         self.ripe_bins = [False] * (self.bins - 0*tb) # We don't let the trash_buffer be ripe # We technically don't, but this is easier
-        self.num_neighbours = 1
+        self.num_neighbours = num_neighbours
         self.obs_dim = obs_dim
 
-        self.frame_idx = 0 # Debug value
-        self.ripe_when = ripe_when # Value to decide when a buffer is ripe or not
+        if ripe_when is None:
+            self.ripe_when = self.batch_size # Value to decide when a buffer is ripe or not
+        else:
+            self.ripe_when = ripe_when
+        self.ready_when = ready_when # Number of ripe bins before we can start training
+
+        self.noise_adder = True
+
     def __getitem__(self, idxs) -> Dict[str, np.ndarray]:
         return dict(obs=self.obs_buf[idxs],
                     next_obs=self.next_obs_buf[idxs],
@@ -141,8 +148,6 @@ class TheCoolerReplayBuffer(ReplayBuffer):
 
         current_sample = self[self.sample_randomly_idxs(size=1, check_ripeness=check_ripeness)] # Sample to calc KNN from
         current_bin_idx = self.get_bin_idx(current_sample['obs'], single_dim=False) # Idx of bin of current_sample
-        if current_bin_idx == 300:
-            i = 2
         neighbour_bin_idxs = self.get_neighbour_bins(P=current_bin_idx, num_neighbours=nn) # Idx of neighbour bins of current_sample
         samples = self[self.get_sample_idxs_from_bin(neighbour_bin_idxs, action=specific_action)] # Samples from neighbour_bins
 
@@ -178,29 +183,15 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         :param single_dim: basically whether or not you use it to store TRUE IF YOU'RE STORIN'
         :return: an int if not single_dim, otherwise a list
         """
-        # TODO: MOVE THIS TO A SELF VARIABLE?
         widths = [i / self.fineness for i in self.state_max]
         idxs = [int(s_val // widths[i]) for i, s_val in enumerate(s)]
         if single_dim:
             idxs = sum([r*self.fineness**i for i, r in enumerate(idxs)])
 
-        # TODO: CURRENTLY BUG WHEN SAMPLING WHERE IT'LL RUN THIS INSTEAD
-        # ONLY MEANT TO BE RUN WHEN STORIN' 
+        # Should only really go here if we're storing
         s = np.array(s)
         if self.tb and ((s <= self.state_min).any() or (s >= self.state_max).any()):
             idxs = len(self.size) - 1 # The trash observation goes in the trash can
-
-        # # TODO: REMOVE THIS WHEN DONE TESTING
-        # if test:
-        #     widths = [i / self.fineness for i in self.state_max]
-        #     idxs = [int(s_val // widths[i]) for i, s_val in enumerate(s)]
-        #     if single_dim:
-        #         idxs = sum([r*self.fineness**i for i, r in enumerate(idxs)])
-        #
-        #     s = np.array(s)
-        #     if self.tb and ((s <= self.state_min).any() or (s >= self.state_max).any()):
-        #         idxs = len(self.size) - 1 # The trash observation goes in the trash can
-
 
         return idxs
 
@@ -242,6 +233,10 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         # Trahs_obs for testing
         trash_obs = self.rews_buf[teh_idx] != 0
 
+        if self.noise_adder:
+            obs += np.random.normal(loc=0,scale=1e-3, size=self.obs_dim)
+            next_obs += np.random.normal(loc=0,scale=1e-3, size=self.obs_dim)
+
         self.obs_buf[teh_idx] = obs
         self.next_obs_buf[teh_idx] = next_obs
         self.acts_buf[teh_idx] = act
@@ -249,15 +244,11 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         self.done_buf[teh_idx] = done
         self.ptr[idx] = (self.ptr[idx] + 1) % self.max_bin_size
         self.size[idx] = min(self.size[idx] + 1, self.max_bin_size)
-        self.frame_idx+= 1
 
         # Update ripeness - When updated O(1) when not, adds O(1) best case, O(whatever, i'll find out later)
         if not self.ripe_bins[idx]: # Don't want trash buffer things to contribute to ripeness - do we?
 
             # DEBUG
-            if self.frame_idx >= 1000:
-                i = 4
-
             if self.size[idx] >= self.batch_size:
                 self.ripe_bins[idx] = True
 
@@ -310,22 +301,5 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         idxs = np.random.choice(poppable_idxs, size)
         return idxs
 
-    # def update_ripeness(self):
-    #     """
-    #     Used to determine what bins are ripe for sampling
-    #     :return:
-    #     """
-    #
-    #     for i, r in enumerate(self.ripe_bins):
-    #         if not r: # If unripe, we check
-    #             if self.spec_len(i) >= self.batch_size:
-    #                 self.ripe_bins[i] = True
-    #                 continue
-    #
-    #             idx_no_action = r % self.bins_per_action
-    #             neighs = self.get_neighbour_bins(single_dim_interpreter(idx_no_action,self.fineness, self.obs_dim),
-    #                                                  num_neighbours=self.num_neighbours)
-    #
-    #             if sum([self.spec_len(i) for i in neighs]) >= self.batch_size:
-    #                 self.ripe_bins[i] = True
-
+    def training_ready(self) -> bool:
+        return sum(self.ripe_bins) >= self.ready_when
