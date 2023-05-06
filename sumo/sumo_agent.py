@@ -24,7 +24,7 @@ import random
 import distributionalQLearning2 as distributionalQLearning
 from IPython.display import clear_output
 from network import Network
-
+from tqdm import tqdm
 
 # SubSymbolic AI? Knowing the effect of action and just calculating the noise instead of the transition probabilities
 
@@ -60,6 +60,8 @@ class SumoAgent:
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
         )
+        print(self.device) # Just to know which one we're on
+
         self.dqn = Network(env.obs_dim, env.action_dim).to(self.device)
         if model_path is not None:
             self.dqn.load_state_dict(model_path)
@@ -128,7 +130,7 @@ class SumoAgent:
 
         return loss.item()
 
-    def train(self, num_frames: int, plotting_interval: int = 200, save_model=None):
+    def train(self, num_frames: int, plotting_interval: int = 200):
         """Train the agent."""
         self.is_test = False
 
@@ -141,7 +143,7 @@ class SumoAgent:
 
         current_episode_score = 0
 
-        for frame_idx in range(1, num_frames + 1):
+        for frame_idx in tqdm(range(1, num_frames + 1)):
             action = self.select_action(state)
             next_state, reward, done = self.step(action)
             current_episode_score += reward
@@ -176,16 +178,16 @@ class SumoAgent:
             # plotting
                 if frame_idx % plotting_interval == 0:
                     self._plot(frame_idx, scores, losses, epsilons)
-                    #self._special_plot(episode_scores, epsilons, losses, frame_idx)
-                    print(frame_idx, loss, self.epsilon, )
+                    # print(frame_idx, loss, self.epsilon, )
 
         print("Training complete")
+        return scores, losses, epsilons
 
-        if save_model is not None:
-            try:
-                torch.save(self.dqn.state_dict(), save_model)
-            except:
-                print("ERROR! Could not save model!")
+    def save_model(self, model_path):
+        try:
+            torch.save(self.dqn.state_dict(), model_path)
+        except:
+            print("ERROR! Could not save model!")
 
     def test(self, test_games=100, render_games: int=0, render_speed: int=60):
         """
@@ -214,9 +216,11 @@ class SumoAgent:
 
             avg_dists.append(np.mean(avg_dist))
             scores.append(score)
-        print(avg_dists)
-        self.env.init_render()
-        self.env.frame_rate = render_speed
+
+        # If statment necessary, otherwise Pygame opens and stays loitering around
+        if render_games > 0:
+            self.env.init_render()
+            self.env.frame_rate = render_speed
 
         for i in range(render_games):
             state = self.env.reset()
@@ -227,6 +231,7 @@ class SumoAgent:
                 self.env.render()
 
                 state = next_state
+
         return scores, avg_dists
 
 
