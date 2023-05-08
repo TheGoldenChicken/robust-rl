@@ -67,7 +67,7 @@ class RobustSumoAgent(SumoAgent):
         # print(f'X_p: {np.mean(state)} \n y_p: {np.mean(next_state)} \n y_v: {np.mean(y_v)}')
         # print("Robust estimator", robust_estimator)
 
-        robust_estimators = torch.FloatTensor(robust_estimators).to(device).reshape(-1, 1) * -1 # -1 because that works better? #unsqueezing because im stupid and lazy
+        robust_estimators = torch.FloatTensor(robust_estimators).to(device).reshape(-1, 1) * 1 # -1 because that works better? #unsqueezing because im stupid and lazy
         robust_estimators = rewards + self.gamma * robust_estimators * mask
 
         # mask = 1 - done  # Remove effect from those that are done
