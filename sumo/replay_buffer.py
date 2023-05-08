@@ -10,7 +10,7 @@ class ReplayBuffer:
     def __init__(self, obs_dim: int, size: int, batch_size: int = 32, ready_when=500):
         self.obs_buf = np.zeros([size, obs_dim], dtype=np.float32)
         self.next_obs_buf = np.zeros([size, obs_dim], dtype=np.float32)
-        self.acts_buf = np.zeros([size], dtype=np.float32)
+        self.acts_buf = np.zeros([size], dtype=np.int32)
         self.rews_buf = np.zeros([size], dtype=np.float32)
         self.done_buf = np.zeros(size, dtype=np.float32)
         self.max_size, self.batch_size = size, batch_size
@@ -105,7 +105,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         self.obs_dim = obs_dim
 
         if ripe_when is None:
-            self.ripe_when = self.batch_size # Value to decide when a buffer is ripe or not
+            self.ripe_when = self.batch_size + 1 # Value to decide when a buffer is ripe or not # Fixes dumb issue with argpartition (the +1 that is)
         else:
             self.ripe_when = ripe_when
         self.ready_when = ready_when # Number of ripe bins before we can start training
@@ -131,47 +131,61 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         """
         return self.size[idx]
 
-    def sample_from_scratch(self, K, nn, specific_action=None, distance='Euclidian', check_ripeness=True):
+    def sample_from_scratch(self, K, nn, num_times=1, specific_action=None, distance='Euclidian', check_ripeness=True):
         """
         Practically the only interface the agent should have with the replay_buffer (apart from dundermethods)
         The whole sampling shebang based on a random point in the current dataset
         :param K: K nearest neighbours to sample based on (basically a batch_size
         :param nn: number-neighbours how many grids to look in larger -> slower + more accurate approximations
+        :param num_times: number of times we repeat sampling procedure for different points (meant for batch learning)
         :param specific_action: the action to sample based on, if not chosen, chooses random action
         :param distance: which distance measure to use when getting KNN
         :param check_ripeness: Whether to only sample from bins we know are in a ripe quarter
-        :return:
+        :return: KNN samples (list of dicts) the actual samples to be used, current_samples, the reference sample for...
+        each point, used for specifying the reward used in computing robust estimator
         """
+        # TODO: FIX NOT BEING ABLE TO SPECIFY SPECIFIC_ACTION - WE CANNOT GUARANTEE RIPE REPLAY BUFFERS ON THAT ACTION...
 
-        if specific_action is None:
-            specific_action = np.random.randint(0,self.num_actions)
+        KNN_sampless = []
+        current_samples = self[self.sample_randomly_idxs(size=num_times, check_ripeness=check_ripeness)] # Samples to calc KNN from
 
-        current_sample = self[self.sample_randomly_idxs(size=1, check_ripeness=check_ripeness)] # Sample to calc KNN from
-        current_bin_idx = self.get_bin_idx(current_sample['obs'], single_dim=False) # Idx of bin of current_sample
-        neighbour_bin_idxs = self.get_neighbour_bins(P=current_bin_idx, num_neighbours=nn) # Idx of neighbour bins of current_sample
-        samples = self[self.get_sample_idxs_from_bin(neighbour_bin_idxs, action=specific_action)] # Samples from neighbour_bins
+        for i, r in enumerate(current_samples['obs']):
 
-        KNN_samples = self.get_knn( current_sample=current_sample, samples=samples, K=K, distance=distance)
+            current_action = current_samples['acts'][i]
+            current_bin_idx = self.get_bin_idx(current_samples['obs'][i], single_dim=False) # Idx of bin of current_sample
+            neighbour_bin_idxs = self.get_neighbour_bins(P=current_bin_idx, num_neighbours=nn) # Idx of neighbour bins of current_sample
+            samples = self[self.get_sample_idxs_from_bin(neighbour_bin_idxs, action=current_action)] # Samples from neighbour_bins
 
-        return KNN_samples
+            KNN_samples = self.get_knn(current_obs=current_samples['obs'][i], samples=samples, K=K, distance=distance)
 
-    def get_knn(self, current_sample: dict, samples: dict, K: int, distance='Euclidian') -> dict:
+            KNN_sampless.append(KNN_samples)
+
+        return KNN_sampless, current_samples
+
+    def get_knn(self, current_obs: np.ndarray, samples: dict, K: int, distance='Euclidian', return_dict=True) -> dict:
         """
         Given a current sample and bunch of other samples, get K-nearest samples from bunch of other samples
         Includes current sample
-        :param current_sample: Current sample to calculate distance from
+        :param current_obs: Current obs to calculate distance from
         :param samples: Other samples to find K nearest neighbours from
         :param K: How many neighbours to find
         :param distance: Distance measure to use
+        :param return_dict: Whether or not to reutrn a dictionary or just the samples for appending to a list and size guide (not used)
         :return:
         """
 
-        if current_sample is None:
+        if current_obs is None:
             current_sample = np.random.choice(samples['obs'], 1)
 
-        dists = [np.linalg.norm(current_sample['obs'] - x) for x in samples['obs']]
-        K = min(K, len(samples['obs'])) - 1 # Subtract one to account for zero indexing (necessary?)
+        dists = [np.linalg.norm(current_obs - x) for x in samples['obs']]
+        K = min(K, len(samples['obs']))
+
+        # TODO: Debug this so we don't need the min(k, len(samples['obs']) above
+        # if K >= len(samples['obs']):
+        #     i = 2
+
         idxs = np.argpartition(dists, K)[:K]
+
         samples = {r: i[idxs] for r, i in samples.items()}
 
         return samples
@@ -272,7 +286,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         marker = action*self.size_per_action
         # Don't worry about the list comprehension outside, that's just to flatten the bastard
         idxs = [item for sublist in
-                [list(range(i * self.max_bin_size + marker, i * self.max_bin_size + marker + self.size[i])) for i in idx]
+                [list(range(i * self.max_bin_size + marker, i * self.max_bin_size + marker + self.size[i+action*self.bins_per_action])) for i in idx]
                 for item in sublist]
         return idxs
 

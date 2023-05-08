@@ -27,7 +27,6 @@ class SumoPPEnv:
         self.sumo_position = self.start_position
         self.hill_position = self.line_length/2 # + np.random.randn()
         self.cliff_position = self.hill_position + 50 # Where the sumo will fall down the cliff
-        self.cliff_position = self.line_length
         self.max_duration = 300 # Env terminates after this
         self.current_action = 0  # 0, 1, 2, NOOP, left, right
 
@@ -101,6 +100,13 @@ class SumoPPEnv:
         self.display = pygame.display.set_mode((self.width, self.height))
         self.rendering = True
         self.clock = pygame.time.Clock()
+
+    def get_cliff_distance(self):
+        """
+        Hlper function for testing robust behavior
+        Should really be removed
+        """
+        return self.cliff_position - self.sumo_position
 
     def render(self):
 

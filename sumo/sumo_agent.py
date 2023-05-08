@@ -24,7 +24,7 @@ import random
 import distributionalQLearning2 as distributionalQLearning
 from IPython.display import clear_output
 from network import Network
-
+from tqdm import tqdm
 
 # SubSymbolic AI? Knowing the effect of action and just calculating the noise instead of the transition probabilities
 
@@ -58,8 +58,10 @@ class SumoAgent:
         self.training_ready = False
 
         self.device = torch.device(
-            "cpu" if torch.cuda.is_available() else "cpu"
+            "cuda" if torch.cuda.is_available() else "cpu"
         )
+        print(self.device) # Just to know which one we're on
+
         self.dqn = Network(env.obs_dim, env.action_dim).to(self.device)
         if model_path is not None:
             self.dqn.load_state_dict(model_path)
@@ -74,9 +76,10 @@ class SumoAgent:
         # Should work for tensors and numpy...
         self.state_normalizer = lambda state: (state - self.min)/(self.max - self.min)
 
-    def get_samples(self) -> dict:
+    def get_samples(self) -> tuple[dict, ]:
         """
         Should be updated for each individual agent type
+        returns: tuple[samples,current_samples] current_samples only if robust agent, samples is list in this case
         """
         raise(NotImplementedError)
         return samples
@@ -119,7 +122,7 @@ class SumoAgent:
         """Update the model by gradient descent."""
         samples = self.get_samples() # Get_samples needs to be set for each subclass
 
-        loss = self._compute_dqn_loss(samples)
+        loss = self._compute_dqn_loss(*samples)
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -127,7 +130,7 @@ class SumoAgent:
 
         return loss.item()
 
-    def train(self, num_frames: int, plotting_interval: int = 200, save_model=None):
+    def train(self, num_frames: int, plotting_interval: int = 200):
         """Train the agent."""
         self.is_test = False
 
@@ -140,7 +143,7 @@ class SumoAgent:
 
         current_episode_score = 0
 
-        for frame_idx in range(1, num_frames + 1):
+        for frame_idx in tqdm(range(1, num_frames + 1)):
             action = self.select_action(state)
             next_state, reward, done = self.step(action)
             current_episode_score += reward
@@ -153,9 +156,6 @@ class SumoAgent:
                 state = self.env.reset()
                 scores.append(score)
                 score = 0
-
-            if frame_idx >= 3000:
-                i = 2
 
             # Update whether we're ready to train
             if not self.training_ready:
@@ -178,16 +178,16 @@ class SumoAgent:
             # plotting
                 if frame_idx % plotting_interval == 0:
                     self._plot(frame_idx, scores, losses, epsilons)
-                    #self._special_plot(episode_scores, epsilons, losses, frame_idx)
-                    print(frame_idx, loss, self.epsilon, )
+                    # print(frame_idx, loss, self.epsilon, )
 
         print("Training complete")
+        return scores, losses, epsilons
 
-        if save_model is not None:
-            try:
-                torch.save(self.dqn.state_dict(), save_model)
-            except:
-                print("ERROR! Could not save model!")
+    def save_model(self, model_path):
+        try:
+            torch.save(self.dqn.state_dict(), model_path)
+        except:
+            print("ERROR! Could not save model!")
 
     def test(self, test_games=100, render_games: int=0, render_speed: int=60):
         """
@@ -199,24 +199,28 @@ class SumoAgent:
         """
         self.is_test = True # Prevent from taking random actions
         scores = []
+        avg_dists = []
 
         for i in range(test_games):
             score = 0
             state = self.env.reset()
             done = False
-
+            avg_dist = []
             # Changed here from training, since we play games till the end, not for a certain number of steps (frames)
             while not done:
                 action = self.select_action(state)
                 next_state, reward, done = self.step(action)
-
+                avg_dist.append(self.env.get_cliff_distance())
                 state = next_state
                 score += reward
 
+            avg_dists.append(np.mean(avg_dist))
             scores.append(score)
 
-        self.env.init_render()
-        self.env.frame_rate = render_speed
+        # If statment necessary, otherwise Pygame opens and stays loitering around
+        if render_games > 0:
+            self.env.init_render()
+            self.env.frame_rate = render_speed
 
         for i in range(render_games):
             state = self.env.reset()
@@ -228,7 +232,7 @@ class SumoAgent:
 
                 state = next_state
 
-        return scores
+        return scores, avg_dists
 
 
     def _plot(

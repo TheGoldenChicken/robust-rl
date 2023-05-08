@@ -18,11 +18,11 @@ class DQNSumoAgent(SumoAgent):
         self.dqn_target.load_state_dict(self.dqn.state_dict())
         self.dqn_target.eval()
 
-    def get_samples(self) -> dict:
+    def get_samples(self) -> tuple[dict, ]:
         """
-        Should be updated for each individual agent type
+        Pretty self-explanatory for this one tbh
         """
-        return self.replay_buffer.sample_batch()
+        return (self.replay_buffer.sample_batch(),)
 
     def _compute_dqn_loss(self, samples: Dict[str, np.ndarray]) -> torch.Tensor:
         """Return dqn loss."""
