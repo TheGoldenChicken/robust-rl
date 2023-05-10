@@ -158,7 +158,7 @@ def robust_estimator(X_p,y_p,X_v,y_v,delta):
     f_prime = pre_sub_robust_estimator_prime_approx(X_p,y_p,X_v,y_v,delta)
 
     beta_max = maximize(f_prime)
-    return f(beta_max)[0][0]
+    return f(beta_max)[0][0], beta_max
 
 # mu = np.array([0, 0])
 # Sigma = np.array([[3, 1], [1, 4]])

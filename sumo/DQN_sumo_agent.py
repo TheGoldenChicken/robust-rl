@@ -18,6 +18,8 @@ class DQNSumoAgent(SumoAgent):
         self.dqn_target.load_state_dict(self.dqn.state_dict())
         self.dqn_target.eval()
 
+        self.state_normalizer = lambda state: (state-0)/(1200-0)
+
     def get_samples(self) -> tuple[dict, ]:
         """
         Pretty self-explanatory for this one tbh
@@ -32,6 +34,9 @@ class DQNSumoAgent(SumoAgent):
         action = torch.LongTensor(samples["acts"].reshape(-1, 1)).to(device)
         reward = torch.FloatTensor(samples["rews"].reshape(-1, 1)).to(device)
         done = torch.FloatTensor(samples["done"].reshape(-1, 1)).to(device)
+
+        state = self.state_normalizer(state)
+        next_state = self.state_normalizer(next_state)
 
         # G_t   = r + gamma * v(s_{t+1})  if state != Terminal
         #       = r                       otherwise
@@ -116,8 +121,7 @@ class DQNSumoAgent(SumoAgent):
 if __name__ == "__main__":
 
     # environment
-    line_length = 500
-    env = SumoPPEnv(line_length=line_length)
+    env = SumoPPEnv()
 
     seed = 777
     def seed_torch(seed):
@@ -141,7 +145,7 @@ if __name__ == "__main__":
     agent = DQNSumoAgent(env=env, replay_buffer=replay_buffer, epsilon_decay=epsilon_decay, target_update=target_update,
                          max_epsilon=1.0, min_epsilon=0.1, gamma=0.99, model_path=None)
 
-    num_frames = 12000
+    num_frames = 2000
     agent.train(num_frames)
     scores = agent.test(test_games=1000, render_games=10)
     print(scores, np.mean(scores))

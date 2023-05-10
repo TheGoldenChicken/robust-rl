@@ -8,11 +8,19 @@ from sumo_pp import SumoPPEnv
 from typing import Dict, List
 
 class RobustSumoAgent(SumoAgent):
-    def __init__(self, env, replay_buffer, epsilon_decay, grad_batch_size=30, delta=0.5, max_epsilon=1.0, min_epsilon=0.1, gamma=0.99, model_path=None):
+    def __init__(self, env, replay_buffer, epsilon_decay, grad_batch_size=30, delta=0.5, max_epsilon=1.0,
+                 min_epsilon=0.1, gamma=0.99, model_path=None, robust_factor=1):
         super().__init__(env, replay_buffer, epsilon_decay, max_epsilon, min_epsilon, gamma, model_path)
 
+        self.robust_factor = robust_factor # Factor multiplied on the robust estimator
         self.grad_batch_size = grad_batch_size # How many samples to compute each loss based off of
         self.delta = delta # For the robust estimator
+
+        # Adding the below as class specific values is kinda stupid, however not having them here would require changing the train function
+        self.betas = []
+        self.state_value_pairs = []
+        self.robust_estimators = []
+        self.quadratic_approximations = []
     def get_samples(self) -> tuple[dict, dict]:
         """
         Should be updated for each individual agent type
@@ -40,7 +48,7 @@ class RobustSumoAgent(SumoAgent):
         current_q_values = self.dqn(current_sample_obs).gather(1, current_sample_actions)
 
         robust_estimators = []
-
+        beta_maxss = []
         for i, sample in enumerate(samples):
             state = sample["obs"]
             next_state = sample["next_obs"]
@@ -56,10 +64,11 @@ class RobustSumoAgent(SumoAgent):
             if mask[i] == 0:
                 robust_estimator = 0
             else:
-                robust_estimator = distributionalQLearning.robust_estimator(X_p=state, y_p=next_state,
-                                                                            X_v=next_state, y_v=Q_vals,
-                                                                            delta=self.delta)
+                robust_estimator, beta_max = distributionalQLearning.robust_estimator(X_p=state, y_p=next_state,
+                                                                                      X_v=next_state, y_v=Q_vals,
+                                                                                      delta=self.delta)
                 robust_estimator = robust_estimator
+
 
             robust_estimators.append(robust_estimator)
 
@@ -67,8 +76,8 @@ class RobustSumoAgent(SumoAgent):
         # print(f'X_p: {np.mean(state)} \n y_p: {np.mean(next_state)} \n y_v: {np.mean(y_v)}')
         # print("Robust estimator", robust_estimator)
 
-        robust_estimators = torch.FloatTensor(robust_estimators).to(device).reshape(-1, 1) * 1 # -1 because that works better? #unsqueezing because im stupid and lazy
-        robust_estimators = rewards + self.gamma * robust_estimators * mask
+        robust_estimators = torch.FloatTensor(robust_estimators).to(device).reshape(-1, 1) * self.robust_factor # -1 because that works better? #unsqueezing because im stupid and lazy
+        robust_estimators = rewards - self.gamma * robust_estimators * mask
 
         # mask = 1 - done  # Remove effect from those that are done
 
@@ -80,8 +89,8 @@ class RobustSumoAgent(SumoAgent):
 if __name__ == "__main__":
 
     # environment
-    line_length = 500
-    env = SumoPPEnv(line_length=line_length)
+    # line_length = 500
+    env = SumoPPEnv()
 
     seed = 777
     def seed_torch(seed):
@@ -117,9 +126,9 @@ if __name__ == "__main__":
     grad_batch_size = 10
     replay_buffer_size = 500
     max_min = [[env.cliff_position],[0]]
-    epsilon_decay = 1/1000
+    epsilon_decay = 1/1500
     ripe_when = None # Just batch size
-    delta = 1 # Should basically be same as DQN with such a small value
+    delta = 0.5 # Should basically be same as DQN with such a small value
 
     # TODO: PERHAPS JUST PASS A PREMADE REPLAY BUFFER TO THE SUMO AGENT TO AVOID SO MANY PARAMETERS?
     agent = RobustSumoAgent(env=env, replay_buffer=replay_buffer, grad_batch_size=grad_batch_size, delta=delta,

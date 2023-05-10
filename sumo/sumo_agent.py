@@ -37,11 +37,6 @@ from tqdm import tqdm
 # ripe_when, moved to replay buffer
 # number_neighbours - move to replay buffer (default 2)
 
-# TODO
-# Add to sumo environment
-# get_obs_dim
-# get_action_dim
-# get max_min
 class SumoAgent:
     def __init__(self, env, replay_buffer, epsilon_decay, max_epsilon=1.0, min_epsilon=0.1, gamma=0.99, model_path=None):
         self.env = env
@@ -198,26 +193,35 @@ class SumoAgent:
         :return:
         """
         self.is_test = True # Prevent from taking random actions
-        scores = []
-        avg_dists = []
+        all_rewards = []
+        all_actions = []
+        all_visited_states = []
+
+        all_sar = [] # All state_action_reward
 
         for i in range(test_games):
-            score = 0
             state = self.env.reset()
             done = False
-            avg_dist = []
+
+            # NOTE that we also get the last state, action, reward when the environment terminates here...
+
+            sar = [(np.nan, np.nan, np.nan)] * self.env.max_duration
+
+            i = 0
             # Changed here from training, since we play games till the end, not for a certain number of steps (frames)
             while not done:
                 action = self.select_action(state)
                 next_state, reward, done = self.step(action)
-                avg_dist.append(self.env.get_cliff_distance())
+
+                sar[i] = (state.item(), action.item(), reward)
+
+                i += 1
+
                 state = next_state
-                score += reward
 
-            avg_dists.append(np.mean(avg_dist))
-            scores.append(score)
+            all_sar.append(sar)
 
-        # If statment necessary, otherwise Pygame opens and stays loitering around
+        # If statement necessary, otherwise Pygame opens and stays loitering around
         if render_games > 0:
             self.env.init_render()
             self.env.frame_rate = render_speed
@@ -232,7 +236,7 @@ class SumoAgent:
 
                 state = next_state
 
-        return scores, avg_dists
+        return np.array(all_sar)
 
 
     def _plot(
