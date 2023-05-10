@@ -78,7 +78,7 @@ class displayHandler:
             text = pygame.transform.rotate(text, angle)
         
         # Match case on align with the following options
-        match align:
+        match (align):
             case "top-left":
                 rect = rect
             case "top-right":
