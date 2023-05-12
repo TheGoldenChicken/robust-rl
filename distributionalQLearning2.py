@@ -68,7 +68,7 @@ def expectation(A, b, c, beta, mu, Sigma):
 
     return k
 
-def maximize(f_prime, tol = 1e-3):
+def maximize(f_prime, tol = 1e-5):
     """
     Maximize f_stable with respect to x by using the derivative f_prime.
     Also note that f_prime is either monotonic decreasing or only has one maximum.
@@ -114,8 +114,8 @@ def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1):
         b, c = linear_approximation(X_v, y_v)
         A = np.zeros((len(b),len(b)))
 
-    b, c = linear_approximation(X_v, y_v)
-    A = np.zeros((len(b),len(b)))
+    # b, c = linear_approximation(X_v, y_v)
+    # A = np.zeros((len(b),len(b)))
 
     if b.shape[0] > 1:
         i = 2
