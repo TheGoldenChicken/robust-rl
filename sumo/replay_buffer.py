@@ -52,31 +52,36 @@ class TheSlightlyCoolerReplayBuffer(ReplayBuffer):
     def __init__(self, obs_dim: int, size: int, batch_size: int = 32):
         super().__init__(obs_dim, size, batch_size)
 
-    def sample_batch(self, all=True, action=None) -> Dict[str, np.ndarray]:
-        if not all:
-            idxs = np.random.choice(self.size, size=self.batch_size, replace=False)
-            return dict(obs=self.obs_buf[idxs],
-                        next_obs=self.next_obs_buf[idxs],
-                        acts=self.acts_buf[idxs],
-                        rews=self.rews_buf[idxs],
-                        done=self.done_buf[idxs])
+    def __getitem__(self, idxs) -> Dict[str, np.ndarray]:
+        return dict(obs=self.obs_buf[idxs],
+                    next_obs=self.next_obs_buf[idxs],
+                    acts=self.acts_buf[idxs],
+                    rews=self.rews_buf[idxs],
+                    done=self.done_buf[idxs])
 
-        if action is not None:
-            return dict(obs=self.obs_buf[:self.size],
-                        next_obs=self.next_obs_buf[:self.size],
-                        acts=self.acts_buf[:self.size],
-                        rews=self.rews_buf[:self.size],
-                        done=self.done_buf[:self.size])
+    def sample_from_scratch(self, K, num_times):
+        """
+        Basically like sample_from_scratch for TheCoolerReplayBuffer
+        But this is probably pretty slow
+        This should be pretty FACKING SLOW
+        """
+        # TODO
+        # I know this is stupid, will fix later, same for TCRP
+        KNN_sampless = []
+        # Should replace be false here?
+        current_idxs = np.random.choice(self.size, size=self.batch_size, replace=False)
+        current_samples = self[current_idxs] # Samples to calc KNN from
 
-        else:
-            # Get the observations with the same action
-            same_action = self.acts_buf[:self.size] == action
-            return dict(obs=self.obs_buf[same_action],
-                        next_obs=self.next_obs_buf[same_action],
-                        acts=self.acts_buf[same_action],
-                        rews=self.rews_buf[same_action],
-                        done=self.done_buf[same_action])
+        for i, r in enumerate(current_samples['obs']):
+            dists = [np.linalg.norm(i - x) for x in self.obs_buf['obs']]
+            K = min(K, len(dists))
+            idxs = np.argpartition(dists, K)[:K]
+            KNN_sampless.append(self[idxs])
 
+        return KNN_sampless, current_samples
+
+    def training_ready(self) -> bool:
+        return self.size >= self.ready_when
 
 class TheCoolerReplayBuffer(ReplayBuffer):
     """
@@ -317,3 +322,32 @@ class TheCoolerReplayBuffer(ReplayBuffer):
 
     def training_ready(self) -> bool:
         return sum(self.ripe_bins) >= self.ready_when
+
+
+
+#
+# # Old stuff used to be used in slow replay buffer
+#     def sample_batch(self, all=True, action=None) -> Dict[str, np.ndarray]:
+#         if not all:
+#             idxs = np.random.choice(self.size, size=self.batch_size, replace=False)
+#             return dict(obs=self.obs_buf[idxs],
+#                         next_obs=self.next_obs_buf[idxs],
+#                         acts=self.acts_buf[idxs],
+#                         rews=self.rews_buf[idxs],
+#                         done=self.done_buf[idxs])
+#
+#         if action is not None:
+#             return dict(obs=self.obs_buf[:self.size],
+#                         next_obs=self.next_obs_buf[:self.size],
+#                         acts=self.acts_buf[:self.size],
+#                         rews=self.rews_buf[:self.size],
+#                         done=self.done_buf[:self.size])
+#
+#         else:
+#             # Get the observations with the same action
+#             same_action = self.acts_buf[:self.size] == action
+#             return dict(obs=self.obs_buf[same_action],
+#                         next_obs=self.next_obs_buf[same_action],
+#                         acts=self.acts_buf[same_action],
+#                         rews=self.rews_buf[same_action],
+#                         done=self.done_buf[same_action])

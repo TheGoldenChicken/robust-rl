@@ -10,10 +10,10 @@ env = ware_house.Env(n = 10)
 
 Q = []
     
-for i in range(3):
+for i in range(1):
     agent = robust_distributional_agent(env, tol = 0.05)
     manager = rl.manager.Manager(agent, render = True)
-    print(f"iteration: {i}: " + str(manager.run(iterations = 10000)))
+    print(f"iteration: {i}: " + str(manager.run(iterations = 20000)))
     print("total samples: " + str(agent.total_samples))
 
     Q += [list(agent.Q.values()),list(agent.Q.keys())]

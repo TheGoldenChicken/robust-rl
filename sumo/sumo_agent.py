@@ -37,11 +37,6 @@ from tqdm import tqdm
 # ripe_when, moved to replay buffer
 # number_neighbours - move to replay buffer (default 2)
 
-# TODO
-# Add to sumo environment
-# get_obs_dim
-# get_action_dim
-# get max_min
 class SumoAgent:
     def __init__(self, env, replay_buffer, epsilon_decay, max_epsilon=1.0, min_epsilon=0.1, gamma=0.99, model_path=None):
         self.env = env
@@ -65,7 +60,7 @@ class SumoAgent:
         self.dqn = Network(env.obs_dim, env.action_dim).to(self.device)
         if model_path is not None:
             self.dqn.load_state_dict(model_path)
-        self.optimizer = optim.Adam(self.dqn.parameters())
+        self.optimizer = optim.Adam(self.dqn.parameters(), lr=0.001)
 
         # transition to store in memory
         self.transition = list()
@@ -90,20 +85,20 @@ class SumoAgent:
         return loss
 
 
-    def select_action(self, state: np.ndarray) -> np.ndarray:
+    def select_action(self, state: np.ndarray, ) -> np.ndarray:
         """Select an action from the input state."""
         # epsilon greedy policy
         if self.epsilon > np.random.random() and not self.is_test:
             selected_action = random.randint(0, self.env.action_dim-1) # Why is this not inclusive, exclusive??? Stupid
         else:
+            select_state = self.state_normalizer(state)
             selected_action = self.dqn(
-                torch.FloatTensor(self.state_normalizer(state)).to(self.device)
+                torch.FloatTensor(select_state).to(self.device)
             ).argmax()
             selected_action = selected_action.detach().cpu().numpy()
 
         if not self.is_test:
             self.transition = [state, selected_action]
-
         return selected_action
 
     def step(self, action: np.ndarray) -> Tuple[np.ndarray, np.float64, bool]:
@@ -118,7 +113,7 @@ class SumoAgent:
 
         return next_state, reward, done
 
-    def update_model(self) -> torch.Tensor:
+    def update_model(self): # -> torch.Tensor:
         """Update the model by gradient descent."""
         samples = self.get_samples() # Get_samples needs to be set for each subclass
 
@@ -130,10 +125,10 @@ class SumoAgent:
 
         return loss.item()
 
-    def train(self, num_frames: int, plotting_interval: int = 200):
+    def train(self, num_frames: int, plotting_interval: int = 200, q_val_plotting_interval=200):
         """Train the agent."""
         self.is_test = False
-
+        self.dqn.train()
         state = self.env.reset()
         update_cnt = 0
         epsilons = []
@@ -180,6 +175,9 @@ class SumoAgent:
                     self._plot(frame_idx, scores, losses, epsilons)
                     # print(frame_idx, loss, self.epsilon, )
 
+                if frame_idx % q_val_plotting_interval == 0:
+                    self._plot_q_vals()
+
         print("Training complete")
         return scores, losses, epsilons
 
@@ -198,26 +196,32 @@ class SumoAgent:
         :return:
         """
         self.is_test = True # Prevent from taking random actions
-        scores = []
-        avg_dists = []
+        all_sar = [] # All state_action_reward
+        self.dqn.eval()
 
         for i in range(test_games):
-            score = 0
             state = self.env.reset()
             done = False
-            avg_dist = []
+
+            # NOTE that we also get the last state, action, reward when the environment terminates here...
+
+            sar = [(np.nan, np.nan, np.nan)] * self.env.max_duration
+
+            i = 0
             # Changed here from training, since we play games till the end, not for a certain number of steps (frames)
             while not done:
                 action = self.select_action(state)
                 next_state, reward, done = self.step(action)
-                avg_dist.append(self.env.get_cliff_distance())
+
+                sar[i] = (state.item(), action.item(), reward)
+
+                i += 1
+
                 state = next_state
-                score += reward
 
-            avg_dists.append(np.mean(avg_dist))
-            scores.append(score)
+            all_sar.append(sar)
 
-        # If statment necessary, otherwise Pygame opens and stays loitering around
+        # If statement necessary, otherwise Pygame opens and stays loitering around
         if render_games > 0:
             self.env.init_render()
             self.env.frame_rate = render_speed
@@ -232,7 +236,14 @@ class SumoAgent:
 
                 state = next_state
 
-        return scores, avg_dists
+        return np.array(all_sar)
+
+    def load_model(self, path):
+        self.dqn.load_state_dict(torch.load(path))
+
+
+    def get_q_vals(self, states):
+        return self.dqn(states).detach().cpu().numpy()
 
 
     def _plot(
@@ -254,4 +265,24 @@ class SumoAgent:
         plt.subplot(133)
         plt.title('epsilons')
         plt.plot(epsilons)
+        plt.show()
+
+    def _plot_q_vals(self):
+        states = torch.FloatTensor(np.linspace(0, 1, 1000)).reshape(-1, 1).to(self.device)
+        data = self.get_q_vals(states)
+        action0 = data[:, 0]
+        action1 = data[:, 1]
+        action2 = data[:, 2]
+
+        clear_output(True)
+        plt.figure(figsize=(20, 5))
+        plt.subplot(131)
+        plt.title('Action 0')
+        plt.plot(action0)
+        plt.subplot(132)
+        plt.title('Action 1')
+        plt.plot(action1)
+        plt.subplot(133)
+        plt.title('Action 2')
+        plt.plot(action2)
         plt.show()
