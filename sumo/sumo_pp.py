@@ -23,14 +23,14 @@ class SumoPPEnv:
 
     def __init__(self, line_length=1200):
         self.line_length = line_length
-        self.start_position = self.line_length/5 + np.random.randn()
+        self.start_position = self.line_length/5 #+ np.random.randn()
         self.sumo_position = self.start_position
         self.hill_position = self.line_length/2 + 400 # + np.random.randn()
         self.cliff_position = self.hill_position + 10 # Where the sumo will fall down the cliff
-        self.max_duration = 300 # Env terminates after this
+        self.max_duration = 100 # Env terminates after this
         self.current_action = 0  # 0, 1, 2, NOOP, left, right
 
-        self.sumo_speed = 5
+        self.sumo_speed = 20
         self.noise_mean = 0 # Not meant to be changed, or introduces bias
         self.noise_var = self.sumo_speed / 2 # Higher var <-> More difficulty
         # self.reward_function = lambda pos: 1/(pos - self.hill_position)**2 # 1 over squared istances from the hill
@@ -53,6 +53,8 @@ class SumoPPEnv:
         self.sprite_frame = 0
         self.rendering = False
         self.frame_rate = 60
+        pygame.init()
+        self.font = pygame.font.SysFont('Sans-serif', 50)
 
         # For interfacing with agent
         self.action_dim = 3
@@ -70,7 +72,7 @@ class SumoPPEnv:
             actual_action = action
 
         self.sumo_position += self.sumo_speed * actual_action\
-                              + np.random.normal(loc=self.noise_mean,scale=self.noise_var, size=1)[0]
+                              #+ np.random.normal(loc=self.noise_mean,scale=self.noise_var, size=1)[0]
 
         reward = self.reward_normalizer(self.reward_function(self.sumo_position))
 
@@ -84,7 +86,7 @@ class SumoPPEnv:
         else:
             done = False
 
-        # Don't know if need to use - Penalize no op
+        # # Don't know if need to use - Penalize no op
         # if action == 0:
         #     reward -= 0.1
 
@@ -96,7 +98,7 @@ class SumoPPEnv:
         return np.array([self.sumo_position]), reward, done, 'derp' # Final value is dummy for working with gym envs
 
     def reset(self):
-        self.sumo_position = self.line_length/5 + np.random.randn()
+        self.sumo_position = self.line_length/5 # + np.random.randn()
         self.frame = 0 # Reset the timer (pretty important)
         return np.array([self.sumo_position])
 
@@ -146,6 +148,10 @@ class SumoPPEnv:
 
         #pygame.draw.rect(self.display, blue, (self.sumo_position, int(self.height/2), self.block_size-10, self.block_size-10))
         drawImage(self.display, path=self.path, center=(self.sumo_position-60, int(self.height/2) - 84*1.5), scale=(150, 150))
+        position = self.font.render(str(self.sumo_position), True, (0, 0, 0))
+        self.display.blit(position, (50,1000))
+        reward = self.font.render(str(self.reward_normalizer(self.reward_function(self.sumo_position))), True, (0, 0, 0))
+        self.display.blit(reward, (50,1050))
 
 
 if __name__ == "__main__":
