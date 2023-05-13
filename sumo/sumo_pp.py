@@ -21,11 +21,14 @@ def drawImage(display, path, center, scale=None, angle=None):
 
 class SumoPPEnv:
 
-    def __init__(self, line_length=1200):
+    def __init__(self, line_length=1200, noise=True, start_pos_noise = True):
         self.line_length = line_length
-        self.start_position = self.line_length/5 #+ np.random.randn()
+        self.noise = noise
+        self.start_pos_noise = start_pos_noise
+
+        self.start_position = self.line_length/5 + np.random.randn() * self.start_pos_noise
         self.sumo_position = self.start_position
-        self.hill_position = self.line_length/2 + 400 # + np.random.randn()
+        self.hill_position = self.line_length/2 + 400 # + np.random.randn() * noise
         self.cliff_position = self.hill_position + 10 # Where the sumo will fall down the cliff
         self.max_duration = 100 # Env terminates after this
         self.current_action = 0  # 0, 1, 2, NOOP, left, right
@@ -36,7 +39,7 @@ class SumoPPEnv:
         # self.reward_function = lambda pos: 1/(pos - self.hill_position)**2 # 1 over squared istances from the hill
         self.reward_function = lambda pos: -pos**2 + 2*self.hill_position*pos
         self.reward_normalizer = lambda reward: reward/self.reward_function(self.hill_position)
-        # self.reward_normalizer = lambda reward: reward * 1
+
         self.max_x = line_length # Terminates beyond this - Hill may not move beyond 10 of this position
         self.min_x = 0 # Terminates beyond this
 
@@ -49,7 +52,7 @@ class SumoPPEnv:
         # TODO: Replace this stupid shit with stupid shit using the clock instead
         self.render_frame_interval = 10
         self.frame = 0
-        self.path = 'images/sumo_1.png'
+        self.path = 'sumo/images/sumo_1.png'
         self.sprite_frame = 0
         self.rendering = False
         self.frame_rate = 60
@@ -72,7 +75,7 @@ class SumoPPEnv:
             actual_action = action
 
         self.sumo_position += self.sumo_speed * actual_action\
-                              #+ np.random.normal(loc=self.noise_mean,scale=self.noise_var, size=1)[0]
+                              + np.random.normal(loc=self.noise_mean,scale=self.noise_var, size=1)[0] * self.noise
 
         reward = self.reward_normalizer(self.reward_function(self.sumo_position))
 
@@ -93,12 +96,10 @@ class SumoPPEnv:
         if self.rendering:
             self.render()
 
-        # return_val = self.sumo_position/1000
-        #return np.array([return_val]), reward, done, 'derp'
         return np.array([self.sumo_position]), reward, done, 'derp' # Final value is dummy for working with gym envs
 
     def reset(self):
-        self.sumo_position = self.line_length/5 # + np.random.randn()
+        self.sumo_position = self.line_length/5 + np.random.randn() * self.start_pos_noise
         self.frame = 0 # Reset the timer (pretty important)
         return np.array([self.sumo_position])
 
@@ -122,14 +123,14 @@ class SumoPPEnv:
         self.sprite_frame += 1
 
         if self.sprite_frame % self.render_frame_interval == 0:
-            if self.path == 'images/sumo_2.png' or self.path == 'images/sumo_1.png':
-                self.path = 'images/sumo_3.png'
+            if self.path == 'sumo/images/sumo_2.png' or self.path == 'sumo/images/sumo_1.png':
+                self.path = 'sumo/images/sumo_3.png'
 
-            elif self.path == 'images/sumo_3.png':
-                self.path = 'images/sumo_2.png'
+            elif self.path == 'sumo/images/sumo_3.png':
+                self.path = 'sumo/images/sumo_2.png'
 
             if self.current_action == 0:
-                self.path = 'images/sumo_1.png'
+                self.path = 'sumo/images/sumo_1.png'
 
         self.clock.tick(self.frame_rate)
         pygame.display.flip() # Why this?
@@ -155,14 +156,12 @@ class SumoPPEnv:
 
 
 if __name__ == "__main__":
-    line_length = 1500
-    env = SumoPPEnv(line_length=line_length)
+    env = SumoPPEnv()
     env.init_render()
 
     # Plot reward function
-    xs = np.linspace(0, 500, line_length * 2)
+    xs = np.linspace(0, env.max_x, env.max_x*2)
     ys = env.reward_function(xs)
-    #plt.plot(xs, ys)
     plt.plot(xs, env.reward_normalizer(ys))
     plt.show()
     action = 0
@@ -186,7 +185,7 @@ if __name__ == "__main__":
                     elif event.key == pygame.K_d:
                         action = 0
             next_state, reward, done, _ = env.step(action)
-            print(reward, done, next_state, env.get_cliff_distance())
+
             episode_reward += reward
             env.render()
 
