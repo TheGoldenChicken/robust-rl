@@ -57,10 +57,10 @@ if __name__ == "__main__":
     epsilon_decay = 1/1000
 
     seed = 6969
-    for seed in [4242]:#, 6942, 420, 123, 5318008, 23, 22, 99, 10]:
+    for seed in [42421]:#, 6942, 420, 123, 5318008, 23, 22, 99, 10]:
         #delta_vals = [0.5]
-        # delta_vals =[0, 0.01, 0.05, 0.1, 0.5, 1]
-        delta_vals = [0, 0.1, 0.5]
+        delta_vals =[0, 0.01, 0.05, 0.1, 0.5, 1]
+        # delta_vals = [0, 0.1, 0.5]
         # delta = 1
 
         factor = -1

@@ -38,10 +38,7 @@ def linear_approximation(X,y):
     Phi = np.array([np.ones(X.shape[0]), *[X[:,i] for i in range(D)]]).T
 
     # Compute the posteriror using linear algebra
-    if np.linalg.cond(Phi.T@Phi) < 1 / sys.float_info.epsilon:
-        Sigma = np.linalg.pinv(Phi.T@Phi)
-    else:
-        i = 5
+    Sigma = np.linalg.pinv(Phi.T@Phi)
     mu = Sigma@Phi.T@y
 
     c = mu[0]
@@ -112,9 +109,6 @@ def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1, linear_only = False):
         b, c = linear_approximation(X_v, y_v)
         A = np.zeros((len(b),len(b)))
 
-    if b.shape[0] > 1:
-        i = 2
-
     ### Gaussian approximation ###
     # Compute the mean and covariance of the samples X_p, y_p
     mu = np.mean(X_p, axis = 0)
@@ -150,7 +144,7 @@ def robust_estimator(X_p,y_p,X_v,y_v,delta, linear_only = False):
     """
 
     f = pre_sub_robust_estimator(X_p,y_p,X_v,y_v,delta, linear_only)
-    f_prime = pre_sub_robust_estimator_prime_approx(X_p,y_p,X_v,y_v,delta, linear_only)
+    f_prime = pre_sub_robust_estimator_prime_approx(X_p,y_p,X_v,y_v,delta, linear_only=linear_only)
 
     beta_max = maximize(f_prime)
     return f(beta_max)[0][0], beta_max
