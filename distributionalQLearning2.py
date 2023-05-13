@@ -11,7 +11,7 @@ def quadratic_approximation(X,y):
     Phi = np.array([np.ones(X.shape[0]), *[X[:,i] for i in range(D)], *[X[:,i]*X[:,j] for i in range(D) for j in range(i,D)]]).T
 
     # Compute the posteriror using linear algebra
-    Sigma = np.linalg.inv(Phi.T@Phi)
+    Sigma = np.linalg.pinv(Phi.T@Phi)
     mu = Sigma@Phi.T@y # TODO: THIS HAS A TENDENCY TO RETURN NAN VALUES
 
     # Extract c, b, A from the fitted mean values.
@@ -39,7 +39,7 @@ def linear_approximation(X,y):
 
     # Compute the posteriror using linear algebra
     if np.linalg.cond(Phi.T@Phi) < 1 / sys.float_info.epsilon:
-        Sigma = np.linalg.inv(Phi.T@Phi)
+        Sigma = np.linalg.pinv(Phi.T@Phi)
     else:
         i = 5
     mu = Sigma@Phi.T@y
@@ -50,13 +50,6 @@ def linear_approximation(X,y):
     return b, c
 
 def expectation(A, b, c, beta, mu, Sigma):
-    # A_inv = np.linalg.inv(A)
-    # S = (beta/2)*A_inv
-    # m = (-b/2)@A_inv
-    # S_inv = np.linalg.inv(S)
-    # S_det = np.linalg.det(S)
-    # k = (np.exp(c/-beta)*np.sqrt(S_det*(2*np.pi)**len(m))/np.exp(-(1/2)*m.T@S_inv@m))
-
     Sigma_inv = np.linalg.inv(Sigma)
     Sigma_tilde = np.linalg.inv(Sigma_inv+(2/beta)*A)
     Sigma_tilde_inv = np.linalg.inv(Sigma_tilde)
