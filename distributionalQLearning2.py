@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.stats import multivariate_normal
 import sys
+
 def quadratic_approximation(X,y):
     ### Quadratic approximation using Bayesian linear regression ###
     # Hyperparameters: alpha = 0, beta = 1
@@ -10,7 +11,7 @@ def quadratic_approximation(X,y):
     Phi = np.array([np.ones(X.shape[0]), *[X[:,i] for i in range(D)], *[X[:,i]*X[:,j] for i in range(D) for j in range(i,D)]]).T
 
     # Compute the posteriror using linear algebra
-    Sigma = np.linalg.inv(Phi.T@Phi)
+    Sigma = np.linalg.pinv(Phi.T@Phi)
     mu = Sigma@Phi.T@y # TODO: THIS HAS A TENDENCY TO RETURN NAN VALUES
 
     # Extract c, b, A from the fitted mean values.
@@ -38,7 +39,7 @@ def linear_approximation(X,y):
 
     # Compute the posteriror using linear algebra
     if np.linalg.cond(Phi.T@Phi) < 1 / sys.float_info.epsilon:
-        Sigma = np.linalg.inv(Phi.T@Phi)
+        Sigma = np.linalg.pinv(Phi.T@Phi)
     else:
         i = 5
     mu = Sigma@Phi.T@y
@@ -49,13 +50,6 @@ def linear_approximation(X,y):
     return b, c
 
 def expectation(A, b, c, beta, mu, Sigma):
-    # A_inv = np.linalg.inv(A)
-    # S = (beta/2)*A_inv
-    # m = (-b/2)@A_inv
-    # S_inv = np.linalg.inv(S)
-    # S_det = np.linalg.det(S)
-    # k = (np.exp(c/-beta)*np.sqrt(S_det*(2*np.pi)**len(m))/np.exp(-(1/2)*m.T@S_inv@m))
-
     Sigma_inv = np.linalg.inv(Sigma)
     Sigma_tilde = np.linalg.inv(Sigma_inv+(2/beta)*A)
     Sigma_tilde_inv = np.linalg.inv(Sigma_tilde)
@@ -68,7 +62,7 @@ def expectation(A, b, c, beta, mu, Sigma):
 
     return k
 
-def maximize(f_prime, tol = 1e-3):
+def maximize(f_prime, tol = 1e-5):
     """
     Maximize f_stable with respect to x by using the derivative f_prime.
     Also note that f_prime is either monotonic decreasing or only has one maximum.
@@ -104,18 +98,18 @@ def maximize(f_prime, tol = 1e-3):
 
 def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1):
     ### Quadratic approximation ###
-    # A, b, c = quadratic_approximation(X_v, y_v)
-    # # TODO: IN SOME CASES, A BECOMES AN ARRAY OF [[NAN]], which fucks up the whole .eig thingy
-    # ### Check if A is positive definite ###
-    # # We know it is semi- since A is always symmetric
-    # w, _ = np.linalg.eig(A)
-    # if np.any(w < 0):
-    #     # If any eigenvalue is negative, use linear approximation instead
-    #     b, c = linear_approximation(X_v, y_v)
-    #     A = np.zeros((len(b),len(b)))
+    A, b, c = quadratic_approximation(X_v, y_v)
+    # TODO: IN SOME CASES, A BECOMES AN ARRAY OF [[NAN]], which fucks up the whole .eig thingy
+    ### Check if A is positive definite ###
+    # We know it is semi- since A is always symmetric
+    w, _ = np.linalg.eig(A)
+    if np.any(w < 0):
+        # If any eigenvalue is negative, use linear approximation instead
+        b, c = linear_approximation(X_v, y_v)
+        A = np.zeros((len(b),len(b)))
 
-    b, c = linear_approximation(X_v, y_v)
-    A = np.zeros((len(b),len(b)))
+    # b, c = linear_approximation(X_v, y_v)
+    # A = np.zeros((len(b),len(b)))
 
     if b.shape[0] > 1:
         i = 2

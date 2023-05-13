@@ -1,7 +1,14 @@
+import sys
+import os
+
+# Add current folder to path
+sys.path.append('.')
+# Set the current working directory to the folder this file is in
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
 import torch
 import random
 import numpy as np
-import os
 from sumo_pp import SumoPPEnv
 from replay_buffer import TheCoolerReplayBuffer
 from robust_sumo_agent import RobustSumoAgent
@@ -40,7 +47,6 @@ if __name__ == "__main__":
 
     # We seed before initializing environment
     seed_everything(6969)
-
     # environment
     # line_length = 1000 # Use env default val
     env = SumoPPEnv()

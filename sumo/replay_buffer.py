@@ -88,7 +88,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
     Replay buffer more optimal for grid-based replay-buffering
     """
     def __init__(self, obs_dim, bin_size, batch_size, fineness, num_actions, state_max=np.infty,
-                 state_min=-np.infty, tb=True, ripe_when=None, ready_when=10, num_neighbours=2):
+                 state_min=-np.infty, tb=True, ripe_when=None, ready_when=10, num_neighbours=2, noise_adder = True):
         self.bins_per_action = (fineness**obs_dim)
         self.bins = (fineness**obs_dim)*num_actions + 1*tb
         self.size_per_action = (fineness**obs_dim)*bin_size # Max size per action
@@ -115,7 +115,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
             self.ripe_when = ripe_when
         self.ready_when = ready_when # Number of ripe bins before we can start training
 
-        self.noise_adder = True
+        self.noise_adder = noise_adder
 
     def __getitem__(self, idxs) -> Dict[str, np.ndarray]:
         return dict(obs=self.obs_buf[idxs],
