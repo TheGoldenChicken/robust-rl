@@ -256,10 +256,11 @@ class TheCoolerReplayBuffer(ReplayBuffer):
             while True:
                 noise1 = np.random.normal(0, 1e-3, self.obs_dim)
                 noise2 = np.random.normal(0, 1e-3, self.obs_dim)
-                if np.var(noise1) <= 3.5e-7 or np.var(noise2) <= 3.5e-7: continue
+                if np.abs(noise1) < 1e-5 or np.abs(noise2) < 1e-5: continue
 
                 obs += noise1
                 next_obs += noise2
+                break
         self.obs_buf[teh_idx] = obs
         self.next_obs_buf[teh_idx] = next_obs
         self.acts_buf[teh_idx] = act
