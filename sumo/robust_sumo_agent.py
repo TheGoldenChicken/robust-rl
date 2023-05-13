@@ -24,21 +24,23 @@ class RobustSumoAgent(SumoAgent):
         self.betas = []
         self.robust_estimators = []
         self.quadratic_approximations = []
+
     def get_samples(self) -> tuple[dict, dict]:
         """
         Should be updated for each individual agent type
         """
         samples, current_samples = self.replay_buffer.sample_from_scratch(K=self.replay_buffer.batch_size,
                                                                           nn=self.replay_buffer.num_neighbours,
-                                                                          num_times=self.grad_batch_size)
+                                                                          num_times=self.grad_batch_size,
+                                                                          check_ripeness=True)
 
         return samples, current_samples
     def _compute_dqn_loss(self, samples: List[Dict[str, np.ndarray]],
                           current_samples: List[Dict[str, np.ndarray]] = 0): # -> torch.Tensor: # Default value only so Pycharm doesn't shit itself
         """
         Blablabla compute the loss, this is a good docstring, screw u
-        :param samples:
-        :param curent_samples:
+        :param samples: Samples to compute robust_estimator by using state, next_state and such
+        :param curent_samples: The centre samples to use as reference point wrt. loss between robust estimator and Q(s,a)
         :return:
         """
         # TODO: MAKE ROBUST ESTIMATOR WORK WITH TENSORS...
@@ -51,6 +53,8 @@ class RobustSumoAgent(SumoAgent):
         current_q_values = self.dqn(current_sample_obs).gather(1, current_sample_actions)
 
         robust_estimators = []
+        plotting_robust_estimators = [] # For holding output without gamma discounted, reward added robust estimators
+
         for i, sample in enumerate(samples):
             state = sample["obs"]
             next_state = sample["next_obs"]
@@ -65,24 +69,26 @@ class RobustSumoAgent(SumoAgent):
             # No reason for calculating robust estimator in the real way if it gets masked anyway
             if mask[i] == 0:
                 robust_estimator = 0
+                beta_max = np.nan
             else:
                 robust_estimator, beta_max = distributionalQLearning.robust_estimator(X_p=state, y_p=next_state,
                                                                                       X_v=next_state, y_v=Q_vals,
                                                                                       delta=self.delta)
                 robust_estimator = robust_estimator
-                self.betas.append(beta_max)
 
+            self.betas.append(beta_max)
             robust_estimators.append(robust_estimator)
+            plotting_robust_estimators.append(robust_estimator)
 
         robust_estimators = torch.FloatTensor(robust_estimators).to(device).reshape(-1, 1) * self.robust_factor # -1 because that works better? #unsqueezing because im stupid and lazy
-        robust_estimators = rewards - self.gamma * robust_estimators * mask
+        robust_estimators = rewards + self.gamma * robust_estimators * mask
 
         # mask = 1 - done  # Remove effect from those that are done
 
         # calculate dqn loss
         loss = F.smooth_l1_loss(current_q_values, robust_estimators, reduction='mean') # reduction same as default, no worries
 
-        return loss, robust_estimators
+        return loss, robust_estimators, plotting_robust_estimators
 
     def update_model(self): # -> torch.Tensor:
         """Update the model by gradient descent."""
@@ -92,6 +98,7 @@ class RobustSumoAgent(SumoAgent):
 
         self.optimizer.zero_grad()
         loss.backward()
+        # torch.nn.utils.clip_grad_norm_(self.dqn.parameters(), max_norm=2)
         self.optimizer.step()
 
         return loss.item(), torch.mean(robust_estimator).detach().cpu().numpy()
@@ -104,16 +111,13 @@ class RobustSumoAgent(SumoAgent):
         update_cnt = 0
         epsilons = []
         losses = []
-        scores = []
-        score = 0
+        scores = [] # For plotting scores
+        score = 0 # Current episode score
         robust_estimators = []
-
-        current_episode_score = 0
 
         for frame_idx in tqdm(range(1, num_frames + 1)):
             action = self.select_action(state)
             next_state, reward, done = self.step(action)
-            current_episode_score += reward
 
             state = next_state
             score += reward
@@ -145,11 +149,8 @@ class RobustSumoAgent(SumoAgent):
 
             # plotting
                 if frame_idx % plotting_interval == 0:
-                    self._plot(frame_idx, scores, robust_estimators, epsilons)
+                    self._plot(frame_idx, scores, losses, epsilons)
                     # print(frame_idx, loss, self.epsilon, )
-
-                # if frame_idx % q_val_plotting_interval == 0:
-                #     self._plot_q_vals()
 
         print("Training complete")
         return scores, losses, epsilons
@@ -158,7 +159,6 @@ class RobustSumoAgent(SumoAgent):
 if __name__ == "__main__":
 
     # environment
-    # line_length = 500
     env = SumoPPEnv()
 
     seed = 4949
@@ -210,7 +210,7 @@ if __name__ == "__main__":
     max_min = [[env.cliff_position],[0]]
     epsilon_decay = 1/2000
     ripe_when = None # Just batch size
-    delta = 0.5 # Should basically be same as DQN with such a small value
+    delta = 0.01 # Should basically be same as DQN with such a small value
 
     # TODO: PERHAPS JUST PASS A PREMADE REPLAY BUFFER TO THE SUMO AGENT TO AVOID SO MANY PARAMETERS?
     agent = RobustSumoAgent(env=env, replay_buffer=replay_buffer, grad_batch_size=grad_batch_size, delta=delta,
@@ -239,6 +239,6 @@ if __name__ == "__main__":
     plt.tight_layout()
     plt.show()
 
-    scores = agent.test(test_games=100, render_games=30)
+    scores = agent.test(test_games=100, render_games=5)
     i = 5
     #print(scores, np.mean(scores))

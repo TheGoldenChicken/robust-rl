@@ -253,8 +253,9 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         trash_obs = self.rews_buf[teh_idx] != 0
 
         if self.noise_adder:
-            obs += np.random.normal(0, 1e-3, self.obs_dim)
-            next_obs += np.random.normal(0, 1e-3, self.obs_dim)
+            # Stupid stuff to prevent singular matrices from appearing in calculation of the robust estimator
+            obs += np.random.normal(loc=0,scale=1e-3, size=self.obs_dim)
+            next_obs += np.random.normal(loc=0,scale=1e-3, size=self.obs_dim)
 
         self.obs_buf[teh_idx] = obs
         self.next_obs_buf[teh_idx] = next_obs

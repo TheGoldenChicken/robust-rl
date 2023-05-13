@@ -8,25 +8,15 @@
 # TODO: Det der skal lægges til INdex af action skal ændres til at være sum(actions) hvis actions er en liste
 # TODO: CONSIDER ADDING NUM_NIEGHBOURS (CHECK HOW MANY GRIDS) TO AGENT
 
-# from sumo import sumo_pp
-from sumo import sumo_pp
-import os
 from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-from sumo_utils import normalize_tensor
-from replay_buffer import TheCoolerReplayBuffer
 import random
-import distributionalQLearning2 as distributionalQLearning
 from IPython.display import clear_output
-from network import Network
+from sumo.network import Network
 from tqdm import tqdm
-
-# SubSymbolic AI? Knowing the effect of action and just calculating the noise instead of the transition probabilities
 
 # finenesss = used for replay buffer
 # state_dim = used for replay and network
@@ -59,8 +49,8 @@ class SumoAgent:
 
         self.dqn = Network(env.obs_dim, env.action_dim).to(self.device)
         if model_path is not None:
-            self.dqn.load_state_dict(model_path)
-        self.optimizer = optim.Adam(self.dqn.parameters(), lr=0.001)
+            self.load_model(model_path)
+        self.optimizer = optim.Adam(self.dqn.parameters(), lr=0.001) # Adam default lr=0.001
 
         # transition to store in memory
         self.transition = list()
@@ -85,7 +75,7 @@ class SumoAgent:
         return loss
 
 
-    def select_action(self, state: np.ndarray, ) -> np.ndarray:
+    def select_action(self, state: np.ndarray) -> np.ndarray:
         """Select an action from the input state."""
         # epsilon greedy policy
         if self.epsilon > np.random.random() and not self.is_test:
@@ -121,6 +111,7 @@ class SumoAgent:
 
         self.optimizer.zero_grad()
         loss.backward()
+        # Add gradient clipping here?
         self.optimizer.step()
 
         return loss.item()
@@ -129,6 +120,7 @@ class SumoAgent:
         """Train the agent."""
         self.is_test = False
         self.dqn.train()
+
         state = self.env.reset()
         update_cnt = 0
         epsilons = []
@@ -136,12 +128,10 @@ class SumoAgent:
         scores = []
         score = 0
 
-        current_episode_score = 0
 
         for frame_idx in tqdm(range(1, num_frames + 1)):
             action = self.select_action(state)
             next_state, reward, done = self.step(action)
-            current_episode_score += reward
 
             state = next_state
             score += reward
@@ -169,14 +159,13 @@ class SumoAgent:
                 )
                 epsilons.append(self.epsilon)
 
-
             # plotting
                 if frame_idx % plotting_interval == 0:
                     self._plot(frame_idx, scores, losses, epsilons)
                     # print(frame_idx, loss, self.epsilon, )
 
-                if frame_idx % q_val_plotting_interval == 0:
-                    self._plot_q_vals()
+                # if frame_idx % q_val_plotting_interval == 0:
+                #     self._plot_q_vals()
 
         print("Training complete")
         return scores, losses, epsilons
@@ -197,7 +186,7 @@ class SumoAgent:
         """
         self.is_test = True # Prevent from taking random actions
         all_sar = [] # All state_action_reward
-        self.dqn.eval()
+        self.dqn.eval() # Set network to evaluation mode disabling dropout
 
         for i in range(test_games):
             state = self.env.reset()
@@ -213,6 +202,7 @@ class SumoAgent:
                 action = self.select_action(state)
                 next_state, reward, done = self.step(action)
 
+                # Using item here because they are numpy arrays... stupid
                 sar[i] = (state.item(), action.item(), reward)
 
                 i += 1
@@ -252,6 +242,7 @@ class SumoAgent:
             scores: List[float],
             losses: List[float],
             epsilons: List[float],
+            plot_q_vals: bool = False
     ):
         """Plot the training progresses."""
         clear_output(True)
@@ -265,6 +256,20 @@ class SumoAgent:
         plt.subplot(133)
         plt.title('epsilons')
         plt.plot(epsilons)
+
+        if plot_q_vals:
+            states = torch.FloatTensor(np.linspace(0, 1, 1000)).reshape(-1, 1).to(self.device)
+            q_vals = self.get_q_vals(states)
+            plt.subplot(234)
+            plt.title('action_0')
+            plt.plot(q_vals[:, 0])
+            plt.subplot(235)
+            plt.title('action_1')
+            plt.plot(q_vals[:, 1])
+            plt.subplot(236)
+            plt.title('action_2')
+            plt.plot(q_vals[:, 2])
+
         plt.show()
 
     def _plot_q_vals(self):
