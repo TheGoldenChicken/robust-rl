@@ -96,20 +96,21 @@ def maximize(f_prime, tol = 1e-5):
         else:
             return x_mid
 
-def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1):
-    ### Quadratic approximation ###
-    A, b, c = quadratic_approximation(X_v, y_v)
-    # TODO: IN SOME CASES, A BECOMES AN ARRAY OF [[NAN]], which fucks up the whole .eig thingy
-    ### Check if A is positive definite ###
-    # We know it is semi- since A is always symmetric
-    w, _ = np.linalg.eig(A)
-    if np.any(w < 0):
-        # If any eigenvalue is negative, use linear approximation instead
+def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1, linear_only = False):
+    
+    if not linear_only:
+        ### Quadratic approximation ###
+        A, b, c = quadratic_approximation(X_v, y_v)
+        ### Check if A is positive definite ###
+        # We know it is semi- since A is always symmetric
+        w, _ = np.linalg.eig(A)
+        if np.any(w < 0):
+            # If any eigenvalue is negative, use linear approximation instead
+            b, c = linear_approximation(X_v, y_v)
+            A = np.zeros((len(b),len(b)))
+    else:
         b, c = linear_approximation(X_v, y_v)
         A = np.zeros((len(b),len(b)))
-
-    # b, c = linear_approximation(X_v, y_v)
-    # A = np.zeros((len(b),len(b)))
 
     if b.shape[0] > 1:
         i = 2
@@ -134,12 +135,12 @@ def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1):
 
     return estimator
 
-def pre_sub_robust_estimator_prime_approx(X_p,y_p,X_v,y_v, delta,tol = 1e-3):
-    return lambda beta : (pre_sub_robust_estimator(X_p,y_p,X_v,y_v,delta)(beta+tol)- \
-                          pre_sub_robust_estimator(X_p,y_p,X_v,y_v,delta)(beta-tol))/ \
+def pre_sub_robust_estimator_prime_approx(X_p,y_p,X_v,y_v, delta,tol = 1e-3, linear_only = False):
+    return lambda beta : (pre_sub_robust_estimator(X_p,y_p,X_v,y_v,delta,linear_only)(beta+tol)- \
+                          pre_sub_robust_estimator(X_p,y_p,X_v,y_v,delta,linear_only)(beta-tol))/ \
                           (2*tol)
 
-def robust_estimator(X_p,y_p,X_v,y_v,delta):
+def robust_estimator(X_p,y_p,X_v,y_v,delta, linear_only = False):
     """
     X_p: 2D array of samples (s,a) corresponding to transistions.
     y_p: Transision probability p(s'|s,a)
@@ -148,8 +149,8 @@ def robust_estimator(X_p,y_p,X_v,y_v,delta):
     delta: Kullback liebler divergence distance
     """
 
-    f = pre_sub_robust_estimator(X_p,y_p,X_v,y_v,delta)
-    f_prime = pre_sub_robust_estimator_prime_approx(X_p,y_p,X_v,y_v,delta)
+    f = pre_sub_robust_estimator(X_p,y_p,X_v,y_v,delta, linear_only)
+    f_prime = pre_sub_robust_estimator_prime_approx(X_p,y_p,X_v,y_v,delta, linear_only)
 
     beta_max = maximize(f_prime)
     return f(beta_max)[0][0], beta_max
