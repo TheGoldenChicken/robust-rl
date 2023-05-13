@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.stats import multivariate_normal
 import sys
+
 def quadratic_approximation(X,y):
     ### Quadratic approximation using Bayesian linear regression ###
     # Hyperparameters: alpha = 0, beta = 1
