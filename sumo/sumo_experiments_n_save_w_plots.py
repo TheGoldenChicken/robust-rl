@@ -47,7 +47,7 @@ if __name__ == "__main__":
     bin_size = 1000
 
     # Should have converged somewhat at this point
-    num_frames = 2500
+    num_frames = 5000
 
     # Agent parameters - Should not be changed!
     state_dim = 1
@@ -59,13 +59,15 @@ if __name__ == "__main__":
     seed = 6969
     for seed in [4242]:#, 6942, 420, 123, 5318008, 23, 22, 99, 10]:
         #delta_vals = [0.5]
-        delta_vals =[0, 0.01, 0.05, 0.1, 0.5, 1]
+        # delta_vals =[0, 0.01, 0.05, 0.1, 0.5, 1]
+        delta_vals = [0, 0.1, 0.5]
         # delta = 1
 
         factor = -1
 
-        # 3x2 grid of plots
+        # 3x2 grid of plots with distance between the plots
         fig, axs = plt.subplots(3, 2, figsize=(15, 15))
+        fig.subplots_adjust(hspace=0.5, wspace=0.5)
 
         for i, delta in enumerate(delta_vals):
             seed_everything(seed)
