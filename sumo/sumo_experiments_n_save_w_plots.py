@@ -47,7 +47,7 @@ if __name__ == "__main__":
     bin_size = 1000
 
     # Should have converged somewhat at this point
-    num_frames = 5000
+    num_frames = 10000
 
     # Agent parameters - Should not be changed!
     state_dim = 1
