@@ -1,0 +1,10 @@
+    Batch size, state_max, state_min, ready_when, num_frames,    replay_buffer_size, max_min, epsilon_decay
+    40
+[1200]
+[0]
+300
+    8000
+10
+500
+[[1200], [0]]
+0.0006666666666666666            

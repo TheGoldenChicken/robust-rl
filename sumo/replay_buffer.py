@@ -51,6 +51,7 @@ class TheSlightlyCoolerReplayBuffer(ReplayBuffer):
 
     def __init__(self, obs_dim: int, size: int, batch_size: int = 32):
         super().__init__(obs_dim, size, batch_size)
+        self.noise_adder = True # Since this is used for robust agent, we must also add noise
 
     def __getitem__(self, idxs) -> Dict[str, np.ndarray]:
         return dict(obs=self.obs_buf[idxs],
@@ -59,7 +60,29 @@ class TheSlightlyCoolerReplayBuffer(ReplayBuffer):
                     rews=self.rews_buf[idxs],
                     done=self.done_buf[idxs])
 
-    def sample_from_scratch(self, K, num_times):
+    def store(
+        self,
+        obs: np.ndarray,
+        act: np.ndarray,
+        rew: float,
+        next_obs: np.ndarray,
+        done: bool,
+    ):
+
+        if self.noise_adder:
+            obs += np.random.normal(loc=0,scale=1e-3, size=len(obs))
+            next_obs += np.random.normal(loc=0,scale=1e-3, size=len(next_obs))
+
+        self.obs_buf[self.ptr] = obs
+        self.next_obs_buf[self.ptr] = next_obs
+        self.acts_buf[self.ptr] = act
+        self.rews_buf[self.ptr] = rew
+        self.done_buf[self.ptr] = done
+        self.ptr = (self.ptr + 1) % self.max_size
+        self.size = min(self.size + 1, self.max_size)
+
+
+    def sample_from_scratch(self, K, nn, num_times=1, specific_action=None, distance='Euclidian', check_ripeness=True):
         """
         Basically like sample_from_scratch for TheCoolerReplayBuffer
         But this is probably pretty slow
@@ -69,11 +92,12 @@ class TheSlightlyCoolerReplayBuffer(ReplayBuffer):
         # I know this is stupid, will fix later, same for TCRP
         KNN_sampless = []
         # Should replace be false here?
-        current_idxs = np.random.choice(self.size, size=self.batch_size, replace=False)
+
+        current_idxs = np.random.choice(self.size, size=num_times, replace=False)
         current_samples = self[current_idxs] # Samples to calc KNN from
 
         for i, r in enumerate(current_samples['obs']):
-            dists = [np.linalg.norm(i - x) for x in self.obs_buf['obs']]
+            dists = [np.linalg.norm(i - x) for x in self.obs_buf[:self.size]]
             K = min(K, len(dists))
             idxs = np.argpartition(dists, K)[:K]
             KNN_sampless.append(self[idxs])
@@ -136,7 +160,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         """
         return self.size[idx]
 
-    def sample_from_scratch(self, K, nn, num_times=1, specific_action=None, distance='Euclidian', check_ripeness=True):
+    def sample_from_scratch(self, K, nn=None, num_times=1, specific_action=None, distance='Euclidian', check_ripeness=True):
         """
         Practically the only interface the agent should have with the replay_buffer (apart from dundermethods)
         The whole sampling shebang based on a random point in the current dataset
@@ -150,6 +174,9 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         each point, used for specifying the reward used in computing robust estimator
         """
         # TODO: FIX NOT BEING ABLE TO SPECIFY SPECIFIC_ACTION - WE CANNOT GUARANTEE RIPE REPLAY BUFFERS ON THAT ACTION...
+
+        if nn is None:
+            nn = self.num_neighbours
 
         KNN_sampless = []
         current_samples = self[self.sample_randomly_idxs(size=num_times, check_ripeness=check_ripeness)] # Samples to calc KNN from

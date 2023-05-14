@@ -1,6 +1,5 @@
 import pygame
 import numpy as np
-
 import rl.display
 from scipy.stats import multivariate_normal
 

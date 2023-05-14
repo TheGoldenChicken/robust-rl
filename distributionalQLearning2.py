@@ -59,7 +59,7 @@ def expectation(A, b, c, beta, mu, Sigma):
 
     return k
 
-def maximize(f_prime, tol = 1e-5):
+def maximize(f_prime, tol = 1e-3):
     """
     Maximize f_stable with respect to x by using the derivative f_prime.
     Also note that f_prime is either monotonic decreasing or only has one maximum.
@@ -124,7 +124,8 @@ def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1, linear_only = False):
         mu_tilde = (mu.T@Sigma_inv+(-b.T/beta))@Sigma_tilde
         k1 = np.sqrt(np.linalg.det(Sigma_tilde)/np.linalg.det(Sigma))
         k2 = (-1/2)*mu.T@Sigma_inv@mu+(1/2)*mu_tilde.T@Sigma_tilde_inv@mu_tilde+(c/-beta)
-        
+
+
         return - beta * (np.log(k1) + k2) - delta * beta
 
     return estimator

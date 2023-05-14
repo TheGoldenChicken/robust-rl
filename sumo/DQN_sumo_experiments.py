@@ -31,73 +31,77 @@ if __name__ == "__main__":
     # Replay buffer parameters - Should not be changed!
     obs_dim = env.obs_dim
     action_dim = env.action_dim
-    batch_size = 32
+    batch_size = 40
     state_max, state_min = np.array([env.max_min[0]]), np.array([env.max_min[1]])
     ready_when = 300 # Just about the same as robust agent with 3/10
     size = 10000
 
     # Should have converged somewhat at this point
-    num_frames = 2500
+    num_framess = [2500,5000,8000,10000,12000]
+    for frames in num_framess:
+        num_frames = frames
 
-    # Agent parameters - Should not be changed!
-    state_dim = 1
-    grad_batch_size = 10
-    replay_buffer_size = 500
-    max_min = [[env.max_min[0]],[env.max_min[1]]]
-    epsilon_decay = 1/1000
+        # Agent parameters - Should not be changed!
+        state_dim = 1
+        grad_batch_size = 10
+        replay_buffer_size = 500
+        max_min = [[env.max_min[0]],[env.max_min[1]]]
+        epsilon_decay = 1/1500
+        target_update = 300
 
-    seed = 6969
+        seed = 6969
 
-    # TODO: Fix ugly formatting here, not really becoming of a serious researcher
-    test_name = 'test_1_DQN_sumo'
+        # TODO: Fix ugly formatting here, not really becoming of a serious researcher
+        test_name = f'DQN_sumo-{num_frames}-frames'
 
-    if not os.path.isdir(f'test_results/{test_name}'):
-        os.mkdir(f'test_results/{test_name}',)
+        if not os.path.isdir(f'test_results/{test_name}'):
+            os.mkdir(f'test_results/{test_name}',)
 
-    with open(f'test_results/{test_name}/hyperparams.txt', 'w') as f:
-        f.write(f'''\
-Batch size, state_max, state_min, ready_when, num_frames,\
-replay_buffer_size, max_min, epsilon_decay\n\
-{batch_size}\n{state_max}\n{state_min}\n{ready_when}\n\
-{num_frames}\n{grad_batch_size}\n{replay_buffer_size}\n{max_min}\n{epsilon_decay}\
-        ''')
+        with open(f'test_results/{test_name}/hyperparams.txt', 'w') as f:
+            f.write(f'''\
+    Batch size, state_max, state_min, ready_when, num_frames,\
+    replay_buffer_size, max_min, epsilon_decay\n\
+    {batch_size}\n{state_max}\n{state_min}\n{ready_when}\n\
+    {num_frames}\n{grad_batch_size}\n{replay_buffer_size}\n{max_min}\n{epsilon_decay}\
+            ''')
 
-    seeds = [6969, 4242, 6942, 420, 123, 5318008, 23, 22, 99, 10]
+        seeds = [6969, 4242, 6942, 420, 123, 5318008, 23, 22, 99, 10]
 
-    for seed in seeds:
+        for seed in seeds:
 
-        seed_everything(seed)
+            seed_everything(seed)
 
-        replay_buffer = ReplayBuffer(obs_dim=obs_dim, size=size, batch_size=32, ready_when=300)
-        agent = DQNSumoAgent(env=env, replay_buffer=replay_buffer, epsilon_decay=epsilon_decay,
-                             max_epsilon=1.0, min_epsilon=0.1, gamma=0.99)
+            replay_buffer = ReplayBuffer(obs_dim=obs_dim, size=size, batch_size=32, ready_when=300)
+            agent = DQNSumoAgent(env=env, replay_buffer=replay_buffer, target_update=300, epsilon_decay=epsilon_decay,
+                                 max_epsilon=1.0, min_epsilon=0.1, gamma=0.99)
 
-        train_start = time.time()
+            train_start = time.time()
+            train_data = agent.train(num_frames, plotting_interval=999999)
+            train_end = time.time()
+            test_start = train_end
+            test_data = agent.test(test_games=100, render_games=0)
+            test_end = time.time()
 
-        train_data = (scores, losses, epsilons) = agent.train(num_frames, plotting_interval=999999)
-        train_end = time.time()
-        test_start = train_end
+            # States to extract q-values from
+            states = torch.FloatTensor(np.linspace(0,1, 1200)).reshape(-1,1).to(agent.device)
+            q_vals = agent.get_q_vals(states)
 
-        test_data = agent.test(test_games=100, render_games=0)
-        test_end = time.time()
+            test_columns = ['states_actions_rewards']
+            train_columns = ['scores', 'losses', 'epsilons']
+            time_columns = ['training_time', 'testing_time']
+            time_data = [train_end - train_start, test_end - test_start]
 
-        test_columns = ['Test Scores', 'Episode mean cliff dists']
-        train_columns = ['Scores', 'Losses', 'Epsilons']
-        time_columns = ['Training Time', 'Testing Time']
-        time_data = [train_end - train_start, test_end - test_start]
+            train_scores = pd.DataFrame({train_columns[0]: train_data[0]}) # Scores
+            train_df = pd.DataFrame({train_columns[i]: train_data[i] for i in range(1, len(train_data))}) # Losses, epsilons
+    #        test_df = pd.DataFrame({test_columns[i]: test_data[i] for i in range(len(test_data))})
+            time_df = pd.DataFrame({time_columns[i]: [time_data[i]] for i in range(len(time_data))}) # Training test, testing time
 
-        train_scores = pd.DataFrame({train_columns[0]: train_data[0]})  # Scores
-        train_df = pd.DataFrame( {train_columns[i]: train_data[i] for i in range(1, len(train_data))})  # Losses, epsilons
-        #        test_df = pd.DataFrame({test_columns[i]: test_data[i] for i in range(len(test_data))})
-        time_df = pd.DataFrame({time_columns[i]: [time_data[i]] for i in range(len(time_data))})  # Training test, testing time
+            train_scores.to_csv(f'test_results/{test_name}/seed-{seed}-train_score_data.csv')
+            train_df.to_csv(f'test_results/{test_name}/seed-{seed}-train_data.csv')
+            np.save(f'test_results/{test_name}/seed-{seed}-test_data.npy', test_data)
+            np.save(f'test_results/{test_name}/seed-{seed}-q_vals.npy', q_vals)
+     #       test_df.to_csv(f'test_results/{test_name}/{delta}-test_data.csv')
+            time_df.to_csv(f'test_results/{test_name}/seed-{seed}-time_data.csv')
+            agent.save_model(f'test_results/{test_name}/seed-{seed}-model')
 
-        # Save data
-        train_scores.to_csv(f'test_results/{test_name}/{seed}-train_score_data.csv')
-        train_df.to_csv(f'test_results/{test_name}/{seed}-train_data.csv')
-        # test_df.to_csv(f'test_results/{test_name}/{seed}-test_data.csv')
-        np.save(f'test_results/{test_name}/{delta}-train_data.npy', test_data)
-        time_df.to_csv(f'test_results/{test_name}/{seed}-time_data.csv')
-        agent.save_model(f'test_results/{test_name}/{seed}-model')
-
-        torch.cuda.empty_cache()
-# def robust_agent_testing(seed, testing_runs,)
+            torch.cuda.empty_cache()

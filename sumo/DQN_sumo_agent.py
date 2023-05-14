@@ -105,12 +105,7 @@ class DQNSumoAgent(SumoAgent):
                     print(frame_idx, loss, self.epsilon, )
 
         print("Training complete")
-
-        if save_model is not None:
-            try:
-                torch.save(self.dqn.state_dict(), save_model)
-            except:
-                print("ERROR! Could not save model!")
+        return scores, losses, epsilons
 
     def _target_hard_update(self):
         """Hard update: target <- local."""

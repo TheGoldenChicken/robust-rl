@@ -21,7 +21,7 @@ def drawImage(display, path, center, scale=None, angle=None):
 
 class SumoPPEnv:
 
-    def __init__(self, line_length=1200, noise=True, start_pos_noise = True):
+    def __init__(self, line_length=1200, noise=True, start_pos_noise=True):
         self.line_length = line_length
         self.noise = noise
         self.start_pos_noise = start_pos_noise

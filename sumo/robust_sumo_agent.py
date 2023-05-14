@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 import distributionalQLearning2 as distributionalQLearning
 import numpy as np
-from replay_buffer import TheCoolerReplayBuffer
+from replay_buffer import TheCoolerReplayBuffer, TheSlightlyCoolerReplayBuffer
 from sumo_pp import SumoPPEnv
 from typing import Dict, List
 import matplotlib.pyplot as plt
@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 class RobustSumoAgent(SumoAgent):
     def __init__(self, env, replay_buffer, epsilon_decay, grad_batch_size=30, delta=0.5, max_epsilon=1.0,
-                 min_epsilon=0.1, gamma=0.99, model_path=None, robust_factor=1):
+                 min_epsilon=0.1, gamma=0.99, model_path=None, robust_factor=1, linear_only=False):
         super().__init__(env, replay_buffer, epsilon_decay, max_epsilon, min_epsilon, gamma, model_path)
 
         self.robust_factor = robust_factor # Factor multiplied on the robust estimator
@@ -24,13 +24,14 @@ class RobustSumoAgent(SumoAgent):
         self.betas = []
         self.robust_estimators = []
         self.quadratic_approximations = []
+        self.linear_only = linear_only
 
     def get_samples(self) -> tuple[dict, dict]:
         """
         Should be updated for each individual agent type
         """
         samples, current_samples = self.replay_buffer.sample_from_scratch(K=self.replay_buffer.batch_size,
-                                                                          nn=self.replay_buffer.num_neighbours,
+                                                                          nn=None,
                                                                           num_times=self.grad_batch_size,
                                                                           check_ripeness=True)
 
@@ -73,7 +74,8 @@ class RobustSumoAgent(SumoAgent):
             else:
                 robust_estimator, beta_max = distributionalQLearning.robust_estimator(X_p=state, y_p=next_state,
                                                                                       X_v=next_state, y_v=Q_vals,
-                                                                                      delta=self.delta)
+                                                                                      delta=self.delta,
+                                                                                      linear_only=self.linear_only)
                 robust_estimator = robust_estimator
 
             self.betas.append(beta_max)
@@ -94,7 +96,7 @@ class RobustSumoAgent(SumoAgent):
         """Update the model by gradient descent."""
         samples = self.get_samples() # Get_samples needs to be set for each subclass
 
-        loss, robust_estimator = self._compute_dqn_loss(*samples)
+        loss, robust_estimator, _ = self._compute_dqn_loss(*samples)
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -193,10 +195,12 @@ if __name__ == "__main__":
     ready_when = 10
     num_neighbours = 2
     bin_size = 1000
-    replay_buffer = TheCoolerReplayBuffer(obs_dim=obs_dim, bin_size=bin_size, batch_size=batch_size, fineness=fineness,
-                                          num_actions=action_dim, state_max=state_max, state_min=state_min,
-                                          ripe_when=ripe_when, ready_when=ready_when, num_neighbours=num_neighbours,
-                                          tb=True)
+    # replay_buffer = TheCoolerReplayBuffer(obs_dim=obs_dim, bin_size=bin_size, batch_size=batch_size, fineness=fineness,
+    #                                       num_actions=action_dim, state_max=state_max, state_min=state_min,
+    #                                       ripe_when=ripe_when, ready_when=ready_when, num_neighbours=num_neighbours,
+    #                                       tb=True)
+
+    replay_buffer = TheSlightlyCoolerReplayBuffer(obs_dim=obs_dim, size=100000, batch_size=batch_size)
 
     num_frames = 8000
 
