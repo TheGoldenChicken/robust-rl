@@ -57,9 +57,9 @@ if __name__ == "__main__":
     epsilon_decay = 1/1000
 
     seed = 6969
-    for seed in [42421]:#, 6942, 420, 123, 5318008, 23, 22, 99, 10]:
+    for seed in [6969]:#, 6942, 420, 123, 5318008, 23, 22, 99, 10]:
         #delta_vals = [0.5]
-        delta_vals =[0, 0.01, 0.05, 0.1, 0.5, 1]
+        delta_vals =[0.01]#, 0.1, 0.5, 1]
         # delta_vals = [0, 0.1, 0.5]
         # delta = 1
 
@@ -83,15 +83,16 @@ if __name__ == "__main__":
             agent = RobustSumoAgent(env=env, replay_buffer=replay_buffer, grad_batch_size=grad_batch_size, delta=delta,
                                     epsilon_decay=epsilon_decay, max_epsilon=1.0, min_epsilon=0.1, gamma=0.99, robust_factor=factor)
 
-            # Change
-            train_start = time.time()
-            train_data = (scores, losses, epsilons) = agent.train(num_frames, plotting_interval=999999)
-            train_end = time.time()
-            test_start = train_end
+            # # Change
+            # train_start = time.time()
+            train_data = agent.train(num_frames, plotting_interval=999999)
+            # train_end = time.time()
+            # test_start = train_end
             test_data = agent.test(test_games=100, render_games=0)
-            test_end = time.time()
+            # test_end = time.time()
 
-            states = torch.FloatTensor(np.arange(0,1200)).reshape(-1,1).to(agent.device)
+            states = torch.FloatTensor(np.linspace(0,1,1200)).reshape(-1,1).to(agent.device)
+
             q_vals = agent.get_q_vals(states)
 
             # Plot the q values for each action (dim(q_vals)=(len(states), action_dim))

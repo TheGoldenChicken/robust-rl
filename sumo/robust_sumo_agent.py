@@ -94,7 +94,7 @@ class RobustSumoAgent(SumoAgent):
         """Update the model by gradient descent."""
         samples = self.get_samples() # Get_samples needs to be set for each subclass
 
-        loss, robust_estimator = self._compute_dqn_loss(*samples)
+        loss, robust_estimator, _ = self._compute_dqn_loss(*samples)
 
         self.optimizer.zero_grad()
         loss.backward()
