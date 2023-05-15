@@ -59,6 +59,17 @@ def expectation(A, b, c, beta, mu, Sigma):
 
     return k
 
+from scipy.optimize import minimize
+def maximize_f(f):
+    
+    # Find the maximum of f
+    # Use a negative sign for maximization
+    res = minimize(lambda x : -f(x), 1, method = 'Nelder-Mead', tol = 1e-5, bounds = [(1e-5, np.inf)])
+    
+    # Return the: f(x), x
+    return -res.fun, res.x[0]
+
+
 def maximize(f_prime, tol = 1e-5):
     """
     Maximize f_stable with respect to x by using the derivative f_prime.
@@ -66,8 +77,9 @@ def maximize(f_prime, tol = 1e-5):
     Also note that x is always positive.
     """
     
-    x_min = tol*2
+    x_min = 2e-3
     x_max = 10
+    
     
     # If f_prime(tol) < 0 the function is monotonic decreasing.
     if f_prime(x_min) < 0:
@@ -147,10 +159,11 @@ def robust_estimator(X_p,y_p,X_v,y_v,delta, linear_only = False):
     """
 
     f = pre_sub_robust_estimator(X_p,y_p,X_v,y_v,delta, linear_only)
-    f_prime = pre_sub_robust_estimator_prime_approx(X_p,y_p,X_v,y_v,delta, linear_only=linear_only)
-
-    beta_max = maximize(f_prime)
-    return f(beta_max)[0][0], beta_max
+    # f_prime = pre_sub_robust_estimator_prime_approx(X_p,y_p,X_v,y_v,delta, linear_only=linear_only)
+    
+    return maximize_f(f)
+    # beta_max = maximize(f_prime)
+    # return f(beta_max)[0][0], beta_max
 
 # mu = np.array([0, 0])
 # Sigma = np.array([[3, 1], [1, 4]])
