@@ -47,7 +47,7 @@ if __name__ == "__main__":
     bin_size = 1000
 
     # Should have converged somewhat at this point
-    num_frames = 8000
+    num_frames = 20000
 
     # Agent parameters - Should not be changed!
     state_dim = 1
@@ -56,11 +56,12 @@ if __name__ == "__main__":
     max_min = [[env.max_min[0]],[env.max_min[1]]]
     epsilon_decay = 1/1000
 
-    seed = 6969
-    for seed in [42421]:#, 6942, 420, 123, 5318008, 23, 22, 99, 10]:
+    seed = 999
+    for seed in [999]:#, 6942, 420, 123, 5318008, 23, 22, 99, 10]:
         #delta_vals = [0.5]
-        delta_vals =[0, 0.01, 0.05, 0.1, 0.5, 1]
-        # delta_vals = [0, 0.1, 0.5]
+        # delta_vals =[0.01, 0.1, 0.5]#, 1, 5]
+        # delta_vals = [1]
+        delta_vals = [0.01,0.05,0.1,0.5,1,2]2
         # delta = 1
 
         factor = -1
@@ -83,16 +84,19 @@ if __name__ == "__main__":
             agent = RobustSumoAgent(env=env, replay_buffer=replay_buffer, grad_batch_size=grad_batch_size, delta=delta,
                                     epsilon_decay=epsilon_decay, max_epsilon=1.0, min_epsilon=0.1, gamma=0.99, robust_factor=factor)
 
-            # Change
-            train_start = time.time()
-            train_data = (scores, losses, epsilons) = agent.train(num_frames, plotting_interval=999999)
-            train_end = time.time()
-            test_start = train_end
+            # # Change
+            # train_start = time.time()
+            train_data = agent.train(num_frames, plotting_interval=999999)
+            # train_end = time.time()
+            # test_start = train_end
             test_data = agent.test(test_games=100, render_games=0)
-            test_end = time.time()
+            # test_end = time.time()
 
-            states = torch.FloatTensor(np.arange(0,1200)).reshape(-1,1).to(agent.device)
+            states = torch.FloatTensor(np.linspace(0,1,1200)).reshape(-1,1).to(agent.device)
+
             q_vals = agent.get_q_vals(states)
+            
+            
 
             # Plot the q values for each action (dim(q_vals)=(len(states), action_dim))
             for j in range(action_dim):
@@ -101,7 +105,16 @@ if __name__ == "__main__":
                 axs[i//2, i%2].set_xlabel("State")
                 axs[i//2, i%2].set_ylabel("Q Value")
                 axs[i//2, i%2].legend()
+                
+            indices = np.where(q_vals[:,2] > q_vals[:,1])[0]
+            if len(indices) != 0:
+                print(f'Right > Left: {indices[0]/1200 }\nCliff: {0.84}')
+                axs[i//2, i%2].axvline(x=indices[0]/1200, color='black', linestyle='--')
+                axs[i//2, i%2].text(0.5, 0.2, f'Right > Left: {indices[0]/1200 }\nCliff: {0.84}',rotation=0, va='bottom')
 
+            axs[i//2, i%2].axvline(x=0.84, color='purple', linestyle='--')
+
+            
             torch.cuda.empty_cache()
 
         plt.show()

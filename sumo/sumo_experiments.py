@@ -74,10 +74,11 @@ if __name__ == "__main__":
 
 
     # Seeds
-    # seeds = [6969, 4242, 6942, 420, 123, 5318008, 23, 22, 99, 10]
-    seeds = [6942, 420, 123, 5318008, 23, 22, 99, 10]
+    seeds = [6969, 4242, 6942, 420, 123, 5318008, 23, 22, 99, 10]
     # Delta values to test
     delta_vals = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 3, 5]
+    delta_vals = [0.01, 0.05, 0.1, 0.5, 1, 2, 3, 5]
+
     # Whether to add or subtract robust estimator from reward
     factors = [-1]
     # Whether to use linear or quadratic approximation
@@ -87,7 +88,7 @@ if __name__ == "__main__":
         for linear in linear_only:
             for factor in factors:
                 # TODO: Fix ugly formatting here, not really becoming of a serious researcher
-                test_name = f'linear-{linear}-test_seed_{seed}_robust_factor_{factor}'
+                test_name = f'newoptim-linear-{linear}-test_seed_{seed}_robust_factor_{factor}'
 
                 if not os.path.isdir(f'test_results/{test_name}'):
                     os.mkdir(f'test_results/{test_name}',)

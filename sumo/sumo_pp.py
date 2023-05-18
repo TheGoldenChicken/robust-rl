@@ -52,7 +52,7 @@ class SumoPPEnv:
         # TODO: Replace this stupid shit with stupid shit using the clock instead
         self.render_frame_interval = 10
         self.frame = 0
-        self.path = 'sumo/images/sumo_1.png'
+        self.path = 'images/sumo_1.png'
         self.sprite_frame = 0
         self.rendering = False
         self.frame_rate = 60
@@ -123,14 +123,14 @@ class SumoPPEnv:
         self.sprite_frame += 1
 
         if self.sprite_frame % self.render_frame_interval == 0:
-            if self.path == 'sumo/images/sumo_2.png' or self.path == 'sumo/images/sumo_1.png':
-                self.path = 'sumo/images/sumo_3.png'
+            if self.path == 'images/sumo_2.png' or self.path == 'images/sumo_1.png':
+                self.path = 'images/sumo_3.png'
 
-            elif self.path == 'sumo/images/sumo_3.png':
-                self.path = 'sumo/images/sumo_2.png'
+            elif self.path == 'images/sumo_3.png':
+                self.path = 'images/sumo_2.png'
 
             if self.current_action == 0:
-                self.path = 'sumo/images/sumo_1.png'
+                self.path = 'images/sumo_1.png'
 
         self.clock.tick(self.frame_rate)
         pygame.display.flip() # Why this?
