@@ -44,10 +44,11 @@ class CliffCar:
         self.car_position_func = lambda placing: np.array([self.width/placing, self.height/placing])\
                                                  + np.random.randn(2) * self.start_pos_noise
 
-        self.car_position = self.car_position_func(5)
+        self.car_position = self.car_position_func(4.5)
+
         self.cliff_height = self.height/5
-        self.goal = [self.width/(5/6), self.cliff_height+50] # Where the sumo will fall down the cliff
-        self.max_duration = 300 # Env terminates after this
+        self.goal = [self.width*(4.5/6), self.height/(4.5)] # Where the car will fall down the cliff
+        self.max_duration = 600 # Env terminates after this
         self.current_action = 0  # 0, 1, 2, 3, 4 NOOP, left, right, up, down
 
         self.max_x, self.max_y = self.width, self.height
@@ -59,10 +60,12 @@ class CliffCar:
 
         self.speed = 20
         self.noise_mean = 0
+        # self.noise_var = 0.0000001
         self.noise_var = self.speed / 2
         self.reward_function = lambda x, y: sum([-x ** 2 + 2 * self.goal[0] * x, -y ** 2 + 2 * self.goal[1] * y])
         max_reward = self.reward_function(self.goal[0], self.goal[1])
-        self.reward_normalizer = lambda reward: reward/max_reward
+        min_reward = self.reward_function(0, self.max_y)
+        self.reward_normalizer = lambda reward: (reward-min_reward)/(max_reward-min_reward)
 
         # Technically this is the one we should use, but above should be faster
         # self.reward_normalizer = lambda val: (val - self.reward_func(0, 0)) / (reward_func(1000, 1000) - reward_func(0, 0))
@@ -88,10 +91,13 @@ class CliffCar:
         self.action_dim = 5
         self.obs_dim = 2
         # TODO: CHECK HOW MAX-MIN SHOULD WORK
-        self.max_min_x = [self.max_x, self.min_x]
+        self.max_min = [[self.max_x, self.max_y], [self.min_x, self.min_y]]
 
     def step(self, action):
         self.frame += 1
+
+        if type(action) == np.ndarray:
+            action = action.item()
 
         # TODO: Remove action translator with seomthing a bit mroe sane
         self.car_position += self.speed * action_translator[action] + \
@@ -116,7 +122,7 @@ class CliffCar:
 
 
     def reset(self):
-        self.car_position = np.array([self.width/5, self.height/5]) + np.random.randn(2) * self.start_pos_noise
+        self.car_position = np.array([self.width/4.5, self.height/4.5]) + np.random.randn(2) * self.start_pos_noise
         self.frame = 0 # Reset the timer (pretty important)
         return self.car_position
 
@@ -138,7 +144,7 @@ class CliffCar:
         #         self.path = 'sumo/images/sumo_3.png'
         #
         #     elif self.path == 'sumo/images/sumo_3.png':
-        #         self.path = 'sumo/images/sumo_2.png'
+        #         self.path = 'sumo/images/sumo_2.png'[self.width/(4.5/6), self.height/(4.5/6)]
         #
         #     if self.current_action == 0:
         #         self.path = 'sumo/images/sumo_1.png'
@@ -151,20 +157,18 @@ class CliffCar:
             for y in range(-int(self.block_size[1]), self.height, self.block_size[1]):
                 pygame.draw.rect(self.display, black, (x, y, self.block_size[0]-10, self.block_size[1]-10))
 
-        # TODO: Made it to here
-        # # The Cliff - Fix this
-        # pygame.draw.rect(self.display, (0, 0, 255), (self.sumo_position, int(self.height/2), 10, 10))
-        # pygame.draw.rect(self.display, (0, 255, 0), (self.hill_position, int(self.height/2), 20, 60))
-        # # The cliff
-        # pygame.draw.rect(self.display, (255,255,255), (self.cliff_position, int(self.height/2), 1000, 1000))
-        # pygame.draw.rect(self.display, (0,0,0), (self.cliff_position, int(self.height/2)+50, 1000, 1000))
-        # Reference square, for absolute
+        # The cliff
+        pygame.draw.rect(self.display, (0, 0, 255), (0, 0, self.width, self.cliff_height))
+        # The Goal
+        pygame.draw.rect(self.display, (0,255,0), (self.goal[0], self.goal[1], 50, 50))
+        # Reference square, for absolute car position
         drawImage(self.display, path=self.path, center=(self.car_position[0]-10, self.car_position[1]-10), scale=(65, 65))
         pygame.draw.rect(self.display, blue, (*self.car_position, 50, 50))
-        # position = self.font.render(str(self.sumo_position), True, (0, 0, 0))
-        # self.display.blit(position, (50,1000))
-        reward = self.font.render(str(self.reward_normalizer(self.reward_function(*self.car_position))), True, (0, 0, 0))
+
+        reward = self.font.render('Reward ' + str(self.reward_normalizer(self.reward_function(*self.car_position))), True, (125, 125, 125))
         self.display.blit(reward, (50,1050))
+        pos = self.font.render('Position ' + str(self.car_position), True, (125, 125, 125))
+        self.display.blit(pos, (50,1100))
 
 
 if __name__ == "__main__":
@@ -205,12 +209,12 @@ if __name__ == "__main__":
                         action = 0
                     elif event.key == pygame.K_s:
                         action = 0
-            print(action)
+            print(action, env.goal[0], env.goal[1])
             next_state, reward, done, _ = env.step(action)
 
             episode_reward += reward
             env.render()
-
+            print(done)
         done = False
         state = env.reset()
         print(episode_reward)

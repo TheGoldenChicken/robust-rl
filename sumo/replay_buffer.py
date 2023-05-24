@@ -215,8 +215,10 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         # TODO: Debug this so we don't need the min(k, len(samples['obs']) above
         # if K >= len(samples['obs']):
         #     i = 2
-
-        idxs = np.argpartition(dists, K)[:K]
+        try:
+            idxs = np.argpartition(dists, K)[:K]
+        except:
+            idxs = np.argpartition(dists, min(K, len(dists) - 1))[:min(K, len(dists) - 1)]
 
         samples = {r: i[idxs] for r, i in samples.items()}
 

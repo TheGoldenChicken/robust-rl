@@ -202,6 +202,9 @@ class SumoAgent:
                 action = self.select_action(state)
                 next_state, reward, done = self.step(action)
 
+                if np.isnan(reward): # Sometimes rewards become nan values... who knows why
+                    reward = 0
+
                 # Using item here because they are numpy arrays... stupid
                 sar[i] = (state.item(), action.item(), reward)
 

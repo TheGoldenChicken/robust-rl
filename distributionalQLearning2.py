@@ -25,8 +25,8 @@ def quadratic_approximation(X,y):
             A[i,j] = mu[D+1+i+j]
             A[j,i] = A[i,j]
 
-    if np.isnan(A):
-        i = 2
+    # if np.isnan(A):
+    #     i = 2
 
     return A, b, c
 
@@ -60,7 +60,6 @@ def expectation(A, b, c, beta, mu, Sigma):
 
     return k
 
-def maximize(f_prime, tol = 1e-3):
 def maximize_f(f):
     
     # Find the maximum of f
