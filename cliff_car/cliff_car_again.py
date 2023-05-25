@@ -1,6 +1,8 @@
 import numpy as np
 import pygame
 import matplotlib.pyplot as plt
+import os
+import pathlib
 
 # TODO: Get reward from testing_reward to this script
 # TODO: FIX CLIFF HEIGHT AND ALL THAT SHIT
@@ -80,7 +82,8 @@ class CliffCar:
 
         self.render_frame_interval = 10
         self.frame = 0
-        self.path = 'Car.png'
+        self.path = pathlib.Path(__file__).resolve().parent / 'Car.png'
+        # self.path = 'home/dayman/Desktop/robust-rl/cliff_car/' + 'Car.png'
         self.sprite_frame = 0
         self.rendering = False
         self.frame_rate = 60

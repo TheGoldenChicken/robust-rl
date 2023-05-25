@@ -7,13 +7,18 @@ from sumo.sumo_pp import SumoPPEnv
 import torch
 import sys
 
+from cliff_car.cliff_car_again import CliffCar
+from cliff_car.cliff_car_agent import CliffCarAgent
+
 # states = torch.FloatTensor(np.linspace(0, 1000, 5000)).reshape(-1, 1).to('cuda')
 # print(states)
 # Load the .npy file
 
 root_folder = 'sumo/test_results/test_seed_420_robust_factor_-1'
 root_folder = 'sumo/test_results/Truelinear-test_seed_6969_robust_factor_-1'
-sys.path.append('sumo')
+
+sys.path.append(os.getcwd() + '/sumo')
+sys.path.append('cliff_car')
 
 def get_and_plot_csv_data(delta=None, path=None):
     if delta is not None:
@@ -112,6 +117,15 @@ def load_and_test_agent(delta, test_games, render_games):
     agent = SumoAgent(env, replay_buffer=None, epsilon_decay=None, model_path=path)
     agent.test(test_games=test_games, render_games=render_games)
 
+def load_and_test_agent_cliff_car(delta, test_games, render_games):
+    path = os.path.join('cliff_car', 'test_results', 'Cliffcar-newoptim-linear-False-test_seed_6969_robust_factor_-1', '0.5-model')
+
+    env = CliffCar()
+    # We define a barebones agent for the qualitaive test - Possible since select_action and test are never interfered with
+    agent = CliffCarAgent(env, replay_buffer=None, epsilon_decay=None, model_path=path)
+    agent.test(test_games=test_games, render_games=render_games)
+
+
 def plot_average_of_seeds(seeds, delta_vals, linear=True):
 
     paths = [[f'sumo/test_results/newoptim-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-q_vals.npy'
@@ -144,12 +158,14 @@ def plot_sar_stats(seeds, delta_vals, linear=True):
 
 
         # sar_data = np.mean(sar_data, axis=0) # Average over seeds
+#
+# seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
+# delta_vals = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 3, 5]
+#
+# plot_sar_stats(seeds, delta_vals, True)
 
-seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
-delta_vals = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 3, 5]
-
-plot_sar_stats(seeds, delta_vals, True)
-
+load_and_test_agent_cliff_car(0, 10, 10)
+# load_and_test_agent(0.01, 10, 10)
 #
 # paths_linear = [[f'sumo/test_results/newoptim-linear-True-test_seed_{seed}_robust_factor_-1/{delta}-q_vals.npy'
 #                 for seed in seeds] for delta in delta_vals]
