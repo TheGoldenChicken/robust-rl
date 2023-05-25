@@ -1,20 +1,13 @@
-import cliff_car
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from scipy.ndimage import gaussian_filter
 
-env = cliff_car.Env(max_duration = 50, render = True)
-agent = cliff_car.PlayMode(env)
 
-episodes = 30
-for _ in range(episodes):
-    env.reset()
-    while not agent.next():
-        pass
 
 def generate_heatmap(x, y, std = 8):
-    layout_size = np.array(env.layout).shape
+    layout_size = [11,7]
     y = layout_size[1] - y
     # x = layout_size[1] - x
 
@@ -24,17 +17,28 @@ def generate_heatmap(x, y, std = 8):
     heatmap = np.log(heatmap+0.1)+1 # Bringing it into a nicer scale
 
     extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+    
+    plt.imshow(heatmap.T, extent=extent, origin='lower', cmap=cm.jet)
+
+    plt.show()
     return heatmap.T, extent
 
-data = np.array(agent.visited_states)
-x = data[:,0]
-y = data[:,1]
+# Load .npy file from test_results
+
+data = np.load('cliff_car/test_results/Cliffcar-newoptim-linear-True-test_seed_6969_robust_factor_-1/0.01-test_data.npy', allow_pickle=True)
+
+
+run = np.array([[d[0], d[1]] for d in data[0,:,0] if not np.isnan(d).any()])
+x = run[:,0]
+y = run[:,1]
 
 smooth_scale = 8
 
-img, extent = generate_heatmap(x, y, smooth_scale)
-plt.imshow(img, extent=extent, origin='lower', cmap=cm.jet)
-
+plt.scatter(x,y)
 plt.show()
+# generate_heatmap(x, y, smooth_scale)
+
+
+
 
 # manager.run()

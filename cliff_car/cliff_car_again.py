@@ -61,7 +61,7 @@ class CliffCar:
         self.min = np.array([self.min_x, self.min_y])
 
         self.speed = 20
-        self.noise_mean = 0
+        self.noise_mean = np.array([0,0])
         # self.noise_var = 0.0000001
         self.noise_var = self.speed / 2
         self.reward_function = lambda x, y: sum([-x ** 2 + 2 * self.goal[0] * x, -y ** 2 + 2 * self.goal[1] * y])
@@ -104,7 +104,7 @@ class CliffCar:
 
         # TODO: Remove action translator with seomthing a bit mroe sane
         self.car_position += self.speed * action_translator[action] + \
-                             np.random.randn(2) * self.noise_var
+                             np.random.randn(2) * self.noise_var + self.noise_mean
 
         reward = self.reward_normalizer(self.reward_function(*self.car_position))
 
