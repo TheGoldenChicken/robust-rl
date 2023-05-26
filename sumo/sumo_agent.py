@@ -93,7 +93,7 @@ class SumoAgent:
 
     def step(self, action: np.ndarray) -> Tuple[np.ndarray, np.float64, bool]:
         """Take an action and return the response of the env."""
-        next_state, reward, done, _ = self.env.step(action)
+        next_state, reward, done, _ = self.env.step(action, state)
 
         # Store transitions
         if not self.is_test:
@@ -232,7 +232,7 @@ class SumoAgent:
         return np.array(all_sar)
 
     def load_model(self, path):
-        self.dqn.load_state_dict(torch.load(path))
+        self.dqn.load_state_dict(torch.load(path, map_location=self.device))
 
 
     def get_q_vals(self, states):

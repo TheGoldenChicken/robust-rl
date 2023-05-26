@@ -75,20 +75,21 @@ class SumoPPEnv:
             actual_action = action
 
         self.sumo_position += self.sumo_speed * actual_action\
-                              + np.random.normal(loc=self.noise_mean,scale=self.noise_var, size=1)[0] * self.noise
+                            + np.random.normal(loc=self.noise_mean,scale=self.noise_var, size=1)[0] * self.noise
 
         reward = self.reward_normalizer(self.reward_function(self.sumo_position))
 
         if self.sumo_position >= self.cliff_position or self.sumo_position <= self.min_x: # If to the right of cliff position -> Fall
             done = True
             reward = 0 # Would like to set this lower, but don't know if it works like that
-
         elif self.frame >= self.max_duration:
             done = True
             reward = 0
         else:
             done = False
+        
 
+        
         # # Don't know if need to use - Penalize no op
         # if action == 0:
         #     reward -= 0.1

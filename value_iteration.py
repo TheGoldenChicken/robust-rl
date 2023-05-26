@@ -139,10 +139,11 @@ for i, b in tqdm(enumerate([1,1.5,2,2.5])):
 
 
 
-for robust, std in zip(average_robust, average_std):
-    plt.plot(robust, '.', label = "Distributionally robust policy")
-    plt.plot(std, '.', label = "Non Distributionally robust policy")
+for robust, std, b in zip(average_robust, average_std, [1,1.5,2,2.5]):
+    plt.plot(robust, 'o', label = "Distributionally robust policy", color = "limegreen")
+    plt.plot(std, 'o', label = "Non Distributionally robust policy", color = "darkblue")
     plt.legend()
+    plt.title(f"Average cost for b = {b}")
     plt.xlabel("m")
     plt.ylabel("Cost")
     plt.show()

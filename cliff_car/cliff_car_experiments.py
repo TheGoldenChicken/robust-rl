@@ -63,7 +63,7 @@ if __name__ == "__main__":
     bin_size = 500
 
     # Should have converged somewhat at this point
-    num_frames = 12000
+    num_frames = 20000
 
     # Agent parameters - Should not be changed!
     state_dim = 1
@@ -75,12 +75,14 @@ if __name__ == "__main__":
 
     # Seeds
     # seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
-    seeds = [9000,9001,9002,9003,9004,9005,9006,9007,9008,9009]
+    # seeds = [9000,9001,9002,9003,9004,9005,9006,9007,9008,9009]
+    
+    seeds = [9005,9006,9007,9008,9009]
     # seeds = [6969]
 
     # Delta values to test
     delta_vals = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2]
-    #delta_vals = [0.01, 0.05, 0.1, 0.5, 1, 2, 3, 5]
+    # delta_vals = [0.01, 0.05, 0.1, 0.5, 1, 2, 3, 5]
 
     # Whether to add or subtract robust estimator from reward
     factors = [-1]
@@ -88,6 +90,7 @@ if __name__ == "__main__":
     linear_only = [False]
     #delta_vals = [0.01,0.1,0.05,1]
     for seed in seeds:
+        print("Started training on seed: ", seed, "...")
         for linear in linear_only:
             for factor in factors:
                 # TODO: Fix ugly formatting here, not really becoming of a serious researcher
@@ -121,7 +124,7 @@ if __name__ == "__main__":
                     train_data = agent.train(num_frames, plotting_interval=999999)
                     train_end = time.time()
                     test_start = train_end
-                    test_data = agent.test(test_games=100, render_games=0)
+                    # test_data = agent.test(test_games=100, render_games=0)
                     test_end = time.time()
 
                     # States to extract q-values from
@@ -144,7 +147,7 @@ if __name__ == "__main__":
 
                     train_scores.to_csv(f'test_results/{test_name}/{delta}-train_score_data.csv')
                     train_df.to_csv(f'test_results/{test_name}/{delta}-train_data.csv')
-                    np.save(f'test_results/{test_name}/{delta}-test_data.npy', test_data)
+                    # np.save(f'test_results/{test_name}/{delta}-test_data.npy', test_data)
                     np.save(f'test_results/{test_name}/{delta}-q_vals.npy', q_vals)
                     np.save(f'test_results/{test_name}/{delta}-betas.npy', np.array(agent.betas))
              #       test_df.to_csv(f'test_results/{test_name}/{delta}-test_data.csv')
