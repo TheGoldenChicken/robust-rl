@@ -59,7 +59,7 @@ def get_q_vals(delta=None, path=None):
     return q_vals
 
 
-def plot_q_vals(q_vals, delta=None, same_plot=True, vertical_lines=False):
+def plot_q_vals(q_vals, delta=None, same_plot=True, vertical_lines=False, linear=None, save_folder=None):
 
 
     column1 = q_vals[:, 0]
@@ -83,7 +83,7 @@ def plot_q_vals(q_vals, delta=None, same_plot=True, vertical_lines=False):
         plt.plot(column2, color='blue', label='1: Right (towards cliff)')
         plt.plot(column3, color='green', label='2: Left (away from cliff)')
         plt.legend()
-        plt.title(f'Q-values for converged agent with Delta {delta}')
+        plt.title(f'Q-values for converged agent with Delta {delta} with linear={linear}')
 
     if vertical_lines:
         # Add lines to indicate where right becomes better action than left
@@ -98,7 +98,11 @@ def plot_q_vals(q_vals, delta=None, same_plot=True, vertical_lines=False):
         plt.text(500, 0.2, f'Left > Right: {indices[0]}\nNoOp > Right: {indices1[0]}\nCliff: {1000}\nStart Pos: 240',
                  rotation=0, va='bottom')
 
+    if save_folder:
+        plt.savefig(os.path.join(save_folder, f'q-vals-{delta}-avg{len(seeds)}seeds-{linear}.png'))
+
     plt.show()
+
 
 # TODO: ADD Functionality FOR GETTING MEAN BETA_MAX VALUE FOR EACH UPDATE OF ROBUST ESTIMATOR
 def get_and_plot_betas(delta, rolling_mean=10):
@@ -126,14 +130,15 @@ def load_and_test_agent_cliff_car(delta, test_games, render_games):
     agent.test(test_games=test_games, render_games=render_games)
 
 
-def plot_average_of_seeds(seeds, delta_vals, linear=True):
+def plot_average_of_seeds(seeds, delta_vals, linear=True, save_folder=None):
 
     paths = [[f'sumo/test_results/newoptim-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-q_vals.npy'
                      for seed in seeds] for delta in delta_vals]
 
     for i in range(len(paths)):
         q_vals = np.array([get_q_vals(path=path) for path in paths[i]])
-        plot_q_vals(np.mean(q_vals, axis=0), delta=delta_vals[i], vertical_lines=True)
+        plot_q_vals(np.mean(q_vals, axis=0), delta=delta_vals[i], vertical_lines=True,
+                    linear=linear, save_folder=save_folder)
 
 def plot_sar_stats(seeds, delta_vals, linear=True):
 
@@ -158,9 +163,11 @@ def plot_sar_stats(seeds, delta_vals, linear=True):
 
 
         # sar_data = np.mean(sar_data, axis=0) # Average over seeds
-#
+
 # seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
 # delta_vals = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 3, 5]
+# save_folder = 'plots/q-vals'
+# plot_average_of_seeds(seeds, delta_vals, False, save_folder=save_folder)
 #
 # plot_sar_stats(seeds, delta_vals, True)
 
