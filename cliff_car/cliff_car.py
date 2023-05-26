@@ -82,7 +82,7 @@ class Env():
         self.frame = 0
         return self.state
         
-    def init_render(self, grid_scale = 70):
+    def init_render(self, grid_scale = 30):
         self.width = len(self.layout[0]) * grid_scale
         self.height = len(self.layout) * grid_scale
         

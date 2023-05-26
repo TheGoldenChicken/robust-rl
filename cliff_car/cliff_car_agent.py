@@ -207,7 +207,7 @@ class CliffCarAgent:
         return np.array(all_sar)
 
     def load_model(self, path):
-        self.dqn.load_state_dict(torch.load(path))
+        self.dqn.load_state_dict(torch.load(path, map_location=self.device))
 
 
     def get_q_vals(self, states):

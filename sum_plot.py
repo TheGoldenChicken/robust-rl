@@ -160,7 +160,26 @@ def plot_sar_stats(seeds, delta_vals, linear=True):
         plt.title(f"Episode Returns for delta value {delta_vals[i]}")
         plt.axvline(x=mean_return, color='red', linestyle='-')
         plt.show()
+        
+def plot_sumo_states(seeds, delta_vals, linear=True):
+    
+    paths = [[f'sumo/test_results/newoptim-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-test_data.npy'
+                     for seed in seeds] for delta in delta_vals]
+    
+    # Combine (not average) the states from all seeds
+    for i in range(len(paths)):
+        sar_data = np.array([np.load(path) for path in paths[i]])
+        sar_data = np.concatenate(sar_data, axis=0)
+        sar_data = sar_data[:,:,0].flatten()
+        
+        plt.hist(sar_data, bins=100)
+        plt.title(f"States visited for delta value {delta_vals[i]}")
+    plt.legend()
+    plt.show()
+    
+        # Return Stats
 
+# plot_sumo_states([6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10], [0.001, 0.005, 0.01], True)
 
         # sar_data = np.mean(sar_data, axis=0) # Average over seeds
 
@@ -171,7 +190,7 @@ def plot_sar_stats(seeds, delta_vals, linear=True):
 #
 # plot_sar_stats(seeds, delta_vals, True)
 
-load_and_test_agent_cliff_car(0, 10, 10)
+# load_and_test_agent_cliff_car(0, 10, 10)
 # load_and_test_agent(0.01, 10, 10)
 #
 # paths_linear = [[f'sumo/test_results/newoptim-linear-True-test_seed_{seed}_robust_factor_-1/{delta}-q_vals.npy'

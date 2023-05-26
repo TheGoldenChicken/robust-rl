@@ -1,3 +1,5 @@
+
+
 import rl.agent
 import numpy as np
 from collections import defaultdict
@@ -42,7 +44,7 @@ class robust_distributional_agent(rl.agent.ShallowAgent):
 
         return (self.f_stable(x+tol, samples, K) - self.f_stable(x-tol, samples, K)) / (2*tol)
 
-    def maximize(self, samples, K, tol = 1e-5):
+    def maximize(self, samples, K, tol = 1e-10):
         """
         Maximize f_stable with respect to x by using the derivative f_prime.
         Also note that f_prime is either monotonic decreasing or only has one maximum.
