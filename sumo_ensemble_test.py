@@ -18,8 +18,9 @@ def load_agents(paths):
         
     return agents
 
-deltas = [0.001, 0.005,0.01,0.05,0.1,0.5,1,2]
-deltas = [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,2]
+# deltas = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5,1,2]
+deltas = [0.001, 0.005, 0.01, 0.05, 0.1, 0.2,
+          0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 5]
 # deltas = []
 seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
 linear = False
@@ -81,9 +82,9 @@ def get_image_from_q(q_vals, width = 80):
     
     return img
 
-def plot_q_and_state_hist():
+def plot_q_and_state_hist(test_games = 200):
     for delta in deltas:
-        
+        print("Starting delta: ", delta)
         fig, (ax1, ax3) = plt.subplots(nrows=2,gridspec_kw={'height_ratios': [16, 5]})
     
 
@@ -97,8 +98,7 @@ def plot_q_and_state_hist():
 
         q_vals = np.array([sum_plot.get_q_vals(path=path) for path in q_paths])
         q_vals = np.transpose(q_vals, axes = (1,0,2))
-        
-        img = get_image_from_q(q_vals)
+    
         
         ax3.imshow(get_image_from_q(q_vals), aspect='auto')
 
@@ -106,7 +106,7 @@ def plot_q_and_state_hist():
 
         ensemble_agent = sumo_ensemble.EnsembleSumoTestAgent(env, agents)
 
-        all_sar = ensemble_agent.test(test_games=10)
+        all_sar = ensemble_agent.test(test_games=test_games)
 
         # Create a bar plot of all the states visisted in the test_games
         ax2.hist(all_sar[:,:,0].flatten(), bins=100, label = f"State distribution", alpha=0.5, density=True)
@@ -133,11 +133,16 @@ def plot_q_and_state_hist():
         
         # Adjust the vertical spacing
         plt.subplots_adjust(hspace=0, wspace=0)
-        plt.show()
+        # plt.show(
+        
+        # Increase surrounding white space of plot
+        plt.tight_layout()
+
+        plt.savefig(f'plots/q-vals/ensemble-q-and-state-{linear}-{delta}.png', dpi=300)
         
 
 
-def plot_state_hist_multiple_delta(test_games = 100):
+def plot_state_hist_multiple_delta(test_games = 200):
     
     fig, axs = plt.subplots(len(deltas), 1)
     
@@ -174,11 +179,16 @@ def plot_state_hist_multiple_delta(test_games = 100):
     # plt.ylabel('State density')
     # plt.xlabel('State')
     # plt.title(f'State histogram')
-    plt.show()
+
+    # Save the figure
+    plt.tight_layout()
+
+    plt.savefig(f'plots/q-vals/ensemble-all-delta-state-{linear}.png', dpi=300)
     
     
 def plot_q_as_image_multiple_delta():
     
+    # Figure with aspect ratio
     fig, axs = plt.subplots(len(deltas), 1)
 
     # Remove vertical distance between plots
@@ -199,7 +209,13 @@ def plot_q_as_image_multiple_delta():
         
         axs[i].imshow(img, label = f"Delta={delta}")
         
-        patch = mpatches.Patch(color='black', label=f"Delta={delta}")
+        
+        # Custom label without colored box. Only text saying "Delta=0.1"
+        patch = mpatches.Patch(color='None', label=f"Delta={delta}")
+
+
+        axs[i].legend(handles=[patch], loc = 2)
+        
         # Remove x ticks
         axs[i].set_yticks([])
         
@@ -208,20 +224,30 @@ def plot_q_as_image_multiple_delta():
         else:
             axs[i].set_xlabel('State')
             
-        axs[i].legend(handles=[patch], loc = 2)
+        axs[i].axvline(x=1000, color='k', linestyle='--')
+        
+        
     
     
-    patch0 = mpatches.Patch(color='red', label=f"NoOp")
-    patch1 = mpatches.Patch(color='green', label=f"Right")
-    patch2 = mpatches.Patch(color='blue', label=f"Left")
-    plt.legend(handles=[patch0, patch1, patch2], loc = 4)
+    # patch0 = mpatches.Patch(color='red', label=f"NoOp")
+    # patch1 = mpatches.Patch(color='green', label=f"Right")
+    # patch2 = mpatches.Patch(color='blue', label=f"Left")
+    # plt.legend(handles=[patch0, patch1, patch2], loc = 4)
     # plt.legend(loc = 2)
     # plt.ylabel('State density')
     # plt.xlabel('State')
-    plt.show()
+    # plt.show()
     
-    # 
+    # Save the figure in plots/q-vals
 
-plot_q_and_state_hist()
-# plot_q_as_image_multiple_delta()
+    # Draw a vertical dotted line at state 1000 (cliff)
+    
+
+    # plt.tight_layout()
+
+    plt.savefig(f'plots/q-vals/ensemble-all-delta-q-vals-{linear}.png', dpi=300)
+
+
+# plot_q_and_state_hist()
+plot_q_as_image_multiple_delta()
 # plot_state_hist_multiple_delta()

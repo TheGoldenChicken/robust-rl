@@ -61,7 +61,7 @@ if __name__ == "__main__":
         #delta_vals = [0.5]
         # delta_vals =[0.01, 0.1, 0.5]#, 1, 5]
         # delta_vals = [1]
-        delta_vals = [0.01,0.05,0.1,0.5,1,2]2
+        delta_vals = [0.01,0.05,0.1,0.5,1,2]
         # delta = 1
 
         factor = -1
