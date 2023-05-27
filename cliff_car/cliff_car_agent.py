@@ -27,7 +27,7 @@ class CliffCarAgent:
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
         )
-        print(self.device) # Just to know which one we're on
+        # print(self.device) # Just to know which one we're on
 
         self.dqn = Network(env.obs_dim, env.action_dim).to(self.device)
         if model_path is not None:
