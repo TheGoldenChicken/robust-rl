@@ -94,9 +94,9 @@ def plot_q_vals(seeds, delta, axis):
     
 
 
-deltas = [0.001,0.005]#,0.005,0.01,0.05,0.1,0.5,1,2]
+deltas = [0.001]#,0.005,0.01,0.05,0.1,0.5,1,2]
 # deltas = []
-seeds = [9005,9006]
+seeds = [10000]
 linear = False
 
 fig, axs = plt.subplots(1, len(deltas), figsize=(len(deltas)*5, 4))
@@ -124,8 +124,10 @@ for i, delta in enumerate(deltas):
     x = np.array(x)/10
     y = np.abs(150-np.array(y)/10)
     
-    goal, start, cliff = plot_q_vals(seeds, delta, axs[i])
-    heat_plot = generate_heatmap(x, y, axs[i])
+    # goal, start, cliff = plot_q_vals(seeds, delta, axs[i])
+    goal, start, cliff = plot_q_vals(seeds, delta, axs)
+    # heat_plot = generate_heatmap(x, y, axs[i])
+    heat_plot = generate_heatmap(x, y, axs)
     
     opopt_patch = mpatches.Patch(color='red', label='OpOpt')
     down_patch = mpatches.Patch(color='green', label='Up')
@@ -133,18 +135,19 @@ for i, delta in enumerate(deltas):
     right_patch = mpatches.Patch(color='yellow', label='Right')
     up_patch = mpatches.Patch(color='purple', label='Down')
 
-    axs[i].legend(handles=[opopt_patch, down_patch, left_patch, right_patch, up_patch, goal, start], loc='upper left')
+    # axs[i].legend(handles=[opopt_patch, down_patch, left_patch, right_patch, up_patch, goal, start], loc='upper left')
+    axs.legend(handles=[opopt_patch, down_patch, left_patch, right_patch, up_patch, goal, start], loc='upper left')
 
     # # Change the x and y ticks to be between 0 and 1
     # plt.xticks(np.around(np.linspace(0,149,6),decimals=2), np.around(np.linspace(0,1,6), decimals=2))
     # plt.yticks(np.around(np.linspace(0,149,6),decimals=2), np.around(np.linspace(0,1,6), decimals=2))
 
     # x and y labels
-    axs[i].set_xlabel('x')
-    axs[i].set_ylabel('y')
+    # axs[i].set_xlabel('x')
+    # axs[i].set_ylabel('y')
 
     # Change the title
-    axs[i].set_title(f'Delta: {delta}')
+    # axs[i].set_title(f'Delta: {delta}')
     
     # plot_average_of_seeds(seeds, [delta], linear = linear)    
     
