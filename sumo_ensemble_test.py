@@ -194,6 +194,7 @@ def plot_q_as_image_multiple_delta():
     # Remove vertical distance between plots
     fig.subplots_adjust(hspace=0)
     
+    
     axs[0].set_title(f'State/optimal action diagram')
     
     for i, delta in enumerate(deltas):
@@ -211,28 +212,29 @@ def plot_q_as_image_multiple_delta():
         
         
         # Custom label without colored box. Only text saying "Delta=0.1"
-        patch = mpatches.Patch(color='None', label=f"Delta={delta}")
+        # patch = mpatches.Patch(color='None', label=f"Delta={delta}")
 
 
-        axs[i].legend(handles=[patch], loc = 2)
+        # axs[i].legend(handles=[patch], loc = 2)
         
         # Remove x ticks
-        axs[i].set_yticks([])
+        axs[i].set_yticks([40],[f"Delta: {delta}"])
         
         if i != len(deltas) - 1 :
             axs[i].set_xticks([])
         else:
             axs[i].set_xlabel('State')
             
-        axs[i].axvline(x=1000, color='k', linestyle='--')
+        cliff_line = axs[i].axvline(x=1000, color='k', linestyle='--', label = f"Cliff")
+        start_line = axs[i].axvline(x=240, color='r', linestyle='--', label = f"Start")
         
         
+    patch0 = mpatches.Patch(color='red', label=f"NoOp")
+    patch2 = mpatches.Patch(color='blue', label=f"Right")
+    patch1 = mpatches.Patch(color='green', label=f"Left")
+    plt.legend(handles=[patch0, patch1, patch2, cliff_line,start_line], loc = 4)
     
     
-    # patch0 = mpatches.Patch(color='red', label=f"NoOp")
-    # patch1 = mpatches.Patch(color='green', label=f"Right")
-    # patch2 = mpatches.Patch(color='blue', label=f"Left")
-    # plt.legend(handles=[patch0, patch1, patch2], loc = 4)
     # plt.legend(loc = 2)
     # plt.ylabel('State density')
     # plt.xlabel('State')
