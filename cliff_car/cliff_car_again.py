@@ -63,7 +63,7 @@ class CliffCar:
         self.speed = 20
         self.noise_mean = np.array([0,0])
         # self.noise_var = 0.0000001
-        self.noise_var = self.speed / 2
+        self.noise_var = self.speed / 3
         self.reward_function = lambda x, y: sum([-x ** 2 + 2 * self.goal[0] * x, -y ** 2 + 2 * self.goal[1] * y])
         max_reward = self.reward_function(self.goal[0], self.goal[1])
         min_reward = self.reward_function(0, self.max_y)
@@ -98,7 +98,7 @@ class CliffCar:
 
     def step(self, action):
         self.frame += 1
-
+        self.current_action = action
         if type(action) == np.ndarray:
             action = action.item()
 
@@ -172,6 +172,9 @@ class CliffCar:
         self.display.blit(reward, (50,1050))
         pos = self.font.render('Position ' + str(self.car_position), True, (125, 125, 125))
         self.display.blit(pos, (50,1100))
+        pos = self.font.render('Action ' + str(self.current_action), True, (125, 125, 125))
+        self.display.blit(pos, (50,1150))
+
 
 
 if __name__ == "__main__":
