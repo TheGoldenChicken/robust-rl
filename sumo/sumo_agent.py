@@ -93,7 +93,7 @@ class SumoAgent:
 
     def step(self, action: np.ndarray) -> Tuple[np.ndarray, np.float64, bool]:
         """Take an action and return the response of the env."""
-        next_state, reward, done, _ = self.env.step(action, state)
+        next_state, reward, done, _ = self.env.step(action)
 
         # Store transitions
         if not self.is_test:
