@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 import sum_plot
 import numpy as np
 import matplotlib.patches as mpatches
+from mpl_toolkits.axes_grid1 import AxesGrid
 
 env = SumoPPEnv()
 
@@ -144,12 +145,21 @@ def plot_q_and_state_hist(test_games = 200):
 
 def plot_state_hist_multiple_delta(test_games = 200):
     
-    fig, axs = plt.subplots(len(deltas), 1)
     
-    # Remove vertical distance between plots
-    fig.subplots_adjust(hspace=0)
+    figure = plt.figure()
+
+    grid = AxesGrid(figure, 111,
+                    nrows_ncols=(len(deltas), 1),
+                    axes_pad=0,
+                    share_all=True,
+                    label_mode="all",
+                    cbar_location="right",
+                    cbar_mode="single",
+                    cbar_size="0.5%",
+                    cbar_pad = 0.1,
+                    )
     
-    for i, delta in enumerate(deltas):
+    for i, (delta, ax) in enumerate(zip(deltas,grid)):
         
         print("Stating: ", delta)
         paths_linear = [f'sumo/test_results/newoptim-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-model'
@@ -161,27 +171,52 @@ def plot_state_hist_multiple_delta(test_games = 200):
 
         all_sar = ensemble_agent.test(test_games=test_games)
 
-        # Create a bar plot of all the states visisted in the test_games
-        bins = 75
-        img = np.array([np.histogram(all_sar[:,:,0].flatten(), bins = bins)[0],
-                        np.histogram(all_sar[:,:,0].flatten(), bins = bins)[0]])
-        axs[i].imshow(img, label = f"Delta={delta}")
-        
-        patch = mpatches.Patch(color='blue', label=f"Delta={delta}")
-        # Remove x ticks
-        axs[i].set_xticks([])
-        axs[i].set_yticks([])
-        
-        axs[i].legend(handles=[patch], loc = 2)
-        
-        
-    # plt.legend(loc = 2)
-    # plt.ylabel('State density')
-    # plt.xlabel('State')
-    # plt.title(f'State histogram')
+        # Replace all nan values with 0
+        all_sar = np.nan_to_num(all_sar)
 
-    # Save the figure
-    plt.tight_layout()
+        # Create a bar plot of all the states visisted in the test_games
+        bins = 50
+        
+        img_height = 80
+        
+        img = np.array([np.histogram(all_sar[:,:,0].flatten(), bins = bins, range=(0,1200), density = True)[0],
+                        np.histogram(all_sar[:,:,0].flatten(), bins = bins, range=(0,1200), density = True)[0],
+                        np.histogram(all_sar[:,:,0].flatten(), bins = bins, range=(0,1200), density = True)[0]])
+        im = ax.imshow(img, label = f"Delta={delta}")
+        
+        # Vertical line at the cliff (1000)
+        cliff_line = ax.axvline(x=50*0.83, color='black', linestyle='--', label = 'Cliff')
+        
+        # Vertical line at the start position (240)
+        start_line = ax.axvline(x=50*0.2, color='red', linestyle='--', label = 'Start')
+        
+        # Create text box with the delta value
+        textstr = f'Delta={delta}'
+        props = dict(boxstyle='round', facecolor='white', alpha=1)
+
+        # place a text box in upper left in axes coords
+        ax.text(0.02,0.7, textstr, transform=ax.transAxes, fontsize=8,
+                verticalalignment='top', bbox=props)
+        
+        ax.set_yticks([])
+
+        if i == len(deltas)-1:
+            ax.set_xlabel('State')
+            ax.set_xticks([0,8.3,16.6,24.9,33.2,41.5],[0,200,400,600,800,1000])
+        elif i == 0:
+            ax.set_title("State distribution heatmap")
+        else:
+            ax.set_xticks([])
+            
+        
+    grid.cbar_axes[0].colorbar(im)
+
+    for cax in grid.cbar_axes:
+        cax.set_yticks([])
+        cax.toggle_label(False)
+        
+    
+        
 
     plt.savefig(f'plots/q-vals/ensemble-all-delta-state-{linear}.png', dpi=300)
     
@@ -210,7 +245,13 @@ def plot_q_as_image_multiple_delta():
         
         axs[i].imshow(img, label = f"Delta={delta}")
         
-        
+        # Create text box with the delta value
+        textstr = f'Delta={delta}'
+        props = dict(boxstyle='round', facecolor='white', alpha=1)
+
+        # place a text box in upper left in axes coords
+        axs[i].text(0.02,0.7, textstr, transform=axs[i].transAxes, fontsize=8,
+                verticalalignment='top', bbox=props)
         # Custom label without colored box. Only text saying "Delta=0.1"
         # patch = mpatches.Patch(color='None', label=f"Delta={delta}")
 
@@ -218,7 +259,7 @@ def plot_q_as_image_multiple_delta():
         # axs[i].legend(handles=[patch], loc = 2)
         
         # Remove x ticks
-        axs[i].set_yticks([40],[f"Delta: {delta}"])
+        axs[i].set_yticks([])
         
         if i != len(deltas) - 1 :
             axs[i].set_xticks([])
@@ -252,4 +293,4 @@ def plot_q_as_image_multiple_delta():
 
 # plot_q_and_state_hist()
 plot_q_as_image_multiple_delta()
-# plot_state_hist_multiple_delta()
+plot_state_hist_multiple_delta()
