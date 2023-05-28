@@ -1,6 +1,7 @@
 import numpy as np
 import pygame
 import matplotlib.pyplot as plt
+import pathlib
 
 backgroundColor = (255,255,255)
 red = (255, 0, 0)
@@ -25,6 +26,8 @@ class SumoPPEnv:
         self.line_length = line_length
         self.noise = noise
         self.start_pos_noise = start_pos_noise
+
+        self.root_path = pathlib.Path(__file__).resolve().parent
 
         self.start_position = self.line_length/5 + np.random.randn() * self.start_pos_noise
         self.sumo_position = self.start_position
@@ -152,7 +155,7 @@ class SumoPPEnv:
 
 
         #pygame.draw.rect(self.display, blue, (self.sumo_position, int(self.height/2), self.block_size-10, self.block_size-10))
-        drawImage(self.display, path=self.path, center=(self.sumo_position-60, int(self.height/2) - 84*1.5), scale=(150, 150))
+        drawImage(self.display, path=self.root_path / self.path, center=(self.sumo_position-60, int(self.height/2) - 84*1.5), scale=(150, 150))
         position = self.font.render(str(self.sumo_position), True, (0, 0, 0))
         self.display.blit(position, (50,1000))
         reward = self.font.render(str(self.reward_normalizer(self.reward_function(self.sumo_position))), True, (0, 0, 0))

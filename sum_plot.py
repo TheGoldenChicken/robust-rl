@@ -16,7 +16,7 @@ from cliff_car.cliff_car_agent import CliffCarAgent
 
 root_folder = 'sumo/test_results/test_seed_420_robust_factor_-1'
 root_folder = 'sumo/test_results/Truelinear-test_seed_6969_robust_factor_-1'
-
+root_folder = 'sumo/test_results/newoptim-linear-True-test_seed_5318008_robust_factor_-1'
 sys.path.append(os.getcwd() + '/sumo')
 sys.path.append('cliff_car')
 
@@ -103,7 +103,6 @@ def plot_q_vals(q_vals, delta=None, same_plot=True, vertical_lines=False, linear
 
     plt.show()
 
-
 # TODO: ADD Functionality FOR GETTING MEAN BETA_MAX VALUE FOR EACH UPDATE OF ROBUST ESTIMATOR
 def get_and_plot_betas(delta, rolling_mean=10):
     betas = np.load(os.path.join(root_folder,str(delta)) + '-betas.npy')
@@ -119,7 +118,8 @@ def load_and_test_agent(delta, test_games, render_games):
     env = SumoPPEnv()
     # We define a barebones agent for the qualitaive test - Possible since select_action and test are never interfered with
     agent = SumoAgent(env, replay_buffer=None, epsilon_decay=None, model_path=path)
-    agent.test(test_games=test_games, render_games=render_games)
+    test_results = agent.test(test_games=test_games, render_games=render_games)
+    return test_results
 
 def load_and_test_agent_cliff_car(delta, test_games, render_games):
     path = os.path.join('cliff_car', 'test_results', 'Cliffcar-newoptim-linear-False-test_seed_6969_robust_factor_-1', '0.5-model')
