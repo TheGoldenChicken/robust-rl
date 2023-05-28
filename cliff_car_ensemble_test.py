@@ -1,3 +1,4 @@
+#%%
 from cliff_car import cliff_car_ensemble
 from cliff_car.cliff_car_agent import CliffCarAgent
 from cliff_car.cliff_car_again import CliffCar
@@ -94,15 +95,16 @@ def plot_q_vals(seeds, delta, axis):
     
 
 
-deltas = [0.001]#,0.005,0.01,0.05,0.1,0.5,1,2]
+deltas = [0.001,0.005,0.01,0.05,0.1,0.5,1,2]
 # deltas = []
-seeds = [10000]
+seeds = [10,22,23,99,123,420,4242,6942,6969,9000,9001,9002,9003,9004,9005,5318008]
 linear = False
 
-fig, axs = plt.subplots(1, len(deltas), figsize=(len(deltas)*5, 4))
+
 
 for i, delta in enumerate(deltas):
     
+    fig, axs = plt.subplots(1, 1)
 
     paths_linear = [f'Cliff_car/test_results/Cliffcar-newoptim-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-model'
                     for seed in seeds]
@@ -143,22 +145,26 @@ for i, delta in enumerate(deltas):
     # plt.yticks(np.around(np.linspace(0,149,6),decimals=2), np.around(np.linspace(0,1,6), decimals=2))
 
     # x and y labels
-    # axs[i].set_xlabel('x')
-    # axs[i].set_ylabel('y')
-
+    axs.set_xlabel('x')
+    axs.set_ylabel('y')
     # Change the title
     # axs[i].set_title(f'Delta: {delta}')
     
     # plot_average_of_seeds(seeds, [delta], linear = linear)    
-    
+    fig.colorbar(heat_plot, ticks=[], label='State density')
     # ax1.legend(loc = 2)
     # ax2.legend(loc = 4)
     # ax1.set_ylabel('Q-value')
     # ax2.set_ylabel('State density')
     # ax1.set_xlabel('State')
-    # plt.title(f'Q-values for converged agent, delta={delta}')
-    # plt.show()
+    plt.title(f'Cliff Car. Decision plane and State density, delta={delta}')
+    
+    # Save the figure
+    plt.savefig(f'plots/q-vals/Cliffcar-ensemble-{linear}-test-{delta}.png')
+    
+    plt.show()
+    
 
-plt.show()
+# plt.show()
     
     
