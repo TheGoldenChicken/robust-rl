@@ -21,7 +21,7 @@ def drawImage(display, path, center, scale=None, angle=None):
 
 class SumoPPEnv:
 
-    def __init__(self, line_length=1200, noise=True, start_pos_noise=False):
+    def __init__(self, line_length=1200, noise=True, start_pos_noise=False, noise_mean = 0, noise_var = None):
         self.line_length = line_length
         self.noise = noise
         self.start_pos_noise = start_pos_noise
@@ -34,8 +34,11 @@ class SumoPPEnv:
         self.current_action = 0  # 0, 1, 2, NOOP, left, right
 
         self.sumo_speed = 20
-        self.noise_mean = 0 # Not meant to be changed, or introduces bias
-        self.noise_var = self.sumo_speed / 2 # Higher var <-> More difficulty
+        self.noise_mean = noise_mean
+        if noise_var is None:
+            self.noise_var = self.sumo_speed / 2 # Higher var <-> More difficulty
+        else:
+            self.noise_var = noise_var
         # self.reward_function = lambda pos: 1/(pos - self.hill_position)**2 # 1 over squared istances from the hill
         self.reward_function = lambda pos: -pos**2 + 2*self.hill_position*pos
         self.reward_normalizer = lambda reward: reward/self.reward_function(self.hill_position)
