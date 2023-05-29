@@ -97,74 +97,143 @@ def plot_q_vals(seeds, delta, axis):
 
 deltas = [0.001,0.005,0.01,0.05,0.1,0.5,1,2]
 # deltas = []
-seeds = [10,22,23,99,123,420,4242,6942,6969,9000,9001,9002,9003,9004,9005,5318008]
+# seeds = [10,22,23,99,123,420,4242,6942,6969,9000,9001,9002,9003,9004,9005,5318008]
+
+seeds = [7777]
+deltas = [0.1]
 linear = False
 
 
+def plot_all_seeds():
+    for i, delta in enumerate(deltas):
+        
+        fig, axs = plt.subplots(1, 1)
 
-for i, delta in enumerate(deltas):
-    
-    fig, axs = plt.subplots(1, 1)
+        paths_linear = [f'Cliff_car/test_results/Cliffcar-newoptim-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-model'
+                        for seed in seeds]
 
-    paths_linear = [f'Cliff_car/test_results/Cliffcar-newoptim-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-model'
-                    for seed in seeds]
+        agents = load_agents(paths_linear)
 
-    agents = load_agents(paths_linear)
+        ensemble_agent = cliff_car_ensemble.EnsembleCliffTestAgent(env, agents)
 
-    ensemble_agent = cliff_car_ensemble.EnsembleCliffTestAgent(env, agents)
+        all_sar = ensemble_agent.test(test_games=100)
+        
+        
+        x = []
+        y = []
+        for game in all_sar:
+            for step in game:
+                if step[0] is not np.nan:
+                    x.append(step[0][0])
+                    y.append(step[0][1])
+        x = np.array(x)/10
+        y = np.abs(150-np.array(y)/10)
+        
+        # goal, start, cliff = plot_q_vals(seeds, delta, axs[i])
+        goal, start, cliff = plot_q_vals(seeds, delta, axs)
+        # heat_plot = generate_heatmap(x, y, axs[i])
+        heat_plot = generate_heatmap(x, y, axs)
+        
+        opopt_patch = mpatches.Patch(color='red', label='OpOpt')
+        down_patch = mpatches.Patch(color='green', label='Up')
+        left_patch = mpatches.Patch(color='blue', label='Left')
+        right_patch = mpatches.Patch(color='yellow', label='Right')
+        up_patch = mpatches.Patch(color='purple', label='Down')
 
-    all_sar = ensemble_agent.test(test_games=100)
-    
-    
-    x = []
-    y = []
-    for game in all_sar:
-        for step in game:
-            if step[0] is not np.nan:
-                x.append(step[0][0])
-                y.append(step[0][1])
-    x = np.array(x)/10
-    y = np.abs(150-np.array(y)/10)
-    
-    # goal, start, cliff = plot_q_vals(seeds, delta, axs[i])
-    goal, start, cliff = plot_q_vals(seeds, delta, axs)
-    # heat_plot = generate_heatmap(x, y, axs[i])
-    heat_plot = generate_heatmap(x, y, axs)
-    
-    opopt_patch = mpatches.Patch(color='red', label='OpOpt')
-    down_patch = mpatches.Patch(color='green', label='Up')
-    left_patch = mpatches.Patch(color='blue', label='Left')
-    right_patch = mpatches.Patch(color='yellow', label='Right')
-    up_patch = mpatches.Patch(color='purple', label='Down')
+        # axs[i].legend(handles=[opopt_patch, down_patch, left_patch, right_patch, up_patch, goal, start], loc='upper left')
+        axs.legend(handles=[opopt_patch, down_patch, left_patch, right_patch, up_patch, goal, start], loc='upper left')
 
-    # axs[i].legend(handles=[opopt_patch, down_patch, left_patch, right_patch, up_patch, goal, start], loc='upper left')
-    axs.legend(handles=[opopt_patch, down_patch, left_patch, right_patch, up_patch, goal, start], loc='upper left')
+        # # Change the x and y ticks to be between 0 and 1
+        plt.xticks(np.around(np.linspace(0,149,6),decimals=2), np.around(np.linspace(0,1,6), decimals=2))
+        plt.yticks(np.around(np.linspace(0,149,6),decimals=2), np.around(np.linspace(0,1,6), decimals=2))
 
-    # # Change the x and y ticks to be between 0 and 1
-    # plt.xticks(np.around(np.linspace(0,149,6),decimals=2), np.around(np.linspace(0,1,6), decimals=2))
-    # plt.yticks(np.around(np.linspace(0,149,6),decimals=2), np.around(np.linspace(0,1,6), decimals=2))
+        # x and y labels
+        axs.set_xlabel('x')
+        axs.set_ylabel('y')
+        # Change the title
+        # axs[i].set_title(f'Delta: {delta}')
+        
+        # plot_average_of_seeds(seeds, [delta], linear = linear)    
+        fig.colorbar(heat_plot, ticks=[], label='State density')
+        # ax1.legend(loc = 2)
+        # ax2.legend(loc = 4)
+        # ax1.set_ylabel('Q-value')
+        # ax2.set_ylabel('State density')
+        # ax1.set_xlabel('State')
+        plt.title(f'Cliff Car. Decision plane and State density, delta={delta}')
+        
+        # Save the figure
+        
+        plt.savefig(f'plots/q-vals/Cliffcar-ensemble-{linear}-test-{delta}.png')
+        
+        plt.show()
+    
+def plot_individual_seeds():
+    for seed in seeds:
+        for i, delta in enumerate(deltas):
+            
+            fig, axs = plt.subplots(1, 1)
 
-    # x and y labels
-    axs.set_xlabel('x')
-    axs.set_ylabel('y')
-    # Change the title
-    # axs[i].set_title(f'Delta: {delta}')
-    
-    # plot_average_of_seeds(seeds, [delta], linear = linear)    
-    fig.colorbar(heat_plot, ticks=[], label='State density')
-    # ax1.legend(loc = 2)
-    # ax2.legend(loc = 4)
-    # ax1.set_ylabel('Q-value')
-    # ax2.set_ylabel('State density')
-    # ax1.set_xlabel('State')
-    plt.title(f'Cliff Car. Decision plane and State density, delta={delta}')
-    
-    # Save the figure
-    plt.savefig(f'plots/q-vals/Cliffcar-ensemble-{linear}-test-{delta}.png')
-    
-    plt.show()
-    
+            paths_linear = [f'Cliff_car/test_results/Cliffcar-newoptim-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-model'
+                            for s in [seed]]
 
+            agents = load_agents(paths_linear)
+
+            ensemble_agent = cliff_car_ensemble.EnsembleCliffTestAgent(env, agents)
+
+            all_sar = ensemble_agent.test(test_games=100)
+            
+            
+            x = []
+            y = []
+            for game in all_sar:
+                for step in game:
+                    if step[0] is not np.nan:
+                        x.append(step[0][0])
+                        y.append(step[0][1])
+            x = np.array(x)/10
+            y = np.abs(150-np.array(y)/10)
+            
+            # goal, start, cliff = plot_q_vals(seeds, delta, axs[i])
+            goal, start, cliff = plot_q_vals(seeds, delta, axs)
+            # heat_plot = generate_heatmap(x, y, axs[i])
+            heat_plot = generate_heatmap(x, y, axs)
+            
+            opopt_patch = mpatches.Patch(color='red', label='OpOpt')
+            down_patch = mpatches.Patch(color='green', label='Up')
+            left_patch = mpatches.Patch(color='blue', label='Left')
+            right_patch = mpatches.Patch(color='yellow', label='Right')
+            up_patch = mpatches.Patch(color='purple', label='Down')
+
+            # axs[i].legend(handles=[opopt_patch, down_patch, left_patch, right_patch, up_patch, goal, start], loc='upper left')
+            axs.legend(handles=[opopt_patch, down_patch, left_patch, right_patch, up_patch, goal, start], loc='upper left')
+
+            # # Change the x and y ticks to be between 0 and 1
+            plt.xticks(np.around(np.linspace(0,149,6),decimals=2), np.around(np.linspace(0,1,6), decimals=2))
+            plt.yticks(np.around(np.linspace(0,149,6),decimals=2), np.around(np.linspace(0,1,6), decimals=2))
+
+            # x and y labels
+            axs.set_xlabel('x')
+            axs.set_ylabel('y')
+            # Change the title
+            # axs[i].set_title(f'Delta: {delta}')
+            
+            # plot_average_of_seeds(seeds, [delta], linear = linear)    
+            fig.colorbar(heat_plot, ticks=[], label='State density')
+            # ax1.legend(loc = 2)
+            # ax2.legend(loc = 4)
+            # ax1.set_ylabel('Q-value')
+            # ax2.set_ylabel('State density')
+            # ax1.set_xlabel('State')
+            plt.title(f'Cliff Car. Decision plane and State density, delta={delta}')
+            
+            # Save the figure
+            
+            plt.savefig(f'plots/q-vals/Cliffcar-seed-{seed}-{linear}-test-{delta}.png')
+            
+            plt.show()
+            
+plot_individual_seeds()
 # plt.show()
     
     
