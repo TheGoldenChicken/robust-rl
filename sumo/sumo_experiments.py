@@ -2,7 +2,7 @@ import sys
 import os
 
 # Add current folder to path
-sys.path.append('.')
+sys.path.append('..')
 # Set the current working directory to the folder this file is in
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -75,12 +75,17 @@ if __name__ == "__main__":
 
     # Seeds
     seeds = [4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
-    seeds = [22, 99, 10]
 
     # Delta values to test
     delta_vals = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 3, 5]
     delta_vals = [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 3, 5]
 
+    # seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
+    # seeds = [420]
+
+    # Delta values to test
+    # delta_vals = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 3, 5]
+    # delta_vals = [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9]
     # Whether to add or subtract robust estimator from reward
     factors = [-1]
     # Whether to use linear or quadratic approximation
