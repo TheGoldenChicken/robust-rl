@@ -176,8 +176,6 @@ def plot_sumo_states(seeds, delta_vals, linear=True):
         plt.title(f"States visited for delta value {delta_vals[i]}")
     plt.legend()
     plt.show()
-    
-        # Return Stats
 
 # plot_sumo_states([6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10], [0.001, 0.005, 0.01], True)
 

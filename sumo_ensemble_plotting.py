@@ -371,13 +371,52 @@ def plot_DQN_performance(test_games = 200):
 
         plt.savefig(f'plots/q-vals/DQN_performance-{seed}.png', dpi=300)
 
-
+def plot_sumo_states_individual(seeds, delta_vals, linear=True):
+    
+    paths = [[f'sumo/test_results/newoptim-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-test_data.npy'
+                     for seed in seeds] for delta in delta_vals]
+    
+    fig, axs = plt.subplots(1,len(delta_vals),figsize=(15,4))
+    
+    # Combine (not average) the states from all seeds
+    for i, paths_ in enumerate(paths):
+        for j, path in enumerate(paths_):
+            sar_data = np.load(path)
+            sar_data = sar_data[:,:,0].flatten()
+            
+            axs[i].hist(sar_data, bins=100, label = f"seed: {seeds[j]}", alpha=0.5)
+        axs[i].set_title(f"Delta: {delta_vals[i]}")
+        axs[i].set_xlabel("State")
+        axs[i].legend()
+    
+    plt.savefig(f'plots/q-vals/individual-states-{linear}.png', dpi=300)
+    
+def print_acum_return(seeds, delta_vals, linear=True):
+    
+    paths = [[f'sumo/test_results/newoptim-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-test_data.npy'
+                     for seed in seeds] for delta in delta_vals]
+    
+    fig, axs = plt.subplots(1,len(delta_vals),figsize=(15,4))
+    
+    # Combine (not average) the states from all seeds
+    for i, paths_ in enumerate(paths):
+        acum_returns = []
+        for j, path in enumerate(paths_):
+            sar_data = np.load(path)
+            acum_return = np.mean(np.sum(np.nan_to_num(sar_data[:,:,2]),axis=-1))
+            acum_returns.append(acum_return)
+            print(f"seed:{seeds[j]},delta:{delta_vals[i]},{acum_return}")
+        print(f"delta:{delta_vals[i]},mean:{np.mean(acum_returns)},std:{np.std(acum_returns)}")
+print_acum_return([10,22,23,99], [0.001,0.01,0.1,1,2], linear=False)    
+    
+# PLotting the state distributions individually
+# plot_sumo_states_individual([10,22,23,99],[0.001,0.01,0.1,1],linear=False)
 
 # Plot all q values and state distributions for all seeds seperately
 # plot_DQN_performance()
 
 # Plot all q values and state distributions as an ensemble method
-plot_q_and_state_hist(DQN = True)
+# plot_q_and_state_hist(DQN = True)
 
 # Plot all q values and state distributions as an ensemble method
 # plot_q_and_state_hist()

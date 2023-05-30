@@ -213,7 +213,7 @@ ax.set_ylabel("Accumulated Reward")
 ax.set_xticks(range(len(seeds) + 1))
 ax.set_xticklabels(seeds + ["Ensemble"])
 plt.savefig(f'dqnVsumoAcliff_test_results/DQN_sumo_no_noise_acum_boxplot.png', dpi=300)
-# plt.show()
+plt.show()
 
 ### DQN AND SUMO ENSAMBLE NO NOISE BOXPLOT PERFORMANACE ###
 
@@ -238,7 +238,7 @@ ax.set_ylabel("Accumulated Reward")
 ax.set_xticks(range(len(deltas) + 1))
 ax.set_xticklabels(deltas + ["DQN"])
 plt.savefig(f'dqnVsumoAcliff_test_results/sumo_ensemble_no_noise_acum_boxplot.png', dpi=300)
-# plt.show()
+plt.show()
 
 
 ### DQN AND SUMO ENSAMBLE VARIANCE NOISE ENVIRONMENTS
@@ -266,7 +266,46 @@ for kl, var in zip(deltas,noise_var):
     ax.set_xticks(range(len(deltas) + 1))
     ax.set_xticklabels(deltas + ["DQN"])
     plt.savefig(f'dqnVsumoAcliff_test_results/SUMO_sumo_var-{var}_acum_boxplot.png', dpi = 300)
-    # plt.show()
+    plt.show()
+
+### DQN AND SUMO ENSAMBLE MEAN ACUM OVER ENV VARIANCE
+#%%
+
+fig, ax = plt.subplots(1, 1, figsize=(30,12))
+
+means = np.zeros((len(noise_var), len(deltas)))
+conf_int = np.zeros((len(noise_var), len(deltas), 2))
+
+DQN_means = np.zeros(len(noise_var))
+DQN_conf_int = np.zeros((len(noise_var), 2))
+
+for i, (kl, var) in enumerate(zip(deltas,noise_var)):
+    
+    # Plotting for all delta values
+    for j, delta in enumerate(deltas):
+        
+        means[i][j] = np.mean(var_shift_acum[var][3][delta])
+        # print(np.percentile(var_shift_acum[var][3][delta], [2.5, 97.5]))
+        conf_int[i][j] = np.percentile(var_shift_acum[var][3][delta], [2.5, 97.5])
+    
+    DQN_means[i] = np.mean(var_shift_acum[var][1])
+    DQN_conf_int[i] = np.percentile(var_shift_acum[var][1], [2.5, 97.5])
+
+for i, (m, cis) in enumerate(zip(means.T, np.transpose(conf_int,(1,0,2)))):
+    m_ = np.vstack((m,DQN_means))
+    cis_ = np.hstack((cis,DQN_conf_int))
+    for j, (diff, ci) in enumerate(zip(m_.T,cis_)):
+        ax.plot([i*2 - (1-j/20),i*2+0.1 + j/20],diff,'-o',color='r')
+        # Draw the confidence intervals
+        ax.plot([i*2 - (1-j/20), i*2 - (1-j/20)],ci[:2],'--',color='b')
+        ax.plot([i*2+0.1 + j/20,i*2+0.1 + j/20],ci[2:],'--',color='g')
+        
+    # print(m_.shape)
+    # ax.plot(np.arange(len(m)), m, '-o')
+ax.set_xticks(range(15))
+ax.set_xticklabels(deltas)
+plt.show()
+
 
 
 

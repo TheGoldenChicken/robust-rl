@@ -63,25 +63,25 @@ if __name__ == "__main__":
     bin_size = 500
 
     # Should have converged somewhat at this point
-    num_frames = 12000
+    num_frames = 40000 # 12000
 
     # Agent parameters - Should not be changed!
     state_dim = 1
-    grad_batch_size = 10
-    replay_buffer_size = 1000
+    grad_batch_size = 10 # 10
+    replay_buffer_size = 1000 #1000
     max_min = [[env.max_min[0]],[env.max_min[1]]]
-    epsilon_decay = 1/5000
+    epsilon_decay = 1/20000 # default: 1/5000
 
 
     # Seeds
     # seeds = [6969, 4242, 6942, 123, 420, 5318008,  23, 22, 99, 10]
-    seeds = [23, 22, 99, 10]
+    seeds = [7777]
 
     # seeds = [9000,9001,9002,9003,9004,9005,9006,9007,9008,9009]
         # seeds = [10000]
 
     # Delta values to test
-    delta_vals = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 3, 5]
+    delta_vals = [0.1, 1, 2]#, 3, 4, 5]
     # delta_vals = [0.01, 0.05, 0.1, 0.5, 1, 2, 3, 5]
     # delta_vals = [0.001]
     # Whether to add or subtract robust estimator from reward
