@@ -81,7 +81,7 @@ if __name__ == "__main__":
     # Delta values to test
     # delta_vals = [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 3, 5]
 
-    delta_vals = [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2]
+    delta_vals = [0.05,0.1,0.5,1]#, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 0.001, 0.005, 0.01, 0.05, 0.5, 1, 2]
 
     # seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
     # seeds = [420]
@@ -90,7 +90,7 @@ if __name__ == "__main__":
     # delta_vals = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 3, 5]
     # delta_vals = [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9]
     # Whether to add or subtract robust estimator from reward
-    factors = [-1, 1]
+    factors = [1]
     # Whether to use linear or quadratic approximation
     # linear_only = [True, False]
     linear_only = [False]
