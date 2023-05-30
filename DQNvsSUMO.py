@@ -61,19 +61,19 @@ def test_agent_group(agent_group, n_games = 10):
     
     return asr_DQN_sumo_agents, asr_DQN_ensemble_sumo_agent, asr_sumo_agents, asr_sumo_ensemble_agents
 
-def acum_reward(asr_group):
+def accum_reward(asr_group):
     asr_DQN_sumo_agents, asr_DQN_ensemble_sumo_agent, asr_sumo_agents, asr_sumo_ensemble_agents = asr_group
     
-    DQN_sumo_acum_r = np.sum(np.apply_along_axis(np.nan_to_num, -1, asr_DQN_sumo_agents[:,:,:,2]),axis=-1)
-    DQN_ensemble_sumo_acum_r = np.sum(np.nan_to_num(asr_DQN_ensemble_sumo_agent[:,:,2]),axis=-1)
-    sumo_acum_r = {delta : np.sum(np.apply_along_axis(np.nan_to_num, -1, agents[:,:,:,2]),axis=-1) for delta, agents in asr_sumo_agents.items()}
-    sumo_ensemble_acum_r = {delta : np.sum(np.nan_to_num(agent[:,:,2]),axis=-1) for delta, agent in asr_sumo_ensemble_agents.items()}
+    DQN_sumo_accum_r = np.sum(np.apply_along_axis(np.nan_to_num, -1, asr_DQN_sumo_agents[:,:,:,2]),axis=-1)
+    DQN_ensemble_sumo_accum_r = np.sum(np.nan_to_num(asr_DQN_ensemble_sumo_agent[:,:,2]),axis=-1)
+    sumo_accum_r = {delta : np.sum(np.apply_along_axis(np.nan_to_num, -1, agents[:,:,:,2]),axis=-1) for delta, agents in asr_sumo_agents.items()}
+    sumo_ensemble_accum_r = {delta : np.sum(np.nan_to_num(agent[:,:,2]),axis=-1) for delta, agent in asr_sumo_ensemble_agents.items()}
     
-    return DQN_sumo_acum_r, DQN_ensemble_sumo_acum_r, sumo_acum_r, sumo_ensemble_acum_r
+    return DQN_sumo_accum_r, DQN_ensemble_sumo_accum_r, sumo_accum_r, sumo_ensemble_accum_r
 
 # Define mean and variance of environment noise
 noise_mean = []#0.14, 0.32, 0.45, 1.0, 1.41, 2.0, 2.45, 2.83, 3.16, 3.46, 3.74, 4.0, 4.24, 4.47, 6.32]
-noise_var = 20+np.array([0.65, 1.55, 2.3, 6.21, 10.28, 18.59, 28.1, 39.42, 53.06, 69.59, 89.71, 114.23, 144.11, 180.59, 1464.1])
+noise_var = 10+np.array([0.65, 1.55, 2.3, 6.21, 10.28, 18.59, 28.1, 39.42, 53.06, 69.59, 89.71, 114.23, 144.11, 180.59, 1464.1])
 
 # Load all environmnets
 envs = [[SumoPPEnv(noise_mean=mean, noise_var=0) for mean in noise_mean],
@@ -87,9 +87,14 @@ seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
 linear = False
 n_games = 100
 
+training_length = 8000
+
+if training_length == 12000: training_type = "longertraining"
+else: training_type = "newoptim"
+
 # Get path to all agents
-DQN_sumo_model_paths = [f'sumo/test_results/DQN_sumo-12000-frames/seed-{seed}-model' for seed in seeds]
-sumo_model_paths = [[f'sumo/test_results/newoptim-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-model'
+DQN_sumo_model_paths = [f'sumo/test_results/DQN_sumo-{training_length}-frames/seed-{seed}-model' for seed in seeds]
+sumo_model_paths = [[f'sumo/test_results/{training_type}-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-model'
                         for seed in seeds] for delta in deltas]
 
 ### LOAD ALL AGENTS ###
@@ -127,47 +132,47 @@ print("Testing Done!")
 ### CALCULATE ACCUMULATED REWARDS ###
 
 print("Calculating accumulated rewards")
-no_noise_acum = acum_reward(no_noise_asr)
+no_noise_accum = accum_reward(no_noise_asr)
 
-mean_shift_acum = {}
+mean_shift_accum = {}
 for noise_mean, asr_group in mean_shift_sumo_asr.items():
-    mean_shift_acum[noise_mean] = acum_reward(asr_group)
+    mean_shift_accum[noise_mean] = accum_reward(asr_group)
     
-var_shift_acum = {}
+var_shift_accum = {}
 for noise_var, asr_group in var_shift_sumo_asr.items():
-    var_shift_acum[noise_var] = acum_reward(asr_group)
+    var_shift_accum[noise_var] = accum_reward(asr_group)
 
-print("ACUM rewards calculated!")
+print("accum rewards calculated!")
 
-### no_noise_acum architecture
-# no_noise_acum = (DQN_sumo_acum_r, DQN_ensemble_sumo_acum_r, sumo_acum_r, sumo_ensemble_acum_r)
-#   DQN_sumo_acum_r.shape = (n_seeds, n_games) = (10, 12)
-#   DQN_ensemble_sumo_acum_r.shape = (n_games) = (12,)
-#   sumo_acum_r.shape = {n_deltas : (n_seeds, n_games} = {16 : (10, 12)}
-#   sumo_ensemble_acum_r.shape = {n_deltas : (n_games} = {16 : (12,)}
+### no_noise_accum architecture
+# no_noise_accum = (DQN_sumo_accum_r, DQN_ensemble_sumo_accum_r, sumo_accum_r, sumo_ensemble_accum_r)
+#   DQN_sumo_accum_r.shape = (n_seeds, n_games) = (10, 12)
+#   DQN_ensemble_sumo_accum_r.shape = (n_games) = (12,)
+#   sumo_accum_r.shape = {n_deltas : (n_seeds, n_games} = {16 : (10, 12)}
+#   sumo_ensemble_accum_r.shape = {n_deltas : (n_games} = {16 : (12,)}
 
-### mean_shift_acum architecture
-# mean_shift_acum = {noise_mean : (DQN_sumo_acum_r, DQN_ensemble_sumo_acum_r, sumo_acum_r, sumo_ensemble_acum_r)}
-#   DQN_sumo_acum_r.shape = (n_seeds, n_games) = (10, 12)
-#   DQN_ensemble_sumo_acum_r.shape = (n_games) = (12,)
-#   sumo_acum_r.shape = {n_deltas : (n_seeds, n_games} = {16 : (10, 12)}
-#   sumo_ensemble_acum_r.shape = {n_deltas : (n_games} = {16 : (12,)}
+### mean_shift_accum architecture
+# mean_shift_accum = {noise_mean : (DQN_sumo_accum_r, DQN_ensemble_sumo_accum_r, sumo_accum_r, sumo_ensemble_accum_r)}
+#   DQN_sumo_accum_r.shape = (n_seeds, n_games) = (10, 12)
+#   DQN_ensemble_sumo_accum_r.shape = (n_games) = (12,)
+#   sumo_accum_r.shape = {n_deltas : (n_seeds, n_games} = {16 : (10, 12)}
+#   sumo_ensemble_accum_r.shape = {n_deltas : (n_games} = {16 : (12,)}
 
-### var_shift_acum architecture
-# var_shift_acum = {noise_var : (DQN_sumo_acum_r, DQN_ensemble_sumo_acum_r, sumo_acum_r, sumo_ensemble_acum_r)}
-#   DQN_sumo_acum_r.shape = (n_seeds, n_games) = (10, 12)
-#   DQN_ensemble_sumo_acum_r.shape = (n_games) = (12,)
-#   sumo_acum_r.shape = {n_deltas : (n_seeds, n_games} = {16 : (10, 12)}
-#   sumo_ensemble_acum_r.shape = {n_deltas : (n_games} = {16 : (12,)}
+### var_shift_accum architecture
+# var_shift_accum = {noise_var : (DQN_sumo_accum_r, DQN_ensemble_sumo_accum_r, sumo_accum_r, sumo_ensemble_accum_r)}
+#   DQN_sumo_accum_r.shape = (n_seeds, n_games) = (10, 12)
+#   DQN_ensemble_sumo_accum_r.shape = (n_games) = (12,)
+#   sumo_accum_r.shape = {n_deltas : (n_seeds, n_games} = {16 : (10, 12)}
+#   sumo_ensemble_accum_r.shape = {n_deltas : (n_games} = {16 : (12,)}
 
 ### Saving all results using Pickle ###
 print("Saving results")
-with open(f'no_noise_acum.pkl', 'wb') as f:
-    pickle.dump(no_noise_acum, f)
-with open(f'mean_shift_acum.pkl', 'wb') as f:
-    pickle.dump(mean_shift_acum, f)
-with open(f'var_shift_acum.pkl', 'wb') as f:
-    pickle.dump(var_shift_acum, f)
+with open(f'dqnVsumoAcliff_test_results/accum_reward_data/no_noise_accum.pkl', 'wb') as f:
+    pickle.dump(no_noise_accum, f)
+with open(f'dqnVsumoAcliff_test_results/accum_reward_data/mean_shift_accum.pkl', 'wb') as f:
+    pickle.dump(mean_shift_accum, f)
+with open(f'dqnVsumoAcliff_test_results/accum_reward_data/var_shift_accum.pkl', 'wb') as f:
+    pickle.dump(var_shift_accum, f)
 print("Results saved!")
 
 #%% PLOTTING
@@ -179,17 +184,17 @@ from scipy.stats import ttest_ind
 deltas = [0.001, 0.005, 0.01, 0.05, 0.1, 0.2,
           0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2]
 seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
-noise_var = 20+np.array([0.65, 1.55, 2.3, 6.21, 10.28, 18.59, 28.1, 39.42, 53.06, 69.59, 89.71, 114.23, 144.11, 180.59, 1464.1])
+noise_var = 10+np.array([0.65, 1.55, 2.3, 6.21, 10.28, 18.59, 28.1, 39.42, 53.06, 69.59, 89.71, 114.23, 144.11, 180.59, 1464.1])
 
 
 ### LOAD ALL RESULTS ###
 print("Loading results")
-with open(f'no_noise_acum.pkl', 'rb') as f:
-    no_noise_acum = pickle.load(f)
-with open(f'mean_shift_acum.pkl', 'rb') as f:
-    mean_shift_acum = pickle.load(f)
-with open(f'var_shift_acum.pkl', 'rb') as f:
-    var_shift_acum = pickle.load(f)
+with open(f'dqnVsumoAcliff_test_results/accum_reward_data/no_noise_accum.pkl', 'rb') as f:
+    no_noise_accum = pickle.load(f)
+with open(f'dqnVsumoAcliff_test_results/accum_reward_data/mean_shift_accum.pkl', 'rb') as f:
+    mean_shift_accum = pickle.load(f)
+with open(f'dqnVsumoAcliff_test_results/accum_reward_data/var_shift_accum.pkl', 'rb') as f:
+    var_shift_accum = pickle.load(f)
     
 print("Results loaded!")
 
@@ -202,17 +207,17 @@ fig, ax = plt.subplots(1, 1, figsize=(10, 5))
 
 # Plotting for all seeds
 for i, seed in enumerate(seeds):
-    ax.boxplot(no_noise_acum[0][i], positions=[i], widths=0.6, showmeans=True, meanline=True, meanprops={'color':'red', 'linewidth':2})
+    ax.boxplot(no_noise_accum[0][i], positions=[i], widths=0.6, showmeans=True, meanline=True, meanprops={'color':'red', 'linewidth':2})
 
 # Plotting for ensemble
-ax.boxplot(no_noise_acum[1], positions=[i+1], widths=0.6, showmeans=True, meanline=True, meanprops={'color':'red', 'linewidth':2})
+ax.boxplot(no_noise_accum[1], positions=[i+1], widths=0.6, showmeans=True, meanline=True, meanprops={'color':'red', 'linewidth':2})
 
-ax.set_title("DQN ACUM reward, Argumentation: mean_shift=STD, var_shift=STD")
+ax.set_title("DQN accumulated reward, No augmentation: var_shift=STD")
 ax.set_xlabel("Seed/model")
 ax.set_ylabel("Accumulated Reward")
 ax.set_xticks(range(len(seeds) + 1))
 ax.set_xticklabels(seeds + ["Ensemble"])
-plt.savefig(f'dqnVsumoAcliff_test_results/DQN_sumo_no_noise_acum_boxplot.png', dpi=300)
+plt.savefig(f'dqnVsumoAcliff_test_results/sumo_DQN_all_seeds_no_noise_accum_boxplot.png', dpi=300)
 plt.show()
 
 ### DQN AND SUMO ENSAMBLE NO NOISE BOXPLOT PERFORMANACE ###
@@ -221,54 +226,74 @@ fig, ax = plt.subplots(1, 1, figsize=(10, 5))
 
 # Plotting for all delta values
 for i, delta in enumerate(deltas):
-    ax.boxplot(no_noise_acum[3][delta], positions=[i], widths=0.6, showmeans=True, meanline=True, meanprops={'color':'red', 'linewidth':2})
+    ax.boxplot(no_noise_accum[3][delta], positions=[i], widths=0.6, showmeans=True, meanline=True, meanprops={'color':'red', 'linewidth':2})
 
     # Make a t-test between DQN and SUMO
-    t, p = ttest_ind(no_noise_acum[3][delta], no_noise_acum[1])
+    t, p = ttest_ind(no_noise_accum[3][delta], no_noise_accum[1])
     
     # Plot the p-value just above the x-axis aligned with the boxplots
     ax.text(i + 0.05, 0.98, f"p={p:.3f}", ha='center', va='center', transform=ax.get_xaxis_transform(), fontsize=8)
 
 # Plotting for ensemble
-ax.boxplot(no_noise_acum[1], positions=[i+1], widths=0.6, showmeans=True, meanline=True, meanprops={'color':'red', 'linewidth':2})
+ax.boxplot(no_noise_accum[1], positions=[i+1], widths=0.6, showmeans=True, meanline=True, meanprops={'color':'red', 'linewidth':2})
 
-ax.set_title("Sumo Ensemble. Robust and DQN, Argumentation: mean_shift=STD, var_shift=STD")
+# Plot a horizontal line for the mean of the DQN ensemble
+plt.axhline(y=np.mean(no_noise_accum[1]), color='gray', linestyle='--', label='DQN ensemble mean', linewidth=1.5, alpha=0.5)
+
+ax.set_title(f"Sumo ensemble. Robust and DQN. No Augmentation: var=20; KL(p||p_0)={0}")
 ax.set_xlabel("Agent (delta value)")
 ax.set_ylabel("Accumulated Reward")
 ax.set_xticks(range(len(deltas) + 1))
 ax.set_xticklabels(deltas + ["DQN"])
-plt.savefig(f'dqnVsumoAcliff_test_results/sumo_ensemble_no_noise_acum_boxplot.png', dpi=300)
+plt.savefig(f'dqnVsumoAcliff_test_results/SUMO_DQN_ensemble_no_noise_accum_boxplot.png', dpi=500)
 plt.show()
 
 
 ### DQN AND SUMO ENSAMBLE VARIANCE NOISE ENVIRONMENTS
 
-for kl, var in zip(deltas,noise_var):
+p_values = np.zeros((len(deltas), len(noise_var)))
+
+for i, (kl, var) in enumerate(zip(deltas,noise_var)):
     
     fig, ax = plt.subplots(1, 1, figsize=(10,5))
     
     # Plotting for all delta values
-    for i, delta in enumerate(deltas):
-        ax.boxplot(var_shift_acum[var][3][delta], positions=[i], widths=0.6, showmeans=True, meanline=True, meanprops={'color':'red', 'linewidth':2})
+    for j, delta in enumerate(deltas):
+        ax.boxplot(var_shift_accum[var][3][delta], positions=[j], widths=0.6, showmeans=True, meanline=True, meanprops={'color':'red', 'linewidth':2})
         
         # Make a t-test between DQN and SUMO
-        t, p = ttest_ind(var_shift_acum[var][3][delta], var_shift_acum[var][1])
+        t, p = ttest_ind(var_shift_accum[var][3][delta], var_shift_accum[var][1])
+        
+        p_values[j,i] = p
         
         # Plot the p-value just above the x-axis aligned with the boxplots
-        ax.text(i + 0.05, 0.98, f"p={p:.3f}", ha='center', va='center', transform=ax.get_xaxis_transform(), fontsize=8)
-
+        ax.text(j + 0.05, 0.98, f"p={p:.3f}", ha='center', va='center', transform=ax.get_xaxis_transform(), fontsize=8)
+        
     # Plotting for ensemble
-    ax.boxplot(var_shift_acum[var][1], positions=[i+1], widths=0.6, showmeans=True, meanline=True, meanprops={'color':'red', 'linewidth':2})
+    ax.boxplot(var_shift_accum[var][1], positions=[j+1], widths=0.6, showmeans=True, meanline=True, meanprops={'color':'red', 'linewidth':2})
+    
+    # Plot a horizontal line for the mean of the DQN ensemble
+    plt.axhline(y=np.mean(var_shift_accum[var][1]), color='gray', linestyle='--', label='DQN ensemble mean', linewidth=1.5, alpha=0.5)
+    
 
-    ax.set_title(f"Sumo Ensemble. Robust and DQN, Argumentation: mean_shift=STD, var_shift={var}; KL(p||p_0)={kl}")
+    ax.set_title(f"Sumo ensemble. Robust and DQN. Augmentation: var={np.round(var,2)}; KL(p||p_0)={kl}")
     ax.set_xlabel("Agent (delta value)")
     ax.set_ylabel("Accumulated Reward")
     ax.set_xticks(range(len(deltas) + 1))
     ax.set_xticklabels(deltas + ["DQN"])
-    plt.savefig(f'dqnVsumoAcliff_test_results/SUMO_sumo_var-{var}_acum_boxplot.png', dpi = 300)
+    plt.savefig(f'dqnVsumoAcliff_test_results/SUMO_DQN_ensemble_var-{np.round(var,2)}_accum_boxplot.png', dpi = 500)
     plt.show()
+    
+# Plot the q values as a heatmap
+fig, ax = plt.subplots(1, 1, figsize=(10,5))
 
-### DQN AND SUMO ENSAMBLE MEAN ACUM OVER ENV VARIANCE
+# ax.imshow(p_values, cmap='hot')
+
+fig.colorbar(ax.imshow(p_values), ax=ax)
+
+plt.show()
+
+### DQN AND SUMO ENSAMBLE MEAN accum OVER ENV VARIANCE
 #%%
 
 fig, ax = plt.subplots(1, 1, figsize=(30,12))
@@ -284,12 +309,12 @@ for i, (kl, var) in enumerate(zip(deltas,noise_var)):
     # Plotting for all delta values
     for j, delta in enumerate(deltas):
         
-        means[i][j] = np.mean(var_shift_acum[var][3][delta])
-        # print(np.percentile(var_shift_acum[var][3][delta], [2.5, 97.5]))
-        conf_int[i][j] = np.percentile(var_shift_acum[var][3][delta], [2.5, 97.5])
+        means[i][j] = np.mean(var_shift_accum[var][3][delta])
+        # print(np.percentile(var_shift_accum[var][3][delta], [2.5, 97.5]))
+        conf_int[i][j] = np.percentile(var_shift_accum[var][3][delta], [2.5, 97.5])
     
-    DQN_means[i] = np.mean(var_shift_acum[var][1])
-    DQN_conf_int[i] = np.percentile(var_shift_acum[var][1], [2.5, 97.5])
+    DQN_means[i] = np.mean(var_shift_accum[var][1])
+    DQN_conf_int[i] = np.percentile(var_shift_accum[var][1], [2.5, 97.5])
 
 for i, (m, cis) in enumerate(zip(means.T, np.transpose(conf_int,(1,0,2)))):
     m_ = np.vstack((m,DQN_means))

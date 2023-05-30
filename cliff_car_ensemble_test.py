@@ -95,12 +95,12 @@ def plot_q_vals(seeds, delta, axis):
     
 
 
-deltas = [0.001,0.005,0.01,0.05,0.1,0.5,1,2]
+deltas = [0.001,0.005,0.01,0.05,0.1,0.5,1,2,3,5]
 # deltas = []
-# seeds = [10,22,23,99,123,420,4242,6942,6969,9000,9001,9002,9003,9004,9005,5318008]
+seeds = [10,22,23,99,123,420,4242,6942,6969,5318008]#,9000,9001,9002,9003,9004,9005,
 
-seeds = [7777]
-deltas = [0.1]
+# seeds = [7777]
+# deltas = [0.1]
 linear = False
 
 
@@ -160,13 +160,13 @@ def plot_all_seeds():
         # ax1.set_ylabel('Q-value')
         # ax2.set_ylabel('State density')
         # ax1.set_xlabel('State')
-        plt.title(f'Cliff Car. Decision plane and State density, delta={delta}')
+        plt.title(f'Ensemble Cliff Car. Decision plane, delta={delta}')
         
         # Save the figure
         
         plt.savefig(f'plots/q-vals/Cliffcar-ensemble-{linear}-test-{delta}.png')
         
-        plt.show()
+        # plt.show()
     
 def plot_individual_seeds():
     for seed in seeds:
@@ -225,15 +225,16 @@ def plot_individual_seeds():
             # ax1.set_ylabel('Q-value')
             # ax2.set_ylabel('State density')
             # ax1.set_xlabel('State')
-            plt.title(f'Cliff Car. Decision plane and State density, delta={delta}')
+            plt.title(f'Cliff Car. Decision plane, seed={seed}, delta={delta}')
             
             # Save the figure
             
             plt.savefig(f'plots/q-vals/Cliffcar-seed-{seed}-{linear}-test-{delta}.png')
             
-            plt.show()
+            # plt.show()
             
 plot_individual_seeds()
 # plt.show()
+plot_all_seeds()
     
     
