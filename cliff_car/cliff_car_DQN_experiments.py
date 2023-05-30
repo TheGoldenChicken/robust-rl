@@ -46,13 +46,13 @@ if __name__ == "__main__":
         grad_batch_size = 10
         replay_buffer_size = 500
         max_min = [[env.max_min[0]],[env.max_min[1]]]
-        epsilon_decay = 1/1500
+        epsilon_decay = 1/2000
         target_update = 300
 
         seed = 6969
 
         # TODO: Fix ugly formatting here, not really becoming of a serious researcher
-        test_name = f'DQN_sumo-{num_frames}-frames'
+        test_name = f'DQN_cliffcar-{num_frames}-frames'
 
         if not os.path.isdir(f'test_results/{test_name}'):
             os.mkdir(f'test_results/{test_name}',)
@@ -72,7 +72,7 @@ if __name__ == "__main__":
             seed_everything(seed)
 
             replay_buffer = ReplayBuffer(obs_dim=obs_dim, size=size, batch_size=32, ready_when=300)
-            agent = DQNSumoAgent(env=env, replay_buffer=replay_buffer, target_update=300, epsilon_decay=epsilon_decay,
+            agent = DQNCliffCarAgent(env=env, replay_buffer=replay_buffer, target_update=300, epsilon_decay=epsilon_decay,
                                  max_epsilon=1.0, min_epsilon=0.1, gamma=0.99)
 
             train_start = time.time()
@@ -83,8 +83,8 @@ if __name__ == "__main__":
             test_end = time.time()
 
             # States to extract q-values from
-            states = torch.FloatTensor(np.linspace(0,1, 1200)).reshape(-1,1).to(agent.device)
-            q_vals = agent.get_q_vals(states)
+            # states = torch.FloatTensor(np.linspace(0,1, 1200)).reshape(-1,1).to(agent.device)
+            # q_vals = agent.get_q_vals(states)
 
             test_columns = ['states_actions_rewards']
             train_columns = ['scores', 'losses', 'epsilons']
@@ -99,7 +99,7 @@ if __name__ == "__main__":
             train_scores.to_csv(f'test_results/{test_name}/seed-{seed}-train_score_data.csv')
             train_df.to_csv(f'test_results/{test_name}/seed-{seed}-train_data.csv')
             np.save(f'test_results/{test_name}/seed-{seed}-test_data.npy', test_data)
-            np.save(f'test_results/{test_name}/seed-{seed}-q_vals.npy', q_vals)
+            # np.save(f'test_results/{test_name}/seed-{seed}-q_vals.npy', q_vals)
      #       test_df.to_csv(f'test_results/{test_name}/{delta}-test_data.csv')
             time_df.to_csv(f'test_results/{test_name}/seed-{seed}-time_data.csv')
             agent.save_model(f'test_results/{test_name}/seed-{seed}-model')
