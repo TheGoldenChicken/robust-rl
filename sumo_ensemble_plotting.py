@@ -21,11 +21,15 @@ def load_agents(paths):
         
     return agents
 
-deltas = [0.001, 0.005, 0.01, 0.05, 0.1, 0.2,
-          0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 5]
-seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
-training_type = "newoptim"
+# deltas = [0.001, 0.005, 0.01, 0.05, 0.1, 0.2,
+#           0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 5]
+# seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
+
+# deltas = [0.1,0.2]
+# seeds = [22]
+training_type = "usingy_p"
 linear = False
+robust_factor = -1
 
 
 # deltas = [0.001, 0.005, 0.01, 0.05, 0.1, 0.2,
@@ -73,7 +77,7 @@ def plot_average_q_of_seeds(seeds, delta_vals, linear=True, axis = None, DQN = F
     
 
     if not DQN:
-        paths = [[f'sumo/test_results/{training_type}-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-q_vals.npy'
+        paths = [[f'sumo/test_results/{training_type}-linear-{linear}-test_seed_{seed}_robust_factor_{robust_factor}/{delta}-q_vals.npy'
                         for seed in seeds] for delta in delta_vals]
     else:
         paths = [[f'sumo/test_results/DQN_sumo-{DQN_iter}-frames/seed-{seed}-q_vals.npy' for seed in seeds]]
@@ -108,10 +112,10 @@ def plot_q_and_state_hist(test_games = 200, DQN = False):
         ax2 = ax1.twinx()
         
         if not DQN:
-            paths_linear = [f'sumo/test_results/{training_type}-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-model'
+            paths_linear = [f'sumo/test_results/{training_type}-linear-{linear}-test_seed_{seed}_robust_factor_{robust_factor}/{delta}-model'
                             for seed in seeds]
 
-            q_paths = [f'sumo/test_results/{training_type}-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-q_vals.npy'
+            q_paths = [f'sumo/test_results/{training_type}-linear-{linear}-test_seed_{seed}_robust_factor_{robust_factor}/{delta}-q_vals.npy'
                         for seed in seeds]
             
             agents = load_agents(paths_linear)
@@ -242,7 +246,7 @@ def plot_state_hist_multiple_delta(test_games = 200):
         
         print("Stating: ", delta)
         
-        paths_linear = [f'sumo/test_results/{training_type}-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-model'
+        paths_linear = [f'sumo/test_results/{training_type}-linear-{linear}-test_seed_{seed}_robust_factor_{robust_factor}/{delta}-model'
                         for seed in seeds]
 
         agents = load_agents(paths_linear)
@@ -331,7 +335,7 @@ def plot_q_as_image_multiple_delta():
     axs[0].set_yticks([])
     
     for i, delta in enumerate(deltas):
-        paths = [f'sumo/test_results/{training_type}-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-q_vals.npy'
+        paths = [f'sumo/test_results/{training_type}-linear-{linear}-test_seed_{seed}_robust_factor_{robust_factor}/{delta}-q_vals.npy'
                         for seed in seeds]
         
         q_vals = np.array([sum_plot.get_q_vals(path=path) for path in paths])
@@ -453,7 +457,7 @@ def plot_DQN_performance(test_games = 200):
 
 def plot_sumo_states_individual(seeds, delta_vals, linear=True):
     
-    paths = [[f'sumo/test_results/{training_type}-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-test_data.npy'
+    paths = [[f'sumo/test_results/{training_type}-linear-{linear}-test_seed_{seed}_robust_factor_{robust_factor}/{delta}-test_data.npy'
                      for seed in seeds] for delta in delta_vals]
     
     fig, axs = plt.subplots(1,len(delta_vals),figsize=(13,4))
@@ -473,9 +477,11 @@ def plot_sumo_states_individual(seeds, delta_vals, linear=True):
     
     plt.savefig(f'plots/q-vals/{training_type}-individual-states-{linear}.png', dpi=300)
     
+    plt.show()
+    
 def print_acum_return(seeds, delta_vals, linear=True):
     
-    paths = [[f'sumo/test_results/{training_type}-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-test_data.npy'
+    paths = [[f'sumo/test_results/{training_type}-linear-{linear}-test_seed_{seed}_robust_factor_{robust_factor}/{delta}-test_data.npy'
                      for seed in seeds] for delta in delta_vals]
     
     fig, axs = plt.subplots(1,len(delta_vals),figsize=(15,4))
@@ -494,7 +500,7 @@ def print_acum_return(seeds, delta_vals, linear=True):
 # print_acum_return([6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10], [0.001,0.01,0.1,1,2], linear=False)    
     
 # PLotting the state distributions individually
-# plot_sumo_states_individual([10,22,23,99],[0.001,0.01,0.1,1,2],linear=False)
+plot_sumo_states_individual([22],[0.1,0.05],linear=False)
 
 # Plot all q values and state distributions for all seeds seperately
 # plot_DQN_performance()
@@ -509,5 +515,5 @@ def print_acum_return(seeds, delta_vals, linear=True):
 # plot_q_as_image_multiple_delta()
 
 # Plot the state distributions as heatmap for all delta values (ensemble method)
-plot_state_hist_multiple_delta()
+# plot_state_hist_multiple_delta()
 

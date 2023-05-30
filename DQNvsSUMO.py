@@ -264,7 +264,7 @@ for i, (kl, var) in enumerate(zip(deltas,noise_var)):
         # Make a t-test between DQN and SUMO
         t, p = ttest_ind(var_shift_accum[var][3][delta], var_shift_accum[var][1])
         
-        p_values[j,i] = p
+        p_values[i,j] = (p>0.05)
         
         # Plot the p-value just above the x-axis aligned with the boxplots
         ax.text(j + 0.05, 0.98, f"p={p:.3f}", ha='center', va='center', transform=ax.get_xaxis_transform(), fontsize=8)
