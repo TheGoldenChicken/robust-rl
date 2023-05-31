@@ -121,7 +121,7 @@ def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1, linear_only = False):
         b, c = linear_approximation(X_v, y_v)
         A = np.zeros((len(b),len(b)))
         
-    # b, c = linear_approximation(X_v, y_v)
+    b, c = linear_approximation(X_v, y_v)
     # A = np.zeros((len(b),len(b)))
 
     ### Gaussian approximation ###
