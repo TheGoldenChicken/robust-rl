@@ -27,7 +27,7 @@ def load_agents(paths):
 
 # deltas = [0.1,0.2]
 # seeds = [22]
-training_type = "usingy_p"
+training_type = "actually_quadratic"
 linear = False
 robust_factor = -1
 
@@ -497,10 +497,10 @@ def print_acum_return(seeds, delta_vals, linear=True):
         print(f"delta:{delta_vals[i]},mean:{np.mean(acum_returns)},std:{np.std(acum_returns)}")
         
         
-# print_acum_return([6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10], [0.001,0.01,0.1,1,2], linear=False)    
+# print_acum_return([6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10], [0.001,0.01,0.1,1,2], linear=False)    q 
     
 # PLotting the state distributions individually
-plot_sumo_states_individual([22],[0.1,0.05],linear=False)
+plot_sumo_states_individual([4242, 6942],[0.01,0.05,0.1, 0.5],linear=False)
 
 # Plot all q values and state distributions for all seeds seperately
 # plot_DQN_performance()
