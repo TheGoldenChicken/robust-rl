@@ -101,6 +101,7 @@ if __name__ == "__main__":
                 # TODO: Fix ugly formatting here, not really becoming of a serious researcher
                 test_name = f'changedrewardfunction-linear-{linear}-test_seed_{seed}_robust_factor_{factor}'
 
+
                 if not os.path.isdir(f'test_results/{test_name}'):
                     os.mkdir(f'test_results/{test_name}',)
                 with open(f'test_results/{test_name}/hyperparams.txt', 'w') as f:

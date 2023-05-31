@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.cm as cm
 from scipy.ndimage import gaussian_filter
 import matplotlib.patches as mpatches
+import torch
 
 env = CliffCar()
 
@@ -47,15 +48,17 @@ def generate_heatmap(x, y, axis, std = 8):
     # plt.show()
     # return heatmap.T, extent
 
-def plot_q_vals(seeds, delta, axis):
+def plot_q_vals(seeds, delta, axis, DQN_qvals = None):
     
     data = []
-    for seed in seeds:
-        d = np.load(f'cliff_car/test_results/Cliffcar-newoptim-linear-False-test_seed_{seed}_robust_factor_-1/{delta}-q_vals.npy', allow_pickle=True).reshape(150,150,5)
-        data.append(d)
-    
-    q_vals = np.array([d.reshape(150,150,5) for d in data])
-    
+    if DQN_qvals is None:
+        for seed in seeds:    
+            d = np.load(f'cliff_car/test_results/Cliffcar-newoptim-linear-False-test_seed_{seed}_robust_factor_-1/{delta}-q_vals.npy', allow_pickle=True).reshape(150,150,5)
+            data.append(d)
+        
+        q_vals = np.array([d.reshape(150,150,5) for d in data])
+    else:
+        q_vals = DQN_qvals.reshape(len(seeds),150,150,5)
     # Move the first dimension to the back and ranspose the second and third dimenstion dimentions
     # (0,1,2,3) -> (2,1,0,3)
     q_vals = np.transpose(q_vals, axes=(2,1,0,3))
@@ -102,15 +105,20 @@ seeds = [10,22,23,99,123,420,4242,6942,6969,5318008]#,9000,9001,9002,9003,9004,9
 # seeds = [7777]
 # deltas = [0.1]
 linear = False
+DQN_frames = 10000
 
 
-def plot_all_seeds():
+def plot_all_seeds(DQN = False):
     for i, delta in enumerate(deltas):
         
         fig, axs = plt.subplots(1, 1)
 
-        paths_linear = [f'Cliff_car/test_results/Cliffcar-newoptim-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-model'
-                        for seed in seeds]
+        if DQN:
+            paths_linear = [f'Cliff_car/test_results/DQN_cliffcar-{DQN_frames}-frames/seed-{seed}-model'
+                            for seed in seeds]
+        else:
+            paths_linear = [f'Cliff_car/test_results/Cliffcar-newoptim-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-model'
+                            for seed in seeds]
 
         agents = load_agents(paths_linear)
 
@@ -129,8 +137,21 @@ def plot_all_seeds():
         x = np.array(x)/10
         y = np.abs(150-np.array(y)/10)
         
-        # goal, start, cliff = plot_q_vals(seeds, delta, axs[i])
-        goal, start, cliff = plot_q_vals(seeds, delta, axs)
+        if DQN:
+            DQN_qvals = []
+            for agent in agents:
+                X, Y = np.mgrid[0:1:150j, 0:1:150j]
+                xy = np.vstack((X.flatten(), Y.flatten())).T
+                states = torch.FloatTensor(xy).to(agent.device)
+
+                DQN_qvals.append(agent.get_q_vals(states))
+            DQN_qvals = np.array(DQN_qvals)
+            
+            goal, start, cliff = plot_q_vals(seeds, delta, axs, DQN_qvals = DQN_qvals)
+        else:
+            # goal, start, cliff = plot_q_vals(seeds, delta, axs[i])
+            goal, start, cliff = plot_q_vals(seeds, delta, axs, DQN = None)
+            
         # heat_plot = generate_heatmap(x, y, axs[i])
         heat_plot = generate_heatmap(x, y, axs)
         
@@ -160,12 +181,17 @@ def plot_all_seeds():
         # ax1.set_ylabel('Q-value')
         # ax2.set_ylabel('State density')
         # ax1.set_xlabel('State')
-        plt.title(f'Ensemble Cliff Car. Decision plane, delta={delta}')
-        
-        # Save the figure
-        
-        plt.savefig(f'plots/q-vals/Cliffcar-ensemble-{linear}-test-{delta}.png')
-        
+        if DQN:
+            plt.title(f'DQN Cliff Car. Decision plane')
+            plt.savefig(f'plots/q-vals/Cliffcar-DQN-{DQN_frames}-frames.png')
+            break
+        else:
+            plt.title(f'Ensemble Cliff Car. Decision plane, delta={delta}')
+            
+            # Save the figure
+            
+            plt.savefig(f'plots/q-vals/Cliffcar-ensemble-{linear}-test-{delta}.png')
+
         # plt.show()
     
 def plot_individual_seeds():
@@ -233,8 +259,8 @@ def plot_individual_seeds():
             
             # plt.show()
             
-plot_individual_seeds()
+# plot_individual_seeds()
 # plt.show()
-plot_all_seeds()
+plot_all_seeds(DQN = True)
     
     
