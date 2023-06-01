@@ -15,7 +15,7 @@ from cliff_car.cliff_car_agent import CliffCarAgent
 # Load the .npy file
 
 root_folder = 'sumo/test_results/test_seed_420_robust_factor_-1'
-root_folder = 'sumo/test_results/Truelinear-test_seed_6969_robust_factor_-1'
+root_folder = 'sumo/test_results/Truelinear-test_seed_22_robust_factor_-1'
 root_folder = 'sumo/test_results/newoptim-linear-True-test_seed_5318008_robust_factor_-1'
 sys.path.append(os.getcwd() + '/sumo')
 sys.path.append('cliff_car')
@@ -208,7 +208,7 @@ def plot_sumo_states(seeds, delta_vals, linear=True):
 # # get_and_plot_q_vals(0.01, same_plot=True, vertical_lines=True)
 # q_vals = get_q_vals(0.05)
 # plot_q_vals(q_vals, 0.05, vertical_lines=True)
-# get_and_plot_betas(0.05, rolling_mean=100)
+get_and_plot_betas(0.01, rolling_mean=100)
 # get_and_plot_csv_data(delta=0.05)
 # # load_and_test_agent(delta=0.05, test_games=10, render_games=10)
 

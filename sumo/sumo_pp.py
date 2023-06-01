@@ -43,8 +43,8 @@ class SumoPPEnv:
         else:
             self.noise_var = noise_var
         # self.reward_function = lambda pos: 1/(pos - self.hill_position)**2 # 1 over squared istances from the hill
-        # self.reward_function = lambda pos: -pos**2 + 2*self.hill_position*pos
-        self.reward_function = lambda pos: pos**2
+        self.reward_function = lambda pos: -pos**2 + 2*self.hill_position*pos
+        # self.reward_function = lambda pos: pos**2
         self.reward_normalizer = lambda reward: reward/self.reward_function(self.hill_position)
 
         self.max_x = line_length # Terminates beyond this - Hill may not move beyond 10 of this position

@@ -97,7 +97,7 @@ class TheSlightlyCoolerReplayBuffer(ReplayBuffer):
         current_samples = self[current_idxs] # Samples to calc KNN from
 
         for i, r in enumerate(current_samples['obs']):
-            dists = [np.linalg.norm(i - x) for x in self.obs_buf[:self.size]]
+            dists = [np.linalg.norm(r - x) if self.acts_buf[p] == self.acts_buf[i] else np.infty for p, x in enumerate(self.obs_buf[:self.size])]
             K = min(K, len(dists))
             idxs = np.argpartition(dists, K)[:K]
             KNN_sampless.append(self[idxs])
