@@ -105,6 +105,9 @@ def maximize_f(f):
 #         else:
 #             return x_mid
 
+num_quadratic = 0
+num_approx = 0
+
 def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1, linear_only = False):
     
     if not linear_only:
@@ -121,9 +124,13 @@ def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1, linear_only = False):
         b, c = linear_approximation(X_v, y_v)
         A = np.zeros((len(b),len(b)))
         
-    # b, c = linear_approximation(X_v, y_v)
+    # b, c = linear_approximation(X_v, y_vs)
     # A = np.zeros((len(b),len(b)))
-
+    global num_quadratic, num_approx
+    if A[0][0] == 0:
+        num_quadratic += 1
+    num_approx += 1
+        
     ### Gaussian approximation ###
     # Compute the mean and covariance of the samples X_p, y_p
     mu = np.mean(y_p, axis = 0)

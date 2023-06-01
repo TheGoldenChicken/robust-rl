@@ -35,7 +35,7 @@ def drawImage(display, path, center, scale=None, angle=None):
 
 class CliffCar:
 
-    def __init__(self, width=1500, height=1500, noise=True, start_pos_noise=False):
+    def __init__(self, width=1500, height=1500, noise=True, start_pos_noise=False, noise_mean = np.array([0,0]), noise_var = None):
 
         self.width = width
         self.height = height
@@ -61,9 +61,10 @@ class CliffCar:
         self.min = np.array([self.min_x, self.min_y])
 
         self.speed = 20
-        self.noise_mean = np.array([0,0])
+        self.noise_mean = noise_mean
         # self.noise_var = 0.0000001
-        self.noise_var = self.speed / 3
+        if noise_var is None: self.noise_var = self.speed / 3
+        else: self.noise_var = noise_var
         self.reward_function = lambda x, y: sum([-x ** 2 + 2 * self.goal[0] * x, -y ** 2 + 2 * self.goal[1] * y])
         max_reward = self.reward_function(self.goal[0], self.goal[1])
         min_reward = self.reward_function(0, self.max_y)

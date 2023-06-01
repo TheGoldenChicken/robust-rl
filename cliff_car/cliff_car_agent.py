@@ -172,7 +172,7 @@ class CliffCarAgent:
 
             # NOTE that we also get the last state, action, reward when the environment terminates here...
 
-            sar = [(np.nan, np.nan, np.nan)] * self.env.max_duration
+            sar = np.zeros([self.env.max_duration, 3,2]) # state, action, reward
 
             i = 0
             # Changed here from training, since we play games till the end, not for a certain number of steps (frames)
@@ -181,7 +181,7 @@ class CliffCarAgent:
                 next_state, reward, done = self.step(action)
 
                 # Using item here because they are numpy arrays... stupid
-                sar[i] = (state, action.item(), reward)
+                sar[i] = np.array([state, np.array([action.item(),0]), np.array([reward,0])])
 
                 i += 1
 

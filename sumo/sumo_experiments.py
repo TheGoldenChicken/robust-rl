@@ -54,8 +54,8 @@ if __name__ == "__main__":
     # Replay buffer parameters - Should not be changed!
     obs_dim = env.obs_dim
     action_dim = env.action_dim
-    batch_size = 40
-    fineness = 100
+    batch_size = 40 # 40
+    fineness = 5 # 100
     ripe_when = None
     state_max, state_min = np.array([env.max_min[0]]), np.array([env.max_min[1]])
     ready_when = 10

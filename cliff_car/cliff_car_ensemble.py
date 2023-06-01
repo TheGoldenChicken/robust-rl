@@ -59,8 +59,8 @@ class EnsembleCliffTestAgent:
             done = False
 
             # NOTE that we also get the last state, action, reward when the environment terminates here...
-
-            sar = []#[(np.nan,np.nan,np.nan)] * self.env.max_duration
+            
+            sar = np.zeros([self.env.max_duration, 3,2]) # state, action, reward
 
             i = 0
             # Changed here from training, since we play games till the end, not for a certain number of steps (frames)
@@ -69,7 +69,7 @@ class EnsembleCliffTestAgent:
                 next_state, reward, done = self.step(action)
 
                 # Using item here because they are numpy arrays... stupid
-                sar.append((list(state), action.item(), reward))
+                sar[i] = np.array([state, np.array([action.item(),0]), np.array([reward,0])])
 
                 i += 1
 
@@ -77,4 +77,4 @@ class EnsembleCliffTestAgent:
 
             all_sar.append(sar)
 
-        return all_sar
+        return np.array(all_sar)

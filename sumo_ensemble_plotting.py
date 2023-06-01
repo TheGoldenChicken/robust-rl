@@ -8,6 +8,7 @@ import matplotlib.patches as mpatches
 from mpl_toolkits.axes_grid1 import AxesGrid
 from sumo import DQN_sumo_agent
 from sumo import DQN_sumo_ensemble
+import os
 
 env = SumoPPEnv()
 
@@ -27,14 +28,14 @@ def load_agents(paths):
 
 # deltas = [0.1,0.2]
 # seeds = [22]
-training_type = "actually_quadratic"
+training_type = "newoptim"
 linear = False
 robust_factor = -1
 
 
-# deltas = [0.001, 0.005, 0.01, 0.05, 0.1, 0.2,
-#           0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 5]
-# seeds = [4242, 6942, 123, 420, 5318008]#, 22, 23, 99, 10]
+deltas = [0.001, 0.005, 0.01, 0.05, 0.1, 0.2,
+          0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2]
+seeds = [4242, 6942, 6969, 123, 420, 5318008, 22, 23, 99, 10]
 # training_type = "longertraining"
 # linear = False
 
@@ -137,6 +138,13 @@ def plot_q_and_state_hist(test_games = 200, DQN = False):
 
         all_sar = ensemble_agent.test(test_games=test_games)
 
+        if DQN:
+            # os.mkdir("sumo/test_results/sumo_ensemble")
+            np.save(f"sumo/test_results/sumo_ensemble/DQN-all_sar-games-{test_games}.npy", all_sar, allow_pickle=True)
+        else:
+            # os.mkdir("sumo/test_results/sumo_ensemble")
+            np.save(f"sumo/test_results/sumo_ensemble/{delta}-all_sar-games-{test_games}.npy", all_sar, allow_pickle=True)
+
         # Create a bar plot of all the states visisted in the test_games
         ax2.hist(all_sar[:,:,0].flatten(), bins=100, label = f"State distribution", alpha=0.5, density=True)
         
@@ -200,7 +208,7 @@ def plot_state_hist_multiple_delta(test_games = 200):
                     cbar_pad = 0.1,
                     )
     
-    paths_linear = [f'sumo/test_results/DQN_sumo-8000-frames/seed-{seed}-model'
+    paths_linear = [f'sumo/test_results/DQN_sumo-{DQN_iter}-frames/seed-{seed}-model'
                         for seed in seeds]
 
     agents = load_agents(paths_linear)
@@ -314,8 +322,8 @@ def plot_q_as_image_multiple_delta():
     
     axs[0].set_title(f'State/optimal action diagram')
     
-    # Plot the q-values for the DQN 8000 agent
-    paths = [f'sumo/test_results/DQN_sumo-8000-frames/seed-{seed}-q_vals.npy' for seed in seeds]
+    # Plot the q-values for the DQN {DQN_iter} agent
+    paths = [f'sumo/test_results/DQN_sumo-{DQN_iter}-frames/seed-{seed}-q_vals.npy' for seed in seeds]
     q_vals = np.array([sum_plot.get_q_vals(path=path) for path in paths])
     q_vals = np.transpose(q_vals, axes = (1,0,2))  
     
@@ -333,6 +341,7 @@ def plot_q_as_image_multiple_delta():
     
     # Remove x ticks
     axs[0].set_yticks([])
+
     
     for i, delta in enumerate(deltas):
         paths = [f'sumo/test_results/{training_type}-linear-{linear}-test_seed_{seed}_robust_factor_{robust_factor}/{delta}-q_vals.npy'
@@ -382,8 +391,8 @@ def plot_q_as_image_multiple_delta():
     patch1 = mpatches.Patch(color='green', label=f"Left")
     plt.legend(handles=[patch0, patch1, patch2, cliff_line,start_line], loc = 4)
     
-
-    plt.savefig(f'plots/q-vals/{training_type}-ensemble-all-delta-q-vals-{linear}.png', dpi=300)
+    plt.show()
+    # plt.savefig(f'plots/q-vals/{training_type}-ensemble-all-delta-q-vals-{linear}.png', dpi=300)
 
 
 def plot_DQN_performance(test_games = 200):
@@ -422,6 +431,7 @@ def plot_DQN_performance(test_games = 200):
         DQN_agent = DQN_sumo_agent.DQNSumoAgent(env, replay_buffer=None, epsilon_decay=None, target_update = 0, model_path=model_path)
 
         all_sar = DQN_agent.test(test_games=test_games)
+        
 
         # Create a bar plot of all the states visisted in the test_games
         ax2.hist(all_sar[:,:,0].flatten(), bins=100, label = f"State distribution", alpha=0.5, density=True)
@@ -496,20 +506,23 @@ def print_acum_return(seeds, delta_vals, linear=True):
             print(f"seed:{seeds[j]},delta:{delta_vals[i]},{acum_return}")
         print(f"delta:{delta_vals[i]},mean:{np.mean(acum_returns)},std:{np.std(acum_returns)}")
         
-        
+
+# seeds = [4242, 6942, 420, 5318008, 23]
+# deltas = [0.01,0.05,0.1, 0.5,1]
+    
 # print_acum_return([6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10], [0.001,0.01,0.1,1,2], linear=False)    q 
     
 # PLotting the state distributions individually
-plot_sumo_states_individual([4242, 6942],[0.01,0.05,0.1, 0.5],linear=False)
+# plot_sumo_states_individual([4242, 6942, 420, 5318008, 23],[0.01,0.05,0.1, 0.5,1],linear=False)
 
 # Plot all q values and state distributions for all seeds seperately
 # plot_DQN_performance()
 
 # Plot all q values and state distributions as an ensemble method
-# plot_q_and_state_hist(DQN = True)
+plot_q_and_state_hist(DQN = True, test_games = 100)
 
 # Plot all q values and state distributions as an ensemble method
-# plot_q_and_state_hist()
+plot_q_and_state_hist(test_games = 100)
 
 # Plot the Q values as decision diagrams for all delta values (ensemble method)
 # plot_q_as_image_multiple_delta()

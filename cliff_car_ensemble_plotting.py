@@ -1,4 +1,11 @@
 #%%
+import os
+import sys
+
+sys.path.append('.')
+# Set the current working directory to the folder this file is in
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
 from cliff_car import cliff_car_ensemble
 from cliff_car.cliff_car_agent import CliffCarAgent
 from cliff_car.cliff_car_again import CliffCar
@@ -42,18 +49,17 @@ def generate_heatmap(x, y, axis, std = 8):
     # Make all bins with 0 values transparent
     
     
-    heat_plot = axis.imshow(heatmap.T, extent=extent, origin='lower', cmap=cm.jet, alpha=0.5, label = 'States visited')
+    heat_plot = axis.imshow(heatmap.T, extent=extent, origin='lower', cmap=cm.jet, alpha=0.6, label = 'States visited')
 
     return heat_plot
-    # plt.show()
     # return heatmap.T, extent
 
 def plot_q_vals(seeds, delta, axis, DQN_qvals = None):
     
     data = []
     if DQN_qvals is None:
-        for seed in seeds:    
-            d = np.load(f'cliff_car/test_results/Cliffcar-newoptim-linear-False-test_seed_{seed}_robust_factor_-1/{delta}-q_vals.npy', allow_pickle=True).reshape(150,150,5)
+        for seed_ in seeds:
+            d = np.load(f'cliff_car/test_results/Cliffcar-newoptim-linear-{linear}-test_seed_{seed_}_robust_factor_-1/{delta}-q_vals.npy', allow_pickle=True).reshape(150,150,5)
             data.append(d)
         
         q_vals = np.array([d.reshape(150,150,5) for d in data])
@@ -70,6 +76,8 @@ def plot_q_vals(seeds, delta, axis, DQN_qvals = None):
     right = 3 # yellow
     up = 4 # up
     
+    
+    
     # Perform majority viting between the models
     # q_vals = np.argmax(q_vals, axis=2)
     # order = q_vals
@@ -79,18 +87,20 @@ def plot_q_vals(seeds, delta, axis, DQN_qvals = None):
 
     # Make a color map
     colors = np.zeros((150,150,3))
-    colors[best_actions == noopt] = [255,0,0]
-    colors[best_actions == right] = [0,255,0]
-    colors[best_actions == left] = [0,0,255]
-    colors[best_actions == down] = [255,255,0]
-    colors[best_actions == up] = [255,0,255]
+    colors[best_actions == noopt] = [200,0,0]
+    colors[best_actions == right] = [0,200,0]
+    colors[best_actions == left] = [0,200,200]
+    colors[best_actions == down] = [200,200,0]
+    colors[best_actions == up] = [200,0,200]
 
     # Plot the color map
     axis.imshow(colors.astype(np.uint8))
     
-    goal_plot = axis.scatter([112.5],[33.3],label = 'Goal')
-    start_plot = axis.scatter([33.3],[33.3],label = 'Start')
-
+    axis.scatter([112.5],[33.3], color = "black", marker = "*", s = 70)
+    axis.scatter([33.3],[33.3],label = 'Start', color = "black", marker = "o", s = 45)
+    goal_plot = axis.scatter([112.5],[33.3],label = 'Goal', color = "white", marker = "*", s = 60)
+    start_plot = axis.scatter([33.3],[33.3],label = 'Start', color = "white", marker = "o", s = 35)
+    
     # Dotted Horizontal lin through image at y = 150 - 30
     cliff = axis.plot([0,149],[30,30],'--',color='black', label = 'Cliff')
 
@@ -105,7 +115,7 @@ seeds = [10,22,23,99,123,420,4242,6942,6969,5318008]#,9000,9001,9002,9003,9004,9
 # seeds = [7777]
 # deltas = [0.1]
 linear = False
-DQN_frames = 10000
+DQN_frames = 12000
 
 
 def plot_all_seeds(DQN = False):
@@ -131,7 +141,7 @@ def plot_all_seeds(DQN = False):
         y = []
         for game in all_sar:
             for step in game:
-                if step[0] is not np.nan:
+                if step[0] is not np.nan and step[0][0] != 0 and step[0][1] != 0:
                     x.append(step[0][0])
                     y.append(step[0][1])
         x = np.array(x)/10
@@ -150,14 +160,14 @@ def plot_all_seeds(DQN = False):
             goal, start, cliff = plot_q_vals(seeds, delta, axs, DQN_qvals = DQN_qvals)
         else:
             # goal, start, cliff = plot_q_vals(seeds, delta, axs[i])
-            goal, start, cliff = plot_q_vals(seeds, delta, axs, DQN = None)
+            goal, start, cliff = plot_q_vals(seeds, delta, axs, DQN_qvals = None)
             
         # heat_plot = generate_heatmap(x, y, axs[i])
         heat_plot = generate_heatmap(x, y, axs)
         
         opopt_patch = mpatches.Patch(color='red', label='OpOpt')
         down_patch = mpatches.Patch(color='green', label='Up')
-        left_patch = mpatches.Patch(color='blue', label='Left')
+        left_patch = mpatches.Patch(color='cyan', label='Left')
         right_patch = mpatches.Patch(color='yellow', label='Right')
         up_patch = mpatches.Patch(color='purple', label='Down')
 
@@ -184,6 +194,7 @@ def plot_all_seeds(DQN = False):
         if DQN:
             plt.title(f'DQN Cliff Car. Decision plane')
             plt.savefig(f'plots/q-vals/Cliffcar-DQN-{DQN_frames}-frames.png')
+            plt.close()
             break
         else:
             plt.title(f'Ensemble Cliff Car. Decision plane, delta={delta}')
@@ -191,20 +202,35 @@ def plot_all_seeds(DQN = False):
             # Save the figure
             
             plt.savefig(f'plots/q-vals/Cliffcar-ensemble-{linear}-test-{delta}.png')
+            plt.close()
 
         # plt.show()
     
-def plot_individual_seeds():
+def plot_individual_seeds(DQN = False):
     for seed in seeds:
         for i, delta in enumerate(deltas):
             
             fig, axs = plt.subplots(1, 1)
-
-            paths_linear = [f'Cliff_car/test_results/Cliffcar-newoptim-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-model'
-                            for s in [seed]]
+            DQN_q_vals = None
+            if DQN:
+                paths_linear = [f'Cliff_car/test_results/DQN_cliffcar-{DQN_frames}-frames/seed-{seed}-model']
+                
+                
+            else:
+                paths_linear = [f'Cliff_car/test_results/Cliffcar-newoptim-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-model']
 
             agents = load_agents(paths_linear)
 
+            if DQN:
+                DQN_q_vals = []
+                X, Y = np.mgrid[0:1:150j, 0:1:150j]
+                xy = np.vstack((X.flatten(), Y.flatten())).T
+                states = torch.FloatTensor(xy).to(agents[0].device)
+
+                DQN_q_vals.append(agents[0].get_q_vals(states))
+
+                DQN_q_vals = np.array(DQN_q_vals)
+                
             ensemble_agent = cliff_car_ensemble.EnsembleCliffTestAgent(env, agents)
 
             all_sar = ensemble_agent.test(test_games=100)
@@ -214,20 +240,20 @@ def plot_individual_seeds():
             y = []
             for game in all_sar:
                 for step in game:
-                    if step[0] is not np.nan:
+                    if step[0] is not np.nan and step[0][0] != 0 and step[0][1] != 0:
                         x.append(step[0][0])
                         y.append(step[0][1])
             x = np.array(x)/10
             y = np.abs(150-np.array(y)/10)
             
             # goal, start, cliff = plot_q_vals(seeds, delta, axs[i])
-            goal, start, cliff = plot_q_vals(seeds, delta, axs)
+            goal, start, cliff = plot_q_vals([seed], delta, axs, DQN_qvals = DQN_q_vals)
             # heat_plot = generate_heatmap(x, y, axs[i])
             heat_plot = generate_heatmap(x, y, axs)
             
             opopt_patch = mpatches.Patch(color='red', label='OpOpt')
             down_patch = mpatches.Patch(color='green', label='Up')
-            left_patch = mpatches.Patch(color='blue', label='Left')
+            left_patch = mpatches.Patch(color='cyan', label='Left')
             right_patch = mpatches.Patch(color='yellow', label='Right')
             up_patch = mpatches.Patch(color='purple', label='Down')
 
@@ -251,16 +277,122 @@ def plot_individual_seeds():
             # ax1.set_ylabel('Q-value')
             # ax2.set_ylabel('State density')
             # ax1.set_xlabel('State')
-            plt.title(f'Cliff Car. Decision plane, seed={seed}, delta={delta}')
-            
-            # Save the figure
-            
-            plt.savefig(f'plots/q-vals/Cliffcar-seed-{seed}-{linear}-test-{delta}.png')
+            if DQN:
+                plt.title(f'DQN Cliff Car. Decision plane, seed={seed}, delta={delta}')
+        
+                plt.savefig(f'plots/q-vals/DQN-{DQN_frames}-cliffcar-seed-{seed}-{linear}-test-{delta}.png')
+                plt.close()
+                break
+            else:
+                plt.title(f'Robust Cliff Car. Decision plane, seed={seed}, delta={delta}')
+        
+                plt.savefig(f'plots/q-vals/cliffcar-seed-{seed}-{linear}-test-{delta}.png')
+                plt.close()
             
             # plt.show()
+
+# import linear regression
+from sklearn.linear_model import LinearRegression
+
+def plot_optimal_action_distribution_mean_seeds():
+    
+    
+    
+    delta_optimal_actions = np.zeros((len(deltas), 5))
+    for delta in deltas:
+        for i, seed in enumerate(seeds):
+
+            q_vals = np.load(f'cliff_car/test_results/Cliffcar-newoptim-linear-{linear}-test_seed_{seed}_robust_factor_-1/{delta}-q_vals.npy', allow_pickle=True)
             
+            delta_optimal_actions[i] += np.bincount(np.argmax(q_vals, axis=-1), minlength=5)/(250*250*len(seeds))
+    
+    action_label = {0:"noopt",1:"right",2:"left",3:"up",4:"down"}
+    action_color = {0:"red",1:"orange",2:"blue",3:"limegreen",4:"magenta"}
+    
+    # Plot the ratios of actions for each delta
+    for i in range(5):
+        if(i in [1,3,4]):
+            alpha = 1
+            marker = "-o"
+        else:
+            alpha = 0.3
+            marker = "-"
+        axs[0].plot(np.arange(10),delta_optimal_actions[:,i],marker,color = action_color[i],label=action_label[i],alpha=alpha)
+
+    
+    # Plot a linear regression for each of the 5 actions
+    lin_reg = LinearRegression()
+    for i in [1,3,4]:
+        lin_reg.fit(np.arange(10).reshape(-1,1),delta_optimal_actions[:,i])
+        axs[0].plot(np.arange(10),lin_reg.predict(np.arange(10).reshape(-1,1)),"--",color = action_color[i])
+
+    axs[0].set_xticks(np.arange(10),deltas)
+    axs[0].set_xlabel("dDlta")
+    axs[0].set_ylabel("Action ratios")
+    
+    axs[0].set_title("Invidual (mean)")
+    
+    axs[0].legend(loc = "center left")
+        
+def plot_optimal_action_distribution_ensemble():
+    delta_optimal_actions = np.zeros((len(deltas), 5))
+    for i, delta in enumerate(deltas):
+        data = []
+        for seed in seeds:    
+            d = np.load(f'cliff_car/test_results/Cliffcar-newoptim-linear-False-test_seed_{seed}_robust_factor_-1/{delta}-q_vals.npy', allow_pickle=True).reshape(150,150,5)
+            data.append(d)
+            
+        q_vals = np.array([d.reshape(150,150,5) for d in data])
+
+        q_vals = np.transpose(q_vals, axes=(2,1,0,3))
+        
+        best_actions = np.argmax(np.apply_along_axis(np.bincount,-1,np.argmax(q_vals,axis=-1),minlength=5),axis=-1)
+
+        delta_optimal_actions[i] += np.bincount(best_actions.flatten(), minlength=5)/(250*250)
+        
+    action_label = {0:"noopt",1:"right",2:"left",3:"up",4:"down"}
+    action_color = {0:"red",1:"orange",2:"blue",3:"limegreen",4:"magenta"}
+
+    
+    # Plot the ratios of actions for each delta
+    for i in range(5):
+        if(i in [1,3,4]):
+            alpha = 1
+            marker = "-o"
+        else:
+            alpha = 0.3
+            marker = "-"
+        axs[1].plot(np.arange(10),delta_optimal_actions[:,i],marker,color = action_color[i],label=action_label[i],alpha=alpha)
+    
+    
+    # Plot a linear regression for each of the 5 actions
+    lin_reg = LinearRegression()
+    for i in [1,3,4]:
+        lin_reg.fit(np.arange(10).reshape(-1,1),delta_optimal_actions[:,i])
+        axs[1].plot(np.arange(10),lin_reg.predict(np.arange(10).reshape(-1,1)),"--",color = action_color[i])
+
+    axs[1].set_xticks(np.arange(10),deltas)
+    axs[1].set_xlabel("Delta")
+    axs[1].set_ylabel("Action ratio")
+    
+    # Change the view 
+    axs[1].set_ylim([0,0.35])
+    axs[1].set_title("Ensemble (majority vote)")
+    
+    axs[1].legend(loc = "center left")
+        
+
+for DQN_frames in [8000,10000,12000]:
+    plot_individual_seeds(DQN = True)
+    plot_all_seeds(DQN = True)
+    
 # plot_individual_seeds()
 # plt.show()
-plot_all_seeds(DQN = True)
+# plot_all_seeds()
+
+# fig, axs = plt.subplots(1,2,figsize=(12,5))
+# plot_optimal_action_distribution_mean_seeds()
+# plot_optimal_action_distribution_ensemble()
+# plt.show()
     
     
