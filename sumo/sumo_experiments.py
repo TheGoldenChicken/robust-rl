@@ -76,12 +76,12 @@ if __name__ == "__main__":
     # Seeds
     seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
     seeds = [23, 22, 99, 10]
-    seeds = [6942, 123, 420, 5318008]
     # Delta values to test
     # delta_vals = [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 0.001, 0.005, 0.01, 0.05, 0.5, 1, 2, 3, 5]
 
     # delta_vals = [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 0.001, 0.005, 0.01, 0.05, 0.5, 1, 2]
-    delta_vals = [0.01,0.05,0.1,0.5,1]
+    delta_vals = [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 0.001]
+    # delta_vals = [0.7, 0.8, 0.9, 0.001]
 
     # seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
     # seeds = [420]
@@ -99,7 +99,8 @@ if __name__ == "__main__":
         for linear in linear_only:
             for factor in factors:
                 # TODO: Fix ugly formatting here, not really becoming of a serious researcher
-                test_name = f'actually_quadratic-linear-{linear}-test_seed_{seed}_robust_factor_{factor}'
+                test_name = f'changedrewardfunction-linear-{linear}-test_seed_{seed}_robust_factor_{factor}'
+
 
                 if not os.path.isdir(f'test_results/{test_name}'):
                     os.mkdir(f'test_results/{test_name}',)
