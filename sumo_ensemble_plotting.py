@@ -33,8 +33,8 @@ linear = False
 robust_factor = -1
 
 
-deltas = [ 3, 5]#0.001, 0.005, 0.01, 0.05, 0.1, 0.2,
-         # 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2,
+deltas = [0.001, 0.005, 0.01, 0.05, 0.1, 0.2,
+         0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 5]#
 seeds = [4242, 6942, 6969, 123, 420, 5318008, 22, 23, 99, 10]
 # training_type = "longertraining"
 # linear = False
@@ -391,8 +391,8 @@ def plot_q_as_image_multiple_delta():
     patch1 = mpatches.Patch(color='green', label=f"Left")
     plt.legend(handles=[patch0, patch1, patch2, cliff_line,start_line], loc = 4)
     
-    plt.show()
-    # plt.savefig(f'plots/q-vals/{training_type}-ensemble-all-delta-q-vals-{linear}.png', dpi=300)
+    # plt.show()
+    plt.savefig(f'plots/q-vals/{training_type}-ensemble-all-delta-q-vals-{linear}.png', dpi=300)
 
 
 def plot_DQN_performance(test_games = 200):
@@ -519,13 +519,13 @@ def print_acum_return(seeds, delta_vals, linear=True):
 # plot_DQN_performance()
 
 # Plot all q values and state distributions as an ensemble method
-plot_q_and_state_hist(DQN = True, test_games = 100)
+# plot_q_and_state_hist(DQN = True, test_games = 100)
 
 # Plot all q values and state distributions as an ensemble method
-plot_q_and_state_hist(test_games = 100)
+# plot_q_and_state_hist(test_games = 100)
 
 # Plot the Q values as decision diagrams for all delta values (ensemble method)
-# plot_q_as_image_multiple_delta()
+plot_q_as_image_multiple_delta()
 
 # Plot the state distributions as heatmap for all delta values (ensemble method)
 # plot_state_hist_multiple_delta()

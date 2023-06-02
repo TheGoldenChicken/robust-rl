@@ -69,10 +69,10 @@ def test_agent_group(agent_group, n_games = 10):
 def accum_reward(asr_group):
     asr_DQN_agents, asr_DQN_ensemble_agent, asr_agents, asr_ensemble_agents = asr_group
     
-    DQN_accum_r = np.sum(np.apply_along_axis(np.nan_to_num, -1, asr_DQN_agents[:,:,:,2]),axis=-1)
-    DQN_ensemble_accum_r = np.sum(np.nan_to_num(asr_DQN_ensemble_agent[:,:,2]),axis=-1)
-    accum_r = {delta : np.sum(np.apply_along_axis(np.nan_to_num, -1, agents[:,:,:,2]),axis=-1) for delta, agents in asr_agents.items()}
-    ensemble_accum_r = {delta : np.sum(np.nan_to_num(agent[:,:,2]),axis=-1) for delta, agent in asr_ensemble_agents.items()}
+    DQN_accum_r = np.sum(np.apply_along_axis(np.nan_to_num, -1, asr_DQN_agents[:,:,:,2,0]),axis=-1)
+    DQN_ensemble_accum_r = np.sum(np.nan_to_num(asr_DQN_ensemble_agent[:,:,2,0]),axis=-1)
+    accum_r = {delta : np.sum(np.apply_along_axis(np.nan_to_num, -1, agents[:,:,:,2,0]),axis=-1) for delta, agents in asr_agents.items()}
+    ensemble_accum_r = {delta : np.sum(np.nan_to_num(agent[:,:,2,0]),axis=-1) for delta, agent in asr_ensemble_agents.items()}
     
     return DQN_accum_r, DQN_ensemble_accum_r, accum_r, ensemble_accum_r
 
@@ -138,70 +138,70 @@ def get_accum(env_type,
 ### SUMO ENVIRONMENT ###
     
 # Define mean and variance of environment noise
-sumo_noise_mean = []#0.14, 0.32, 0.45, 1.0, 1.41, 2.0, 2.45, 2.83, 3.16, 3.46, 3.74, 4.0, 4.24, 4.47, 6.32]
-sumo_noise_var = 10+np.array([0.65, 1.55, 2.3, 6.21, 10.28, 18.59, 28.1, 39.42, 53.06, 69.59, 89.71, 114.23, 144.11, 180.59, 1464.1])
-
-# Load all environmnets
-sumo_envs = [[SumoPPEnv(noise_mean=mean, noise_var=0) for mean in sumo_noise_mean],
-        [SumoPPEnv(noise_mean=0, noise_var=var) for var in sumo_noise_var]]
-sumo_std_env = SumoPPEnv()
-
-# Define all deltas and seeds
-sumo_deltas = [0.001, 0.005, 0.01, 0.05, 0.1, 0.2,
-          0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 5]
-sumo_seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
-sumo_linear = False
-sumo_n_games = 100
-
-sumo_training_length = 8000
-
-if sumo_training_length == 12000: sumo_training_type = "longertraining"
-else: sumo_training_type = "newoptim"
-
-# Get path to all agents
-DQN_sumo_model_paths = [f'sumo/test_results/DQN_sumo-{sumo_training_length}-frames/seed-{seed}-model' for seed in sumo_seeds]
-sumo_model_paths = [[f'sumo/test_results/{sumo_training_type}-linear-{sumo_linear}-test_seed_{seed}_robust_factor_-1/{delta}-model'
-                        for seed in sumo_seeds] for delta in sumo_deltas]
-
-sumo_no_noise_accum, sumo_mean_shift_accum, sumo_var_shift_accum = \
-    get_accum("sumo",
-              DQN_sumo_agent.DQNSumoAgent, DQN_sumo_ensemble.EnsembleDQNSumoTestAgent, sumo_ensemble.EnsembleSumoTestAgent, sumo_agent.SumoAgent,
-              DQN_sumo_model_paths, sumo_model_paths,
-              sumo_std_env, sumo_envs,
-              sumo_deltas, sumo_n_games)
-
-### CLIFF CAR ENVIRONMENT ###
-
-# # Define mean and variance of environment noise
-# cliff_car_noise_mean = []#0.14, 0.32, 0.45, 1.0, 1.41, 2.0, 2.45, 2.83, 3.16, 3.46, 3.74, 4.0, 4.24, 4.47, 6.32]
-# cliff_car_noise_var = np.array([6.98,7.38,7.7,9.29,10.8,22.07,41.99,126.92,356.9,2680.17])
+# sumo_noise_mean = []#0.14, 0.32, 0.45, 1.0, 1.41, 2.0, 2.45, 2.83, 3.16, 3.46, 3.74, 4.0, 4.24, 4.47, 6.32]
+# sumo_noise_var = 10+np.array([0.65, 1.55, 2.3, 6.21, 10.28, 18.59, 28.1, 39.42, 53.06, 69.59, 89.71, 114.23, 144.11, 180.59, 1464.1])
 
 # # Load all environmnets
-# cliff_car_envs = [[cliff_car_again.CliffCar(noise_mean=mean, noise_var=0) for mean in cliff_car_noise_mean],
-#         [cliff_car_again.CliffCar(noise_mean=0, noise_var=var) for var in cliff_car_noise_var]]
-# cliff_car_std_env = cliff_car_again.CliffCar()
+# sumo_envs = [[SumoPPEnv(noise_mean=mean, noise_var=0) for mean in sumo_noise_mean],
+#         [SumoPPEnv(noise_mean=0, noise_var=var) for var in sumo_noise_var]]
+# sumo_std_env = SumoPPEnv()
 
 # # Define all deltas and seeds
-# cliff_car_deltas = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 3, 5]
-# cliff_car_seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
-# cliff_car_linear = False
-# cliff_car_n_games = 100
+# sumo_deltas = [0.001, 0.005, 0.01, 0.05, 0.1, 0.2,
+#           0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 5]
+# sumo_seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
+# sumo_linear = False
+# sumo_n_games = 100
 
-# cliff_car_training_length = 8000
+# sumo_training_length = 8000
 
-# cliff_car_training_type = "newoptim"
+# if sumo_training_length == 12000: sumo_training_type = "longertraining"
+# else: sumo_training_type = "newoptim"
 
 # # Get path to all agents
-# DQN_cliff_car_model_paths = [f'cliff_car/test_results/DQN_cliffcar-{cliff_car_training_length}-frames/seed-{seed}-model' for seed in cliff_car_seeds]
-# cliff_car_model_paths = [[f'cliff_car/test_results/Cliffcar-{cliff_car_training_type}-linear-{cliff_car_linear}-test_seed_{seed}_robust_factor_-1/{delta}-model'
-#                         for seed in cliff_car_seeds] for delta in cliff_car_deltas]
+# DQN_sumo_model_paths = [f'sumo/test_results/DQN_sumo-{sumo_training_length}-frames/seed-{seed}-model' for seed in sumo_seeds]
+# sumo_model_paths = [[f'sumo/test_results/{sumo_training_type}-linear-{sumo_linear}-test_seed_{seed}_robust_factor_-1/{delta}-model'
+#                         for seed in sumo_seeds] for delta in sumo_deltas]
 
-# cliff_car_no_noise_accum, cliff_car_mean_shift_accum, cliff_car_var_shift_accum = \
-#     get_accum("cliff_car",
-#               cliff_car_DQN.DQNCliffCarAgent, cliff_car_ensemble.EnsembleCliffTestAgent, cliff_car_ensemble.EnsembleCliffTestAgent, cliff_car_agent.CliffCarAgent,
-#               DQN_cliff_car_model_paths, cliff_car_model_paths,
-#               cliff_car_std_env, cliff_car_envs,
-#               cliff_car_deltas, cliff_car_n_games)
+# sumo_no_noise_accum, sumo_mean_shift_accum, sumo_var_shift_accum = \
+#     get_accum("sumo",
+#               DQN_sumo_agent.DQNSumoAgent, DQN_sumo_ensemble.EnsembleDQNSumoTestAgent, sumo_ensemble.EnsembleSumoTestAgent, sumo_agent.SumoAgent,
+#               DQN_sumo_model_paths, sumo_model_paths,
+#               sumo_std_env, sumo_envs,
+#               sumo_deltas, sumo_n_games)
+
+## CLIFF CAR ENVIRONMENT ###
+
+# Define mean and variance of environment noise
+cliff_car_noise_mean = []#0.14, 0.32, 0.45, 1.0, 1.41, 2.0, 2.45, 2.83, 3.16, 3.46, 3.74, 4.0, 4.24, 4.47, 6.32]
+cliff_car_noise_var = np.array([6.98,7.38,7.7,9.29,10.8,22.07,41.99,126.92,356.9,2680.17])
+
+# Load all environmnets
+cliff_car_envs = [[cliff_car_again.CliffCar(noise_mean=mean, noise_var=0) for mean in cliff_car_noise_mean],
+        [cliff_car_again.CliffCar(noise_mean=0, noise_var=var) for var in cliff_car_noise_var]]
+cliff_car_std_env = cliff_car_again.CliffCar()
+
+# Define all deltas and seeds
+cliff_car_deltas = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 3, 5]
+cliff_car_seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
+cliff_car_linear = False
+cliff_car_n_games = 100
+
+cliff_car_training_length = 12000
+
+cliff_car_training_type = "newoptim"
+
+# Get path to all agents
+DQN_cliff_car_model_paths = [f'cliff_car/test_results/DQN_cliffcar-{cliff_car_training_length}-frames/seed-{seed}-model' for seed in cliff_car_seeds]
+cliff_car_model_paths = [[f'cliff_car/test_results/Cliffcar-{cliff_car_training_type}-linear-{cliff_car_linear}-test_seed_{seed}_robust_factor_-1/{delta}-model'
+                        for seed in cliff_car_seeds] for delta in cliff_car_deltas]
+
+cliff_car_no_noise_accum, cliff_car_mean_shift_accum, cliff_car_var_shift_accum = \
+    get_accum("cliff_car",
+              cliff_car_DQN.DQNCliffCarAgent, cliff_car_ensemble.EnsembleCliffTestAgent, cliff_car_ensemble.EnsembleCliffTestAgent, cliff_car_agent.CliffCarAgent,
+              DQN_cliff_car_model_paths, cliff_car_model_paths,
+              cliff_car_std_env, cliff_car_envs,
+              cliff_car_deltas, cliff_car_n_games)
 
 
 
@@ -233,7 +233,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import ttest_ind
 
-### SUMO PARAMETERS ###
+# ### SUMO PARAMETERS ###
 deltas = [0.001, 0.005, 0.01, 0.05, 0.1, 0.2,
           0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 5]
 seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
@@ -241,7 +241,7 @@ noise_var = 10+np.array([0.65, 1.55, 2.3, 6.21, 10.28, 18.59, 28.1, 39.42, 53.06
 
 env_type = "sumo"
 
-### CLIFF CAR PARAMETERS ###
+# # CLIFF CAR PARAMETERS ###
 # deltas = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 3, 5]
 # seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
 # noise_var = np.array([6.98,7.38,7.7,9.29,10.8,22.07,41.99,126.92,356.9,2680.17])
@@ -283,7 +283,7 @@ plt.show()
 
 ### DQN AND SUMO ENSAMBLE NO NOISE BOXPLOT PERFORMANACE ###
 
-fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+fig, ax = plt.subplots(1, 1, figsize=(12, 5))
 
 # Plotting for all delta values
 for i, delta in enumerate(deltas):
@@ -293,8 +293,8 @@ for i, delta in enumerate(deltas):
     t, p = ttest_ind(no_noise_accum[3][delta], no_noise_accum[1])
     
     # Plot the p-value just above the x-axis aligned with the boxplots
-    ax.text(i + 0.05, 0.98, f"p={p:.3f}", ha='center', va='center', transform=ax.get_xaxis_transform(), fontsize=8)
-
+    ax.text(i + 0.05, 0.98, f"p={p:.2f}", ha='center', va='center', transform=ax.get_xaxis_transform(), fontsize=10)
+    
 # Plotting for ensemble
 ax.boxplot(no_noise_accum[1], positions=[i+1], widths=0.6, showmeans=True, meanline=True, meanprops={'color':'red', 'linewidth':2})
 
@@ -312,11 +312,11 @@ plt.show()
 
 ### DQN AND SUMO ENSAMBLE VARIANCE NOISE ENVIRONMENTS
 
-p_values = np.zeros((len(deltas), len(noise_var)))
+# p_values = np.zeros((len(deltas), len(deltas)))
 
 for i, (kl, var) in enumerate(zip(deltas,noise_var)):
     
-    fig, ax = plt.subplots(1, 1, figsize=(10,5))
+    fig, ax = plt.subplots(1, 1, figsize=(12,5))
     
     # Plotting for all delta values
     for j, delta in enumerate(deltas):
@@ -325,10 +325,10 @@ for i, (kl, var) in enumerate(zip(deltas,noise_var)):
         # Make a t-test between DQN and SUMO
         t, p = ttest_ind(var_shift_accum[var][3][delta], var_shift_accum[var][1])
         
-        p_values[i,j] = (p>0.05)
+        # p_values[i,j] = (p>0.05)
         
         # Plot the p-value just above the x-axis aligned with the boxplots
-        ax.text(j + 0.05, 0.98, f"p={p:.3f}", ha='center', va='center', transform=ax.get_xaxis_transform(), fontsize=8)
+        ax.text(j + 0.05, 0.98, f"p={p:.2f}", ha='center', va='center', transform=ax.get_xaxis_transform(), fontsize=10)
         
     # Plotting for ensemble
     ax.boxplot(var_shift_accum[var][1], positions=[j+1], widths=0.6, showmeans=True, meanline=True, meanprops={'color':'red', 'linewidth':2})
@@ -346,13 +346,13 @@ for i, (kl, var) in enumerate(zip(deltas,noise_var)):
     plt.show()
     
 # Plot the q values as a heatmap
-fig, ax = plt.subplots(1, 1, figsize=(10,5))
+# fig, ax = plt.subplots(1, 1, figsize=(12,5))
 
-# ax.imshow(p_values, cmap='hot')
+# # ax.imshow(p_values, cmap='hot')
 
-fig.colorbar(ax.imshow(p_values), ax=ax)
+# fig.colorbar(ax.imshow(p_values), ax=ax)
 
-plt.show()
+# plt.show()
 
 
 
