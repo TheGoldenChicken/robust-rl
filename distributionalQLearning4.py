@@ -25,9 +25,6 @@ def quadratic_approximation(X,y):
             A[i,j] = mu[D+1+i+j]
             A[j,i] = A[i,j]
 
-    # if np.isnan(A):
-    #     i = 2
-
     return A, b, c
 
 def linear_approximation(X,y):
