@@ -17,7 +17,11 @@ import random
 from IPython.display import clear_output
 from sumo.network import Network
 from tqdm import tqdm
-
+from robust_sumo_agent import RobustSumoAgent
+from sumo_pp import SumoPPEnv
+import os
+import sys
+sys.path.append(os.getcwd() + '/sumo')
 # finenesss = used for replay buffer
 # state_dim = used for replay and network
 # action_dim = used for select action
@@ -56,7 +60,7 @@ class EnsembleSumoTestAgent:
 
         return next_state, reward, done
 
-    def test(self, test_games=100):
+    def test(self, test_games=100, render_games=0, render_speed=60):
         """
         Test the agent
         :param test_games: number of test games to get score from
@@ -92,4 +96,43 @@ class EnsembleSumoTestAgent:
 
             all_sar.append(sar)
 
+        if render_games > 0:
+            self.env.init_render()
+            self.env.frame_rate = render_speed
+
+        for i in range(render_games):
+            state = self.env.reset()
+            done = False
+            while not done:
+                action = self.select_action(state)
+                next_state, reward, done = self.step(action)
+                self.env.render()
+
+                state = next_state
+
         return np.array(all_sar)
+
+
+
+        return np.array(all_sar)
+
+if __name__ == "__main__":
+    env = SumoPPEnv()
+    delta_val = 0.001
+    seeds = [6969, 4242, 123, 420, 6942, 5318008, 23, 22, 99, 10]
+    agents = []
+    for seed in seeds:
+        print(os.getcwd())
+        root_folder = f'test_results/truenonlinear-linear-False-test_seed_{seed}_robust_factor_-1/{delta_val}-model'
+        agent = RobustSumoAgent(env=env, replay_buffer=None, grad_batch_size=None,
+                                delta=delta_val, epsilon_decay=1/2000, max_epsilon=0, min_epsilon=0,
+                                gamma=0.99, robust_factor=-1, linear_only=False)
+
+        try:
+            agent.load_model(root_folder)
+        except:
+            agent.load_model(root_folder + '.zip')
+        agents.append(agent)
+
+    ensemble = EnsembleSumoTestAgent(env, agents)
+    ensemble.test(test_games=0, render_games=10, render_speed=60)
