@@ -7,6 +7,19 @@ class Network(nn.Module):
         """Initialization."""
         super(Network, self).__init__()
 
+        # self.layers = nn.Sequential(
+        #     nn.Linear(in_dim, 128),
+        #     nn.ReLU(),
+        #     nn.Dropout(p=0.2),  # Dropout layer after the first ReLU
+        #     nn.Linear(128, 128),
+        #     nn.ReLU(),
+        #     nn.Dropout(p=0.2),  # Dropout layer after the second ReLU
+        #     nn.Linear(128, 128),
+        #     nn.ReLU(),
+        #     nn.Dropout(p=0.2),  # Dropout layer after the third ReLU
+        #     nn.Linear(128, out_dim)
+        # )
+        #
         self.layers = nn.Sequential(
             nn.Linear(in_dim, 128),
             nn.ReLU(),
@@ -14,6 +27,7 @@ class Network(nn.Module):
             nn.ReLU(),
             nn.Linear(128, out_dim)
         )
+
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward method implementation."""

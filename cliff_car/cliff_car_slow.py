@@ -63,7 +63,7 @@ if __name__ == "__main__":
     bin_size = 500
 
     # Should have converged somewhat at this point
-    num_frames = 40000 # 12000
+    num_frames = 12000 # 12000
 
     # Agent parameters - Should not be changed!
     state_dim = 1
@@ -79,10 +79,10 @@ if __name__ == "__main__":
 
     # seeds = [9000,9001,9002,9003,9004,9005,9006,9007,9008,9009]
         # seeds = [10000]
-
+    #0.01, 0.05, 0.1, 0,2, 0
     # Delta values to test
-    delta_vals = [0.1, 1, 2]#, 3, 4, 5]
-    # delta_vals = [0.01, 0.05, 0.1, 0.5, 1, 2, 3, 5]
+    # delta_vals = [0.1, 1, 2, 3, 5, 0.5, 0.4, 0.2]#, 3, 4, 5]
+    delta_vals = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 3, 5]
     # delta_vals = [0.001]
     # Whether to add or subtract robust estimator from reward
     factors = [-1]
@@ -94,7 +94,7 @@ if __name__ == "__main__":
         for linear in linear_only:
             for factor in factors:
                 # TODO: Fix ugly formatting here, not really becoming of a serious researcher
-                test_name = f'Cliffcar-newoptim-linear-{linear}-test_seed_{seed}_robust_factor_{factor}'
+                test_name = f'SlowCliffcar-newoptim-linear-{linear}-test_seed_{seed}_robust_factor_{factor}'
 
                 if not os.path.isdir(f'test_results/{test_name}'):
                     os.mkdir(f'test_results/{test_name}',)
@@ -115,7 +115,7 @@ if __name__ == "__main__":
                     #                                       fineness=fineness, num_actions=action_dim, state_max=state_max,
                     #                                       state_min=state_min, ripe_when=ripe_when, ready_when=ready_when,
                     #                                       num_neighbours=num_neighbours, tb=True)
-                    replay_buffer = TheSlightlyCoolerReplayBuffer(obs_dim, fineness**2*bin_size, batch_size)
+                    replay_buffer = TheSlightlyCoolerReplayBuffer(obs_dim, (fineness**2)*bin_size, batch_size)
                     
                     agent = RobustCliffCarAgent(env=env, replay_buffer=replay_buffer, grad_batch_size=grad_batch_size,
                                             delta=delta, epsilon_decay=epsilon_decay, max_epsilon=1.0, min_epsilon=0.1,
