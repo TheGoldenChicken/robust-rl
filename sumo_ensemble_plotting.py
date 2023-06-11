@@ -136,7 +136,7 @@ def plot_q_and_state_hist(test_games = 200, DQN = False):
     
         ax3.imshow(get_image_from_q(q_vals), aspect='auto')
 
-        all_sar = ensemble_agent.test(test_games=test_games)
+        all_sar = ensemble_agent.test(test_games=test_games, render_games=10)
 
         if DQN:
             # os.mkdir("sumo/test_results/sumo_ensemble")
@@ -510,7 +510,7 @@ def print_acum_return(seeds, delta_vals, linear=True):
 # seeds = [4242, 6942, 420, 5318008, 23]
 # deltas = [0.01,0.05,0.1, 0.5,1]
     
-# print_acum_return([6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10], [0.001,0.01,0.1,1,2], linear=False)    q 
+# print_acum_return([6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10], [0.001,0.01,0.1,1,2], linear=False)
     
 # PLotting the state distributions individually
 # plot_sumo_states_individual([4242, 6942, 420, 5318008, 23],[0.01,0.05,0.1, 0.5,1],linear=False)
@@ -522,10 +522,10 @@ def print_acum_return(seeds, delta_vals, linear=True):
 # plot_q_and_state_hist(DQN = True, test_games = 100)
 
 # Plot all q values and state distributions as an ensemble method
-# plot_q_and_state_hist(test_games = 100)
+plot_q_and_state_hist(test_games = 100, DQN=True)
 
 # Plot the Q values as decision diagrams for all delta values (ensemble method)
-plot_q_as_image_multiple_delta()
+# plot_q_as_image_multiple_delta()
 
 # Plot the state distributions as heatmap for all delta values (ensemble method)
 # plot_state_hist_multiple_delta()
