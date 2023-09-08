@@ -5,7 +5,13 @@ import matplotlib.cm as cm
 from scipy.ndimage import gaussian_filter
 import matplotlib.patches as mpatches
 
+import sys
+import os
 
+# Add current folder to path
+sys.path.append('..')
+# Set the current working directory to the folder this file is in
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 def generate_heatmap(x, y, std = 8):
     layout_size = [11,7]
@@ -39,15 +45,15 @@ def generate_heatmap(x, y, std = 8):
 ### Plot Q-values
 
 delta = 1
-data1 = np.load(f'cliff_car/test_results/Cliffcar-newoptim-linear-False-test_seed_9000_robust_factor_-1/{delta}-q_vals.npy', allow_pickle=True)
-data2 = np.load(f'cliff_car/test_results/Cliffcar-newoptim-linear-False-test_seed_9001_robust_factor_-1/{delta}-q_vals.npy', allow_pickle=True)
-data3 = np.load(f'cliff_car/test_results/Cliffcar-newoptim-linear-False-test_seed_9002_robust_factor_-1/{delta}-q_vals.npy', allow_pickle=True)
-data4 = np.load(f'cliff_car/test_results/Cliffcar-newoptim-linear-False-test_seed_9003_robust_factor_-1/{delta}-q_vals.npy', allow_pickle=True)
-data5 = np.load(f'cliff_car/test_results/Cliffcar-newoptim-linear-False-test_seed_9004_robust_factor_-1/{delta}-q_vals.npy', allow_pickle=True)
-data6 = np.load(f'cliff_car/test_results/Cliffcar-newoptim-linear-False-test_seed_9005_robust_factor_-1/{delta}-q_vals.npy', allow_pickle=True)
-data7 = np.load(f'cliff_car/test_results/Cliffcar-newoptim-linear-False-test_seed_9006_robust_factor_-1/{delta}-q_vals.npy', allow_pickle=True)
-data8 = np.load(f'cliff_car/test_results/Cliffcar-newoptim-linear-False-test_seed_9007_robust_factor_-1/{delta}-q_vals.npy', allow_pickle=True)
-data9 = np.load(f'cliff_car/test_results/Cliffcar-newoptim-linear-False-test_seed_9008_robust_factor_-1/{delta}-q_vals.npy', allow_pickle=True)
+data1 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
+data2 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
+data3 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
+data4 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
+data5 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
+data6 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
+data7 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
+data8 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
+data9 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
 # data10 = np.load(f'cliff_car/test_results/Cliffcar-newoptim-linear-False-test_seed_9009_robust_factor_-1/{delta}-q_vals.npy', allow_pickle=True)
 
 
@@ -64,7 +70,7 @@ q_vals = np.mean(q_vals, axis=0)
 # q_vals = np.rot90(q_vals, k=1, axes=(0,1))
 
 
-qvals = np.load(f'cliff_car/test_results/Cliffcar-newoptim-linear-False-test_seed_9999_robust_factor_-1/0.001-q_vals.npy', allow_pickle=True).reshape(150,150,5)
+qvals =  np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True).reshape(150,150,5)
 
 # Transpose the first two dimentions
 q_vals = np.transpose(q_vals, axes=(1,0,2))

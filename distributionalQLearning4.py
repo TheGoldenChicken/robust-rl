@@ -67,44 +67,6 @@ def maximize_f(f):
     return -res.fun, res.x[0]
 
 
-# def maximize(f_prime, tol = 1e-5):
-#     """
-#     Maximize f_stable with respect to x by using the derivative f_prime.
-#     Also note that f_prime is either monotonic decreasing or only has one maximum.
-#     Also note that x is always positive.
-#     """
-#
-#     x_min = 2e-3
-#     x_max = 10
-#
-#
-#     # If f_prime(tol) < 0 the function is monotonic decreasing.
-#     if f_prime(x_min) < 0:
-#         return x_min
-#
-#     while True:
-#         # If f_prime(10) > 0, adjust the maximum
-#         if f_prime(x_max) > 0:
-#             x_max *= 2
-#         else:
-#             break
-#
-#     # Find the maximum using devide and conquer
-#     while True:
-#         x_mid = (x_min + x_max) / 2
-#         if x_max - x_min < tol:
-#             return x_mid
-#         f_prime_x_mid = f_prime(x_mid)
-#         if f_prime_x_mid > 0 + tol:
-#             x_min = x_mid
-#         elif f_prime_x_mid < 0 - tol:
-#             x_max = x_mid
-#         else:
-#             return x_mid
-
-num_quadratic = 0
-num_approx = 0
-
 def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1, linear_only = False):
     
     if not linear_only:
@@ -121,13 +83,6 @@ def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1, linear_only = False):
         b, c = linear_approximation(X_v, y_v)
         A = np.zeros((len(b),len(b)))
         
-    # b, c = linear_approximation(X_v, y_vs)
-    # A = np.zeros((len(b),len(b)))
-    global num_quadratic, num_approx
-    if A[0][0] == 0:
-        num_quadratic += 1
-    num_approx += 1
-        
     ### Gaussian approximation ###
     # Compute the mean and covariance of the samples X_p, y_p
     mu = np.mean(y_p, axis = 0)
@@ -143,7 +98,6 @@ def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1, linear_only = False):
         mu_tilde = (mu.T@Sigma_inv+(-b.T/beta))@Sigma_tilde
         k1 = np.sqrt(np.linalg.det(Sigma_tilde)/np.linalg.det(Sigma))
         k2 = (-1/2)*mu.T@Sigma_inv@mu+(1/2)*mu_tilde.T@Sigma_tilde_inv@mu_tilde+(c/-beta)
-
 
         return - beta * (np.log(k1) + k2) - delta * beta
 
@@ -164,84 +118,7 @@ def robust_estimator(X_p,y_p,X_v,y_v,delta, linear_only = False):
     """
 
     f = pre_sub_robust_estimator(X_p,y_p,X_v,y_v,delta, linear_only)
-    # f_prime = pre_sub_robust_estimator_prime_approx(X_p,y_p,X_v,y_v,delta, linear_only=linear_only)
     
     return maximize_f(f)
-    # beta_max = maximize(f_prime)
-    # return f(beta_max)[0][0], beta_max
-
-# mu = np.array([0, 0])
-# Sigma = np.array([[3, 1], [1, 4]])
-
-# A = np.array([[1, 0], [0, 1]])
-# b = np.array([0, 0])
-# c = 0
-
-# from scipy.stats import norm
-# import matplotlib.pyplot as plt
-
-# # # 1D dataset
-# # X_p = np.expand_dims(np.linspace(-1.5, 1.5, 100), axis=1)
-# # y_p = np.array([norm.pdf(x, loc = 0, scale = 1) + np.random.normal(0, 0.1, 1) for x in X_p])
-# # X_v = np.expand_dims(np.linspace(-1.5, 1.5, 100), axis=1)
-# # y_v = np.array([norm.pdf(x, loc = 0, scale = 1) + np.random.normal(0, 0.1, 1) for x in X_v])
-
-
-# # delta = 0.1
-# # plt.scatter(X_p.squeeze(), y_p.squeeze())
-# # print(robust_estimator(X_p,y_p,X_v,y_v,delta))
-
-# # # 2D dataset
-# # Sample randomly in 2D space
-# X_p = np.array([[np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)] for _ in range(100)])
-# # Sample randomly for 2D multivariate gaussian
-# y_p = multivariate_normal.pdf(X_p, mean = [0, 0], cov = [[3, 1], [1, 4]])
-# X_v = X_p
-# y_v = y_p
-
-# delta = 0.1
-# # 3D plot
-# fig = plt.figure()
-# ax = fig.add_subplot(111, projection='3d')
-# ax.scatter(X_p[:,0], X_p[:,1], y_p)
-
-# # 2D plot of quadratic approximation
-# A, b, c = quadratic_approximation(X_p, y_p)
-# X = np.linspace(-1.5, 1.5, 10)
-# Y = np.linspace(-1.5, 1.5, 10)
-
-# beta = 0.1
-# S = (beta/2)*np.linalg.inv(A)
-# m = (-b/2)@np.linalg.inv(A)
-# S_inv = np.linalg.inv(S)
-# S_det = np.linalg.det(S)
-# k = (np.exp(c/-beta)*np.sqrt((2*np.pi)**len(m)*S_det))/np.exp(-(1/2)*m.T@S_inv@m)
-
-
-# Z = np.array([[A[0,0]*x**2+2*A[0,1]*x*y+A[1,1]*y**2+b[0]*x+b[1]*y+c for x in X] for y in Y])
-# Z_ = np.array([[multivariate_normal.pdf([x,y], mean = m, cov = S) for x in X] for y in Y])
-# X, Y = np.meshgrid(X, Y)
-# ax.plot_surface(X, Y, Z, alpha=0.2, color = 'blue')
-# ax.plot_surface(X, Y, Z_, alpha=0.2, color = 'red')
-# plt.show()
-# print(robust_estimator(X_p,y_p,X_v,y_v,delta))
-# pass
-
-
-
-
-# # Plot the quadratic approximation
-
-# A, b, c = quadratic_approximation(X_v, y_v)
-# X = np.linspace(-1.5, 1.5, 100)
-# # if A < 0: A = np.array(0)
-# y = np.array([A*x**2+b*x+c for x in X])
-# plt.plot(X.squeeze(), y.squeeze())
-
-# # Plot a gaussian function with loc = 0 and scale = 1
-# X = np.linspace(-1.5, 1.5, 100)
-# plt.scatter(X.squeeze(), y.squeeze())
-# plt.plot(X.squeeze(), y_v.squeeze())
-# plt.show()
 
 

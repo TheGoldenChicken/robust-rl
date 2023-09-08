@@ -3,8 +3,8 @@ import torch
 import torch.nn.functional as F
 import distributionalQLearning3 as distributionalQLearning
 import numpy as np
-from replay_buffer import TheCoolerReplayBuffer, TheSlightlyCoolerReplayBuffer
-from cliff_car_env import CliffCar
+from sumo.replay_buffer import TheCoolerReplayBuffer, TheSlightlyCoolerReplayBuffer
+from cliff_car_again import CliffCar
 from typing import Dict, List
 import matplotlib.pyplot as plt
 import random
@@ -12,9 +12,9 @@ import os
 from tqdm import tqdm
 
 class RobustCliffCarAgent(CliffCarAgent):
-    def __init__(self, env, replay_buffer, epsilon_decay, network, grad_batch_size=30, delta=0.5, max_epsilon=1.0,
+    def __init__(self, env, replay_buffer, epsilon_decay, grad_batch_size=30, delta=0.5, max_epsilon=1.0,
                  min_epsilon=0.1, gamma=0.99, model_path=None, robust_factor=1, linear_only=False):
-        super().__init__(env, replay_buffer, epsilon_decay, network, max_epsilon, min_epsilon, gamma, model_path)
+        super().__init__(env, replay_buffer, epsilon_decay, max_epsilon, min_epsilon, gamma, model_path)
 
         self.robust_factor = robust_factor # Factor multiplied on the robust estimator
         self.grad_batch_size = grad_batch_size # How many samples to compute each loss based off of

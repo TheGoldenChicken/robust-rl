@@ -5,11 +5,12 @@ import torch
 import torch.optim as optim
 import random
 from IPython.display import clear_output
+from sumo.network import Network
 from tqdm import tqdm
 
 
 class CliffCarAgent:
-    def __init__(self, env, replay_buffer, epsilon_decay, network, max_epsilon=1.0, min_epsilon=0.1, gamma=0.99, model_path=None):
+    def __init__(self, env, replay_buffer, epsilon_decay, max_epsilon=1.0, min_epsilon=0.1, gamma=0.99, model_path=None):
         self.env = env
         self.max, self.min = np.array(self.env.max_min[0]), np.array(self.env.max_min[1])
 
@@ -28,7 +29,7 @@ class CliffCarAgent:
         )
         # print(self.device) # Just to know which one we're on
 
-        self.dqn = network(env).to(self.device)
+        self.dqn = Network(env.obs_dim, env.action_dim).to(self.device)
         if model_path is not None:
             self.load_model(model_path)
         self.optimizer = optim.Adam(self.dqn.parameters(), lr=0.001) # Adam default lr=0.001
@@ -55,11 +56,12 @@ class CliffCarAgent:
         raise(NotImplementedError)
         return loss
 
+
     def select_action(self, state: np.ndarray) -> np.ndarray:
         """Select an action from the input state."""
         # epsilon greedy policy
         if self.epsilon > np.random.random() and not self.is_test:
-            selected_action = random.randint(0, self.env.ACTION_DIM-1) # Why is this not inclusive, exclusive??? Stupid
+            selected_action = random.randint(0, self.env.action_dim-1) # Why is this not inclusive, exclusive??? Stupid
         else:
             select_state = self.state_normalizer(state)
             selected_action = self.dqn(
@@ -107,7 +109,8 @@ class CliffCarAgent:
         losses = []
         scores = []
         score = 0
-        
+
+
         for frame_idx in tqdm(range(1, num_frames + 1)):
             action = self.select_action(state)
             next_state, reward, done = self.step(action)

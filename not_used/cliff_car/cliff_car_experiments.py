@@ -9,10 +9,9 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 import torch
 import random
 import numpy as np
-from cliff_car_env import CliffCar
-from replay_buffer import TheCoolerReplayBuffer
+from cliff_car_again import CliffCar
+from sumo.replay_buffer import TheCoolerReplayBuffer
 from cliff_car_robust_agent import RobustCliffCarAgent
-from network import Network, RadialNetwork2d
 import time
 import pandas as pd
 
@@ -53,8 +52,8 @@ if __name__ == "__main__":
     env = CliffCar()
 
     # Replay buffer parameters - Should not be changed!
-    obs_dim = env.OBS_DIM
-    action_dim = env.ACTION_DIM
+    obs_dim = env.obs_dim
+    action_dim = env.action_dim
     batch_size = 40
     fineness = 100
     ripe_when = None
@@ -64,36 +63,42 @@ if __name__ == "__main__":
     bin_size = 500
 
     # Should have converged somewhat at this point
-    num_frames = 100000 # 12000
+    num_frames = 15000 # 12000
 
     # Agent parameters - Should not be changed!
+    state_dim = 1
     grad_batch_size = 10 # 10
     replay_buffer_size = 1000 #1000
     max_min = [[env.max_min[0]],[env.max_min[1]]]
     epsilon_decay = 1/6000 # default: 1/5000
 
+
     # Seeds
-    seeds = [1]
-    seed_id = 1000 # used for easily change seed
-    
+    seeds = [6969, 4242, 6942, 123, 420, 5318008, 23, 22, 99, 10]
+    # seeds = [7777]
+
+    # seeds = [9000,9001,9002,9003,9004,9005,9006,9007,9008,9009]
+        # seeds = [10000]
+
+    # Delta values to test
+    # delta_vals = [0.1, 1, 2]#, 3, 4, 5]
     delta_vals = [0.05, 0.1, 0.5, 1, 2, 3]
-    
-    factors = [-1] # Whether to add or subtract robust estimator from reward
-    
-    linear_only = [False] # Whether to use linear or quadratic approximation
-    
-    seeds = [seed * seed_id for seed in seeds]
-    
+    # delta_vals = [0.001]
+    # Whether to add or subtract robust estimator from reward
+    factors = [-1]
+    # Whether to use linear or quadratic approximation
+    linear_only = [False]
+    #delta_vals = [0.01,0.1,0.05,1]
     for seed in seeds:
+        print("Started training on seed: ", seed, "...")
         for linear in linear_only:
             for factor in factors:
                 # TODO: Fix ugly formatting here, not really becoming of a serious researcher
-                test_name = rf'linear={linear}-seed={seed}-factor={factor}'
+                test_name = f'After-Exam-Cliffcar-newoptim-linear-{linear}-test_seed_{seed}_robust_factor_{factor}'
 
-                if not os.path.exists(rf'test_results\{test_name}'):
-                    os.makedirs(rf'test_results\{test_name}')
-                    
-                with open(rf'test_results\{test_name}\hyperparams.txt', 'w') as f:
+                if not os.path.isdir(f'test_results/{test_name}'):
+                    os.mkdir(f'test_results/{test_name}',)
+                with open(f'test_results/{test_name}/hyperparams.txt', 'w') as f:
                     f.write(f'''\
             Batch size, Fineness, ripe_when, state_max, state_min, ready_when, num_neighbours, bin_size, num_frames,\
             grad_batch_size, replay_buffer_size, max_min, epsilon_decay \n\
@@ -102,8 +107,6 @@ if __name__ == "__main__":
                     ''')
 
                 for delta in delta_vals:
-                    
-                    print(f"Started training: seed: {seed}, linear: {linear}, factor: {factor}, delta: {delta}")
                     seed_everything(seed)
 
                     env = CliffCar()
@@ -113,8 +116,7 @@ if __name__ == "__main__":
                                                           state_min=state_min, ripe_when=ripe_when, ready_when=ready_when,
                                                           num_neighbours=num_neighbours, tb=True)
 
-                    agent = RobustCliffCarAgent(env=env, replay_buffer=replay_buffer, network = RadialNetwork2d,
-                                            grad_batch_size=grad_batch_size,
+                    agent = RobustCliffCarAgent(env=env, replay_buffer=replay_buffer, grad_batch_size=grad_batch_size,
                                             delta=delta, epsilon_decay=epsilon_decay, max_epsilon=1.0, min_epsilon=0.1,
                                             gamma=0.99, robust_factor=factor, linear_only=linear)
 
@@ -127,7 +129,7 @@ if __name__ == "__main__":
 
                     # States to extract q-values from
                     # Here, we have to make a grid of q vals
-                    X, Y = np.mgrid[env.BOUNDS[0]:env.BOUNDS[2]:150j, env.BOUNDS[1]:env.BOUNDS[3]:150j]
+                    X, Y = np.mgrid[0:1:150j, 0:1:150j]
                     xy = np.vstack((X.flatten(), Y.flatten())).T
                     states = torch.FloatTensor(xy).to(agent.device)
 
@@ -143,13 +145,13 @@ if __name__ == "__main__":
             #        test_df = pd.DataFrame({test_columns[i]: test_data[i] for i in range(len(test_data))})
                     time_df = pd.DataFrame({time_columns[i]: [time_data[i]] for i in range(len(time_data))}) # Training test, testing time
 
-                    train_scores.to_csv(rf'test_results\{test_name}\{delta}-train_score_data.csv')
-                    train_df.to_csv(rf'test_results\{test_name}\{delta}-train_data.csv')
-                    # np.save(rf'test_results\{test_name}\{delta}-test_data.npy', test_data)
-                    np.save(rf'test_results\{test_name}\{delta}-q_vals.npy', q_vals)
-                    np.save(rf'test_results\{test_name}\{delta}-betas.npy', np.array(agent.betas))
-             #       test_df.to_csv(rf'test_results\{test_name}\{delta}-test_data.csv')
-                    time_df.to_csv(rf'test_results\{test_name}\{delta}-time_data.csv')
-                    agent.save_model(rf'test_results\{test_name}\{delta}-model')
+                    train_scores.to_csv(f'test_results/{test_name}/{delta}-train_score_data.csv')
+                    train_df.to_csv(f'test_results/{test_name}/{delta}-train_data.csv')
+                    # np.save(f'test_results/{test_name}/{delta}-test_data.npy', test_data)
+                    np.save(f'test_results/{test_name}/{delta}-q_vals.npy', q_vals)
+                    np.save(f'test_results/{test_name}/{delta}-betas.npy', np.array(agent.betas))
+             #       test_df.to_csv(f'test_results/{test_name}/{delta}-test_data.csv')
+                    time_df.to_csv(f'test_results/{test_name}/{delta}-time_data.csv')
+                    agent.save_model(f'test_results/{test_name}/{delta}-model')
 
                     torch.cuda.empty_cache()
