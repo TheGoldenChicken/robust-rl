@@ -30,10 +30,7 @@ class RobustCliffCarAgent(CliffCarAgent):
         """
         Should be updated for each individual agent type
         """
-        samples, current_samples = self.replay_buffer.sample_from_scratch(K=self.replay_buffer.batch_size,
-                                                                          nn=None,
-                                                                          num_times=self.grad_batch_size,
-                                                                          check_ripeness=True)
+        samples, current_samples = self.replay_buffer.knn()
 
         return samples, current_samples
     

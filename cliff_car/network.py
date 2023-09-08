@@ -45,6 +45,7 @@ class RadialNetwork2d(nn.Module):
         in_dim = len(torch.arange(x_min, x_max+1, self.env.r_basis_diff)) * \
                     len(torch.arange(y_min, y_max+1, self.env.r_basis_diff))
         
+        print(">>>>>>>>>>>>>>>>>>>>>>> " + str(self.env.ACTION_DIM))
         self.layers = nn.Sequential(nn.Linear(in_dim, env.ACTION_DIM))
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -61,10 +62,10 @@ class RadialNetwork2d(nn.Module):
 
         # Evaluate 2D Gaussian distribution for each point in points
         sigma = torch.eye(2) * self.env.r_basis_var
-        basis = torch.zeros(position.shape[0], points.shape[0])
+        basis = torch.zeros(position.shape[0],points.shape[0])
         for i in range(points.shape[0]):
             m = MultivariateNormal(points[i], sigma)
-            basis[:, i] = m.log_prob(position).exp()
+            basis[:,i] = m.log_prob(position).exp()
         
         basis.requires_grad = False
         

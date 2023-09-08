@@ -55,7 +55,7 @@ class CliffCarAgent:
         raise(NotImplementedError)
         return loss
 
-    def select_action(self, state: np.ndarray) -> np.ndarray:
+    def select_action(self, state: int) -> np.ndarray:
         """Select an action from the input state."""
         # epsilon greedy policy
         if self.epsilon > np.random.random() and not self.is_test:
@@ -64,19 +64,22 @@ class CliffCarAgent:
             select_state = self.state_normalizer(state)
             selected_action = self.dqn(
                 torch.FloatTensor(select_state).to(self.device)
-            ).argmax()
-            selected_action = selected_action.detach().cpu().numpy()
+            ).argmax(axis=1)[0]
+            selected_action = int(selected_action)
 
         if not self.is_test:
             self.transition = [state, selected_action]
+            
+        if(selected_action >= 5):
+            print(selected_action)
         return selected_action
 
-    def step(self, action: np.ndarray) -> Tuple[np.ndarray, np.float64, bool]:
+    def step(self, action: int) -> Tuple[np.ndarray, np.float64, bool]:
         """Take an action and return the response of the env."""
         next_state, reward, done, _ = self.env.step(action)
 
         # Store transitions
-        if not self.is_test:
+        if not self.is_test and len(next_state) > 0:
             # Store current transition
             self.transition += [reward, next_state, done]
             self.replay_buffer.store(*self.transition)

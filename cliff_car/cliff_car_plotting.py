@@ -44,7 +44,7 @@ def generate_heatmap(x, y, std = 8):
 
 ### Plot Q-values
 
-delta = 1
+delta = 0.01
 data1 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
 data2 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
 data3 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)

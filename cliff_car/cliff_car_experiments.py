@@ -56,7 +56,7 @@ if __name__ == "__main__":
     obs_dim = env.OBS_DIM
     action_dim = env.ACTION_DIM
     batch_size = 40
-    fineness = 100
+    fineness = 20
     ripe_when = None
     state_max, state_min = np.array(env.max_min[0]), np.array(env.max_min[1])
     ready_when = 10
@@ -64,19 +64,19 @@ if __name__ == "__main__":
     bin_size = 500
 
     # Should have converged somewhat at this point
-    num_frames = 100000 # 12000
+    num_frames = 2000 # 12000
 
     # Agent parameters - Should not be changed!
     grad_batch_size = 10 # 10
     replay_buffer_size = 1000 #1000
     max_min = [[env.max_min[0]],[env.max_min[1]]]
-    epsilon_decay = 1/6000 # default: 1/5000
+    epsilon_decay = 1/500 # default: 1/5000
 
     # Seeds
     seeds = [1]
     seed_id = 1000 # used for easily change seed
     
-    delta_vals = [0.05, 0.1, 0.5, 1, 2, 3]
+    delta_vals = [0.01, 1, 3]
     
     factors = [-1] # Whether to add or subtract robust estimator from reward
     
