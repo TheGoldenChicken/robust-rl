@@ -150,6 +150,7 @@ class CliffCarAgent:
             epsilons.append(self.epsilon)
 
             if frame_idx % test_interval == 0:
+                print(">>> Testing: " + test_name_prefix + "-frame-" + str(frame_idx) + "-epsilon-" + str(self.epsilon))
                 self.test(test_games=test_games,
                           test_name_prefix = test_name_prefix + "-frame-" + str(frame_idx),
                           do_test_plots=do_test_plots)
@@ -185,7 +186,7 @@ class CliffCarAgent:
 
             # NOTE that we also get the last state, action, reward when the environment terminates here...
 
-            sar = np.zeros([self.env.max_duration, 3,2]) # state, action, reward
+            sar = np.zeros([self.env.max_duration + 1, 3,2]) # state, action, reward
 
             frame = 0
             # Changed here from training, since we play games till the end, not for a certain number of steps (frames)
@@ -233,10 +234,11 @@ class CliffCarAgent:
         plt.clf()
 
         # Plot the visited states as a heatmap
-        heatmap, _, _ = np.histogram2d(states[:,0], states[:,1], bins=[len(x_range), len(y_range)])
         states = np.array([sar[:,0] for sar in all_sar]).reshape(-1,2)
+        states = states[~np.all(states == 0, axis=1)] # exclude rows with value [0,0]
+        heatmap, _, _ = np.histogram2d(states[:,0], states[:,1], bins=[len(x_range), len(y_range)])
         plt.imshow(heatmap.T, extent=[x_range[0], x_range[-1], y_range[0], y_range[-1]], origin='lower', cmap='brg')
-        ålt.colorbar()
+        plt.colorbar()
         plt.savefig(f'heatmap_{plot_name_prefix}.png')
         plt.clf()
         

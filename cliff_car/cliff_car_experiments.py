@@ -64,13 +64,13 @@ if __name__ == "__main__":
     bin_size = 500
 
     # Should have converged somewhat at this point
-    train_frames = 2000 # 12000
+    train_frames = 3000 # 12000
 
     # Agent parameters - Should not be changed!
     grad_batch_size = 10 # 10
     replay_buffer_size = 1000 #1000
     max_min = [[env.max_min[0]],[env.max_min[1]]]
-    epsilon_decay = 1/5000 # default: 1/5000
+    epsilon_decay = 1/(train_frames*1.25) # default: 1/5000
 
     # Seeds
     seeds = [1]
@@ -120,8 +120,8 @@ if __name__ == "__main__":
 
                     train_start = time.time()
                     train_data = agent.train(train_frames = train_frames,
-                                             test_interval = 250,
-                                             test_games = 100,
+                                             test_interval = 1000,
+                                             test_games = 20,
                                              do_test_plots = True,
                                              test_name_prefix = "test-delete-me")
                     train_end = time.time()

@@ -50,7 +50,7 @@ class RobustCliffCarAgent(CliffCarAgent):
 
         rewards = torch.FloatTensor(current_samples['rews']).reshape(-1,1).to(device)
         mask = torch.FloatTensor(1 - current_samples['done']).reshape(-1,1).to(device)
-        current_sample_obs = torch.FloatTensor(self.state_normalizer(current_samples['obs'])).to(device)
+        current_sample_obs = torch.FloatTensor(current_samples['obs']).to(device)
         current_sample_actions = torch.LongTensor(current_samples['acts']).reshape(-1,1).to(device)
         current_q_values = self.dqn(current_sample_obs).gather(1, current_sample_actions)
 
