@@ -30,47 +30,13 @@ def generate_heatmap(x, y, std = 8):
     plt.show()
     return heatmap.T, extent
 
-### Extract and plot states
 
-# data = np.load('cliff_car/test_results/Cliffcar-newoptim-linear-True-test_seed_6969_robust_factor_-1/0.01-test_data.npy', allow_pickle=True)
+delta = 3
+seed = 1000
+factor = -1
+linear = True
 
-# run = np.array([[d[0], d[1]] for d in data[0,:,0] if not np.isnan(d).any()])
-# x = run[:,0]
-# y = run[:,1]
-
-# smooth_scale = 8
-
-# generate_heatmap(x, y, smooth_scale)
-
-### Plot Q-values
-
-delta = 0.01
-data1 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
-data2 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
-data3 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
-data4 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
-data5 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
-data6 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
-data7 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
-data8 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
-data9 = np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True)
-# data10 = np.load(f'cliff_car/test_results/Cliffcar-newoptim-linear-False-test_seed_9009_robust_factor_-1/{delta}-q_vals.npy', allow_pickle=True)
-
-
-data = [data6]
-
-# The data is a 22500x5 array of q values
-# Convert it into a 150x150x5 array
-q_vals = [d.reshape(150,150,5) for d in data]
-
-# Average the two q value arrays
-q_vals = np.mean(q_vals, axis=0)
-
-# Rotate the first two dimentions 90 degrees
-# q_vals = np.rot90(q_vals, k=1, axes=(0,1))
-
-
-qvals =  np.load(f'test_results/linear=True-seed=1000-factor=1/{delta}-q_vals.npy', allow_pickle=True).reshape(150,150,5)
+q_vals =  np.load(f'test_results/linear={linear}-seed={seed}-factor={factor}/{delta}-q_vals.npy', allow_pickle=True).reshape(150,150,5)
 
 # Transpose the first two dimentions
 q_vals = np.transpose(q_vals, axes=(1,0,2))

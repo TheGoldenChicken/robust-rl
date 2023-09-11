@@ -44,7 +44,7 @@ class CliffCar:
         self.max_goal_distance = self.get_max_goal_distance()
         
         # Simulation settings
-        self.max_duration = 3000
+        self.max_duration = 1000
         self.frame = 0
         
         self.max_min = [[self.BOUNDS[2], self.BOUNDS[3]], [self.BOUNDS[0], self.BOUNDS[1]]]
@@ -88,7 +88,8 @@ class CliffCar:
     def result(self, position, action):
         noise = np.zeros(2)
         if(self.noise_var is not None):
-            noise = np.random.multivariate_normal(self.noise_mean, self.noise_var)
+
+            noise = np.random.multivariate_normal(self.noise_mean, np.eye(2)*self.noise_var)
 
         action_dir = self.translate_action[action]
 

@@ -112,54 +112,64 @@ class RobustCliffCarAgent(CliffCarAgent):
 
         return loss.item(), torch.mean(robust_estimator).detach().cpu().numpy()
 
-    def train(self, num_frames: int, plotting_interval: int = 200, q_val_plotting_interval=999999):
+    def train(self, train_frames: int, test_interval = 200, test_games = 100, do_test_plots = True, test_name_prefix = ""):
         """Train the agent."""
         self.is_test = False
+        self.dqn.train()
 
-        state = self.env.reset()
+        self.env.reset()
         update_cnt = 0
         epsilons = []
         losses = []
-        scores = [] # For plotting scores
-        score = 0 # Current episode score
-        robust_estimators = []
+        scores = []
+        score = 0
 
-        for frame_idx in tqdm(range(1, num_frames + 1)):
-            action = self.select_action(state)
-            next_state, reward, done = self.step(action)
+        # War up until we are ready to train.
+        while(not self.training_ready):
+            action = self.select_action(self.env.position)
+            _, _, done = self.step(action)
 
-            state = next_state
+            # if episode ends
+            if done:
+                self.env.reset()
+            
+            self.training_ready = self.replay_buffer.training_ready()
+        
+        # Start training for the given amount of trames
+        self.env.reset()
+        for frame_idx in tqdm(range(1, train_frames + 1)):
+            action = self.select_action(self.env.position)
+            _, reward, done = self.step(action)
+
             score += reward
 
             # if episode ends
             if done:
-                state = self.env.reset()
+                self.env.reset()
                 scores.append(score)
                 score = 0
+            
 
-            # Update whether we're ready to train
-            if not self.training_ready:
-                self.training_ready = self.replay_buffer.training_ready()
+            loss = self.update_model()
+            losses.append(loss)
+            update_cnt += 1
 
-            else:
-                loss, robust_estimator = self.update_model()
-                losses.append(loss)
-                robust_estimators.append(robust_estimator)
-                update_cnt += 1
+            # linearly decrease epsilon
+            self.epsilon = max(
+                self.min_epsilon, self.epsilon - (
+                        self.max_epsilon - self.min_epsilon
+                ) * self.epsilon_decay
+            )
+            epsilons.append(self.epsilon)
 
-                # linearly decrease epsilon
-                self.epsilon = max(
-                    self.min_epsilon, self.epsilon - (
-                            self.max_epsilon - self.min_epsilon
-                    ) * self.epsilon_decay
-                )
-                epsilons.append(self.epsilon)
-
-
-            # plotting
-                if frame_idx % plotting_interval == 0:
-                    self._plot(frame_idx, scores, losses, epsilons)
-                    # print(frame_idx, loss, self.epsilon, )
+            if frame_idx % test_interval == 0:
+                self.test(test_games=test_games,
+                          test_name_prefix = test_name_prefix,
+                          do_plots=do_test_plots)
+                pass
+            # # plotting
+            # if frame_idx % plotting_interval == 0:
+            #     self._plot(frame_idx, scores, losses, epsilons)
 
         print("Training complete")
         return scores, losses, epsilons

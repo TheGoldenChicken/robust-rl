@@ -64,7 +64,7 @@ if __name__ == "__main__":
     bin_size = 500
 
     # Should have converged somewhat at this point
-    num_frames = 2000 # 12000
+    train_frames = 2000 # 12000
 
     # Agent parameters - Should not be changed!
     grad_batch_size = 10 # 10
@@ -95,10 +95,10 @@ if __name__ == "__main__":
                     
                 with open(rf'test_results\{test_name}\hyperparams.txt', 'w') as f:
                     f.write(f'''\
-            Batch size, Fineness, ripe_when, state_max, state_min, ready_when, num_neighbours, bin_size, num_frames,\
+            Batch size, Fineness, ripe_when, state_max, state_min, ready_when, num_neighbours, bin_size, train_frames,\
             grad_batch_size, replay_buffer_size, max_min, epsilon_decay \n\
             {batch_size}\n{fineness}\n{ripe_when}\n{state_max}\n{state_min}\n{ready_when}\n{num_neighbours}\n{bin_size}\n\
-            {num_frames}\n{grad_batch_size}\n{replay_buffer_size}\n{max_min}\n{epsilon_decay}\n{seed}\
+            {train_frames}\n{grad_batch_size}\n{replay_buffer_size}\n{max_min}\n{epsilon_decay}\n{seed}\
                     ''')
 
                 for delta in delta_vals:
@@ -106,7 +106,7 @@ if __name__ == "__main__":
                     print(f"Started training: seed: {seed}, linear: {linear}, factor: {factor}, delta: {delta}")
                     seed_everything(seed)
 
-                    env = CliffCar()
+                    env = CliffCar(noise_var = 0.05)
 
                     replay_buffer = TheCoolerReplayBuffer(obs_dim=obs_dim, bin_size=bin_size, batch_size=batch_size,
                                                           fineness=fineness, num_actions=action_dim, state_max=state_max,
@@ -119,7 +119,11 @@ if __name__ == "__main__":
                                             gamma=0.99, robust_factor=factor, linear_only=linear)
 
                     train_start = time.time()
-                    train_data = agent.train(num_frames, plotting_interval=999999)
+                    train_data = agent.train(train_frames = train_frames,
+                                             test_interval = 250,
+                                             test_games = 100,
+                                             do_test_plots = True,
+                                             test_name_prefix = "test-delete-me")
                     train_end = time.time()
                     test_start = train_end
                     # test_data = agent.test(test_games=100, render_games=0)

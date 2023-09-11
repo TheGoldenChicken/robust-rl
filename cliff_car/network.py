@@ -42,11 +42,21 @@ class RadialNetwork2d(nn.Module):
         self.env = env
         
         x_min, y_min, x_max, y_max = self.env.BOUNDS
-        in_dim = len(torch.arange(x_min, x_max+1, self.env.r_basis_diff)) * \
-                    len(torch.arange(y_min, y_max+1, self.env.r_basis_diff))
+        x_range = torch.arange(x_min, x_max, self.env.r_basis_diff)
+        y_range = torch.arange(y_min, y_max, self.env.r_basis_diff)
+
+        self.in_dim = x_range.shape[0] * y_range.shape[0]
         
-        print(">>>>>>>>>>>>>>>>>>>>>>> " + str(self.env.ACTION_DIM))
-        self.layers = nn.Sequential(nn.Linear(in_dim, env.ACTION_DIM))
+        x, y = torch.meshgrid(x_range, y_range)
+        points = torch.column_stack((x.ravel(), y.ravel()))
+
+        sigma = torch.eye(2) * self.env.r_basis_diff
+        self.mNormal = []
+        for i in range(points.shape[0]):
+            m = MultivariateNormal(points[i], sigma)
+            self.mNormal.append(m)
+
+        self.layers = nn.Sequential(nn.Linear(self.in_dim, env.ACTION_DIM))
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward method implementation."""
@@ -56,16 +66,10 @@ class RadialNetwork2d(nn.Module):
         return self.layers(basis)
 
     def radial_basis(self, position):
-        x_min, y_min, x_max, y_max = self.env.BOUNDS
-        x, y = torch.meshgrid(torch.arange(x_min, x_max+1, self.env.r_basis_diff), torch.arange(y_min, y_max+1, self.env.r_basis_diff))
-        points = torch.column_stack((x.ravel(), y.ravel()))
-
-        # Evaluate 2D Gaussian distribution for each point in points
-        sigma = torch.eye(2) * self.env.r_basis_var
-        basis = torch.zeros(position.shape[0],points.shape[0])
-        for i in range(points.shape[0]):
-            m = MultivariateNormal(points[i], sigma)
-            basis[:,i] = m.log_prob(position).exp()
+        basis = torch.zeros(position.shape[0], self.in_dim)
+    
+        for i in range(self.in_dim):
+            basis[:,i] = self.mNormal[i].log_prob(position).exp()
         
         basis.requires_grad = False
         

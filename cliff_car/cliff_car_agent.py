@@ -61,9 +61,9 @@ class CliffCarAgent:
         if self.epsilon > np.random.random() and not self.is_test:
             selected_action = random.randint(0, self.env.ACTION_DIM-1) # Why is this not inclusive, exclusive??? Stupid
         else:
-            select_state = self.state_normalizer(state)
+            # select_state = self.state_normalizer(state)
             selected_action = self.dqn(
-                torch.FloatTensor(select_state).to(self.device)
+                torch.FloatTensor(state).to(self.device)
             ).argmax(axis=1)[0]
             selected_action = int(selected_action)
 
@@ -99,51 +99,64 @@ class CliffCarAgent:
 
         return loss.item()
 
-    def train(self, num_frames: int, plotting_interval: int = 200, q_val_plotting_interval=200):
+    def train(self, train_frames: int, test_interval = 200, test_games = 100, do_test_plots = True, test_name_prefix = ""):
         """Train the agent."""
         self.is_test = False
         self.dqn.train()
 
-        state = self.env.reset()
+        self.env.reset()
         update_cnt = 0
         epsilons = []
         losses = []
         scores = []
         score = 0
-        
-        for frame_idx in tqdm(range(1, num_frames + 1)):
-            action = self.select_action(state)
-            next_state, reward, done = self.step(action)
 
-            state = next_state
+        # War up until we are ready to train.
+        while(not self.training_ready):
+            action = self.select_action(self.env.position)
+            _, _, done = self.step(action)
+
+            # if episode ends
+            if done:
+                self.env.reset()
+            
+            self.training_ready = self.replay_buffer.training_ready()
+        
+        # Start training for the given amount of trames
+        self.env.reset()
+        for frame_idx in tqdm(range(1, train_frames + 1)):
+            action = self.select_action(self.env.position)
+            _, reward, done = self.step(action)
+
             score += reward
 
             # if episode ends
             if done:
-                state = self.env.reset()
+                self.env.reset()
                 scores.append(score)
                 score = 0
+            
 
-            # Update whether we're ready to train
-            if not self.training_ready:
-                self.training_ready = self.replay_buffer.training_ready()
+            loss = self.update_model()
+            losses.append(loss)
+            update_cnt += 1
 
-            else:
-                loss = self.update_model()
-                losses.append(loss)
-                update_cnt += 1
+            # linearly decrease epsilon
+            self.epsilon = max(
+                self.min_epsilon, self.epsilon - (
+                        self.max_epsilon - self.min_epsilon
+                ) * self.epsilon_decay
+            )
+            epsilons.append(self.epsilon)
 
-                # linearly decrease epsilon
-                self.epsilon = max(
-                    self.min_epsilon, self.epsilon - (
-                            self.max_epsilon - self.min_epsilon
-                    ) * self.epsilon_decay
-                )
-                epsilons.append(self.epsilon)
-
-            # plotting
-                if frame_idx % plotting_interval == 0:
-                    self._plot(frame_idx, scores, losses, epsilons)
+            if frame_idx % test_interval == 0:
+                self.test(test_games=test_games,
+                          test_name_prefix = test_name_prefix + "-frame-" + str(frame_idx),
+                          do_test_plots=do_test_plots)
+                pass
+            # # plotting
+            # if frame_idx % plotting_interval == 0:
+            #     self._plot(frame_idx, scores, losses, epsilons)
 
         print("Training complete")
         return scores, losses, epsilons
@@ -154,7 +167,7 @@ class CliffCarAgent:
         except:
             print("ERROR! Could not save model!")
 
-    def test(self, test_games=100, render_games: int=0, render_speed: int=60):
+    def test(self, test_games=100, test_name_prefix: str = "", do_plots=False, render_games: int=0, render_speed: int=60):
         """
         Test the agent
         :param test_games: number of test games to get score from
@@ -166,26 +179,23 @@ class CliffCarAgent:
         all_sar = [] # All state_action_reward
         self.dqn.eval() # Set network to evaluation mode disabling dropout
 
-        for i in range(test_games):
-            state = self.env.reset()
+        for i in tqdm(range(test_games)):
+            self.env.reset()
             done = False
 
             # NOTE that we also get the last state, action, reward when the environment terminates here...
 
             sar = np.zeros([self.env.max_duration, 3,2]) # state, action, reward
 
-            i = 0
+            frame = 0
             # Changed here from training, since we play games till the end, not for a certain number of steps (frames)
             while not done:
-                action = self.select_action(state)
-                next_state, reward, done = self.step(action)
+                action = self.select_action(self.env.position)
+                _, reward, done = self.step(action)
 
-                # Using item here because they are numpy arrays... stupid
-                sar[i] = np.array([state, np.array([action.item(),0]), np.array([reward,0])])
+                sar[frame] = np.array([self.env.position, np.array([action,0]), np.array([reward,0])])
 
-                i += 1
-
-                state = next_state
+                frame += 1
 
             all_sar.append(sar)
 
@@ -195,17 +205,41 @@ class CliffCarAgent:
             self.env.frame_rate = render_speed
 
         for i in range(render_games):
-            state = self.env.reset()
+            self.env.reset()
             done = False
             while not done:
-                action = self.select_action(state)
-                next_state, reward, done = self.step(action)
+                action = self.select_action(self.env.position)
+                _, reward, done = self.step(action)
                 self.env.render()
 
-                state = next_state
+        if do_plots:
+            self.do_test_plots(all_sar, plot_name_prefix=test_name_prefix)
 
         return np.array(all_sar)
+    
+    def do_test_plots(self, all_sar, plot_grid_spacing = 0.5, plot_name_prefix = ""):
+        x_range = torch.arange(self.env.BOUNDS[0], self.env.BOUNDS[2], plot_grid_spacing)
+        y_range = torch.arange(self.env.BOUNDS[1], self.env.BOUNDS[3], plot_grid_spacing)
+        x, y = torch.meshgrid(x_range, y_range)
+        state_grid = torch.column_stack((x.ravel(), y.ravel()))
 
+        # Get q-values for the state grid
+        q_vals = self.get_q_vals(state_grid)
+        v_vals = np.max(q_vals, axis=1).reshape(x.shape)
+        # Plot the q-values as image using the brq cmap
+        plt.imshow(v_vals, extent=[x_range[0], x_range[-1], y_range[0], y_range[-1]], origin='lower', cmap='brg')
+        plt.colorbar()
+        plt.savefig(f'v_vals_{plot_name_prefix}.png')
+        plt.clf()
+
+        # Plot the visited states as a heatmap
+        heatmap, _, _ = np.histogram2d(states[:,0], states[:,1], bins=[len(x_range), len(y_range)])
+        states = np.array([sar[:,0] for sar in all_sar]).reshape(-1,2)
+        plt.imshow(heatmap.T, extent=[x_range[0], x_range[-1], y_range[0], y_range[-1]], origin='lower', cmap='brg')
+        ålt.colorbar()
+        plt.savefig(f'heatmap_{plot_name_prefix}.png')
+        plt.clf()
+        
     def load_model(self, path):
         self.dqn.load_state_dict(torch.load(path, map_location=self.device))
 
