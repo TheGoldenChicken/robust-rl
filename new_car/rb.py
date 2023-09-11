@@ -24,7 +24,7 @@ class Bin:
         if self.head_ptr == -1: # if empty
             return None
         if self.is_full: # if full
-            return samples
+            return self.samples
         return self.samples[:self.head_ptr + 1] #else
     
 class CoolerReplayBuffer:
@@ -44,36 +44,36 @@ class CoolerReplayBuffer:
         return np.round(state / self.bin_width).astype(np.int32)
         
     def store(self, sample : dict):
+        
+        # Stupid stuff to prevent singular matrices from appearing in calculation of the robust estimator
+        sample["state"] += np.random.normal(loc=0,scale=5e-4, size=self.state_dim)
+        sample["next_state"] += np.random.normal(loc=0,scale=5e-4, size=self.state_dim)
+        
         self.bins[sample["action"]][self.get_idx(sample["state"])].store(sample)
     
-    def draw(self, n : int, action : int = None , replace : bool = False, min_req_ratio = 3, repeat = 1):
+    def draw(self, n : int, action : int = None , replace : bool = False, min_req_ratio = 3):
         
-        batches = []
+        bins = []
+        if action is None:
+            bins = self.bins
+        else:
+            bins = [self.bins[action]]
         
-        for _ in range(repeat):
-            bins = []
-            if action is None:
-                bins = self.bins
-            else:
-                bins = [self.bins[action]]
+        samples = []
+        for action_bin in bins:
+            for bin_ in action_bin.values():
+                samples_ = bin_.get_samples()
+                if samples_ is not None:
+                    samples.append(samples_)
+                    
+        if samples != []:
+            samples = np.concatenate(samples)
             
-            samples = []
-            for action_bin in bins:
-                for bin_ in action_bin.values():
-                    samples_ = bin_.get_samples()
-                    if samples_ is not None:
-                        samples.append(samples_)
-                        
-            if samples != []:
-                samples = np.concatenate(samples)
-                
-                if samples.size < n * min_req_ratio: return None
-                
-                batches.append(np.random.choice(samples, n, replace = False))
+            if samples.size < n * min_req_ratio: return None
             
-        return batches
+            return np.random.choice(samples, n, replace = False)
     
-    def knn(self, k, state, action = None, neighbour_bin_dist = 1, min_req_ratio = 1.5, repeat = 1, distance = "Euclidean"):
+    def knn(self, k, state, action = None, neighbour_bin_dist = 5, min_req_ratio = 1.5, distance = "Euclidean"):
         """
         Get the knn samples from the given state
         
@@ -87,81 +87,74 @@ class CoolerReplayBuffer:
         assert neighbour_bin_dist >= 0, "neighbour_dist must be positive and non-zero"
         assert k >= 1, "At least 1 neighbour most be found"
         
-        batches = []
+        idx = self.get_idx_array(state)
+        idxs = np.array(list(itertools.product(range(-neighbour_bin_dist, neighbour_bin_dist + 1), repeat=self.state_dim)), dtype = np.int32) + idx
         
-        for _ in range(repeat):
-            idx = self.get_idx_array(state)
-            idxs = np.array(list(itertools.product(range(-neighbour_bin_dist, neighbour_bin_dist + 1), repeat=self.state_dim)), dtype = np.int32) + idx
-            
-            bins = []
-            if action is None:
-                bins = self.bins
-            else:
-                bins = [self.bins[action]]
-            
-            # Get all samples in all bins indexed by the idxs and store them as an array
-            samples = []
-            for action_bin in bins:
-                for i in idxs:
-                    bin_ = action_bin[tuple(i)]
-                    samples_ = bin_.get_samples()
-                    if samples_ is not None:
-                        samples.append(samples_)
-            
-            if samples != []:
-                print(samples)
-                samples = np.concatenate(samples)
-                
-            # At least < k * min_req_ratio > samples are needed
-            if samples.size < k * min_req_ratio:
-                return None
-            
-            # Calculate distances between state and all samples
-            distances = np.linalg.norm(np.array([sample["state"] for sample in samples]) - state, axis=1)
-            
-            # Get the indices of the k nearest neighbours
-            knn_indices = np.argpartition(distances, k)[:k]
+        bins = []
+        if action is None:
+            bins = self.bins
+        else:
+            bins = [self.bins[action]]
         
-            batches.append(samples[knn_indices])
+        # Get all samples in all bins indexed by the idxs and store them as an array
+        samples = []
+        for action_bin in bins:
+            for i in idxs:
+                bin_ = action_bin[tuple(i)]
+                samples_ = bin_.get_samples()
+                if samples_ is not None:
+                    samples.append(samples_)
+        
+        if samples != []:
+            samples = np.concatenate(samples)
             
-        # Return the k nearest neighbours
-        return batches
-
+        # At least < k * min_req_ratio > samples are needed
+        if samples.size < k * min_req_ratio:
+            return None
+        
+        # Calculate distances between state and all samples
+        distances = np.linalg.norm(np.array([sample["state"] for sample in samples]) - state, axis=1)
+        
+        # Get the indices of the k nearest neighbours
+        knn_indices = np.argpartition(distances, k)[:k]
+    
+        return samples[knn_indices]
+    
 # Test dataset
 
-import matplotlib.pyplot as plt
-import time
+# import matplotlib.pyplot as plt
+# import time
 
 
-n = 100
-dim = 2 # dimention
+# n = 100
+# dim = 2 # dimention
 
-rb = CoolerReplayBuffer(dim, 3, 0.1, 100)
+# rb = CoolerReplayBuffer(dim, 3, 0.1, 100)
 
-all_data = []
-for loc in [0, 1, 2]:
-    data = np.array([np.random.normal(loc = loc, size = n) for _ in range(dim)]).T
+# all_data = []
+# for loc in [0, 1, 2]:
+#     data = np.array([np.random.normal(loc = loc, size = n) for _ in range(dim)]).T
     
-    all_data.append(data)
+#     all_data.append(data)
     
-    samples = [{"state" : d, "action" : loc} for d in data]
+#     samples = [{"state" : d, "action" : loc} for d in data]
     
-    for sample in samples:
-        rb.store(sample)
+#     for sample in samples:
+#         rb.store(sample)
 
-all_data = np.concatenate(all_data)
+# all_data = np.concatenate(all_data)
 
-knn = rb.knn(k = 100, state = np.array([0.5,0.5]), action = 0, neighbour_bin_dist=20, min_required_ratio=1)
+# knn = rb.knn(k = 100, state = np.array([0.5,0.5]), action = 0, neighbour_bin_dist=20, min_req_ratio=1)
 
 
-knn_state = np.array([sample["state"] for sample in knn])
+# knn_state = np.array([sample["state"] for sample in knn])
 
-r_state = np.array([sample["state"] for sample in rb.draw(100)])
+# r_state = np.array([sample["state"] for sample in rb.draw(100)])
 
-plt.scatter(all_data[:,0],all_data[:,1])
-plt.scatter(r_state[:,0], r_state[:,1])
-plt.scatter(knn_state[:,0], knn_state[:,1])
-plt.show()
+# plt.scatter(all_data[:,0],all_data[:,1])
+# plt.scatter(r_state[:,0], r_state[:,1])
+# plt.scatter(knn_state[:,0], knn_state[:,1])
+# plt.show()
         
         
         

@@ -70,7 +70,7 @@ q_vals = np.mean(q_vals, axis=0)
 # q_vals = np.rot90(q_vals, k=1, axes=(0,1))
 
 
-qvals =  np.load(f'test_results/linear=False-seed=1000-factor=-1/{delta}-q_vals.npy', allow_pickle=True).reshape(150,150,5)
+qvals =  np.load(f'test_results/linear=True-seed=1000-factor=1/{delta}-q_vals.npy', allow_pickle=True).reshape(150,150,5)
 
 # Transpose the first two dimentions
 q_vals = np.transpose(q_vals, axes=(1,0,2))

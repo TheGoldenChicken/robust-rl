@@ -62,9 +62,15 @@ class RobustCliffCarAgent(CliffCarAgent):
             next_state = sample["next_obs"]
 
             # Normalize state values (very important, trust me!)
-            state = self.state_normalizer(state)
-            next_state = self.state_normalizer(next_state)
-
+            # state = self.state_normalizer(state)
+            # next_state = self.state_normalizer(next_state)
+            
+            # HACK: No idea why but the state is on rare occations en empty tensor... This is a quick fix
+            if state.shape[0] == 0:
+                mask[i] = 0
+                robust_estimators.append(0)
+                continue
+            
             Q_vals = self.dqn(torch.FloatTensor(next_state).to(device))  # Should all have the same action
             Q_vals = Q_vals.max(dim=1, keepdim=True)[0].detach().cpu().numpy()
 

@@ -55,8 +55,8 @@ if __name__ == "__main__":
     # Replay buffer parameters - Should not be changed!
     obs_dim = env.OBS_DIM
     action_dim = env.ACTION_DIM
-    batch_size = 40
-    fineness = 20
+    batch_size = 100
+    fineness = 10
     ripe_when = None
     state_max, state_min = np.array(env.max_min[0]), np.array(env.max_min[1])
     ready_when = 10
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     grad_batch_size = 10 # 10
     replay_buffer_size = 1000 #1000
     max_min = [[env.max_min[0]],[env.max_min[1]]]
-    epsilon_decay = 1/500 # default: 1/5000
+    epsilon_decay = 1/5000 # default: 1/5000
 
     # Seeds
     seeds = [1]
@@ -78,9 +78,9 @@ if __name__ == "__main__":
     
     delta_vals = [0.01, 1, 3]
     
-    factors = [-1] # Whether to add or subtract robust estimator from reward
+    factors = [-1, 1] # Whether to add or subtract robust estimator from reward
     
-    linear_only = [False] # Whether to use linear or quadratic approximation
+    linear_only = [True, False] # Whether to use linear or quadratic approximation
     
     seeds = [seed * seed_id for seed in seeds]
     
