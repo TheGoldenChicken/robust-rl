@@ -216,6 +216,8 @@ class CliffCarAgent:
         if do_plots:
             self.do_test_plots(all_sar, plot_name_prefix=test_name_prefix)
 
+        self.is_test = False
+
         return np.array(all_sar)
     
     def do_test_plots(self, all_sar, plot_grid_spacing = 0.5, plot_name_prefix = ""):
