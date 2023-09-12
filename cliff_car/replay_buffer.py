@@ -70,8 +70,8 @@ class TheSlightlyCoolerReplayBuffer(ReplayBuffer):
     ):
 
         if self.noise_adder:
-            obs += np.random.normal(loc=0,scale=1e-3, size=len(obs))
-            next_obs += np.random.normal(loc=0,scale=1e-3, size=len(next_obs))
+            obs += np.random.normal(loc=0,scale=5e-3, size=len(obs))
+            next_obs += np.random.normal(loc=0,scale=5e-3, size=len(next_obs))
 
         self.obs_buf[self.ptr] = obs
         self.next_obs_buf[self.ptr] = next_obs
@@ -285,8 +285,8 @@ class TheCoolerReplayBuffer(ReplayBuffer):
 
         if self.noise_adder:
             # Stupid stuff to prevent singular matrices from appearing in calculation of the robust estimator
-            obs += np.random.normal(loc=0,scale=5e-4, size=self.obs_dim)
-            next_obs += np.random.normal(loc=0,scale=5e-4, size=self.obs_dim)
+            obs += np.random.normal(loc=0,scale=1-4, size=self.obs_dim)
+            next_obs += np.random.normal(loc=0,scale=1e-4, size=self.obs_dim)
 
         self.obs_buf[teh_idx] = obs
         self.next_obs_buf[teh_idx] = next_obs

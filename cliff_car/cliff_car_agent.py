@@ -23,9 +23,10 @@ class CliffCarAgent:
         self.replay_buffer = replay_buffer
         self.training_ready = False
 
-        self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu"
-        )
+        # self.device = torch.device(
+        #     "cuda" if torch.cuda.is_available() else "cpu"
+        # )
+        self.device = torch.device("cpu")
         # print(self.device) # Just to know which one we're on
 
         self.dqn = network(env).to(self.device)
@@ -152,7 +153,7 @@ class CliffCarAgent:
             if frame_idx % test_interval == 0:
                 print(">>> Testing: " + test_name_prefix + "-frame-" + str(frame_idx) + "-epsilon-" + str(self.epsilon))
                 self.test(test_games=test_games,
-                          test_name_prefix = test_name_prefix + "-frame-" + str(frame_idx),
+                          test_name_prefix = test_name_prefix + f"-frame-{str(frame_idx)}",
                           do_test_plots=do_test_plots)
                 pass
             # # plotting

@@ -36,7 +36,7 @@ def linear_approximation(X,y):
     Phi = np.array([np.ones(X.shape[0]), *[X[:,i] for i in range(D)]]).T
 
     # Compute the posteriror using linear algebra
-    Sigma = np.linalg.inv(Phi.T@Phi)
+    Sigma = np.linalg.pinv(Phi.T@Phi)
     mu = Sigma@Phi.T@y
 
     c = mu[0]
@@ -45,9 +45,9 @@ def linear_approximation(X,y):
     return b, c
 
 def expectation(A, b, c, beta, mu, Sigma):
-    Sigma_inv = np.linalg.inv(Sigma)
-    Sigma_tilde = np.linalg.inv(Sigma_inv+(2/beta)*A)
-    Sigma_tilde_inv = np.linalg.inv(Sigma_tilde)
+    Sigma_inv = np.linalg.pinv(Sigma)
+    Sigma_tilde = np.linalg.pinv(Sigma_inv+(2/beta)*A)
+    Sigma_tilde_inv = np.linalg.pinv(Sigma_tilde)
     mu_tilde = (mu.T@Sigma_inv+(-b.T/beta))@Sigma_tilde
     k = np.sqrt(np.linalg.det(Sigma_tilde)/np.linalg.det(Sigma)) \
         * np.exp((-1/2)*mu.T@Sigma_inv@mu+(1/2)*mu_tilde.T@Sigma_tilde_inv@mu_tilde+(c/-beta))
@@ -130,9 +130,9 @@ def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1, linear_only = False):
     if Sigma.shape == (): Sigma = np.expand_dims(np.expand_dims(Sigma, axis = 0),axis=0)
 
     def estimator(beta):
-        Sigma_inv = np.linalg.inv(Sigma)
-        Sigma_tilde = np.linalg.inv(Sigma_inv+(2/beta)*A)
-        Sigma_tilde_inv = np.linalg.inv(Sigma_tilde)
+        Sigma_inv = np.linalg.pinv(Sigma)
+        Sigma_tilde = np.linalg.pinv(Sigma_inv+(2/beta)*A)
+        Sigma_tilde_inv = np.linalg.pinv(Sigma_tilde)
         mu_tilde = ((mu.T@Sigma_inv+(-b.T/beta))@Sigma_tilde).flatten() # We flatten here to avoid a mishap with Sigma_tilde
         k1 = np.sqrt(np.linalg.det(Sigma_tilde)/np.linalg.det(Sigma))
         k2 = (-1/2)*mu.T@Sigma_inv@mu+(1/2)*mu_tilde.T@Sigma_tilde_inv@mu_tilde+(c/-beta)
@@ -204,9 +204,9 @@ def robust_estimator(X_p,y_p,X_v,y_v,delta, linear_only = False):
 # Y = np.linspace(-1.5, 1.5, 10)
 
 # beta = 0.1
-# S = (beta/2)*np.linalg.inv(A)
-# m = (-b/2)@np.linalg.inv(A)
-# S_inv = np.linalg.inv(S)
+# S = (beta/2)*np.linalg.pinv(A)
+# m = (-b/2)@np.linalg.pinv(A)
+# S_inv = np.linalg.pinv(S)
 # S_det = np.linalg.det(S)
 # k = (np.exp(c/-beta)*np.sqrt((2*np.pi)**len(m)*S_det))/np.exp(-(1/2)*m.T@S_inv@m)
 

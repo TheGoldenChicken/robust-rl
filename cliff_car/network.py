@@ -66,7 +66,7 @@ class RadialNetwork2d(nn.Module):
         return self.layers(basis)
 
     def radial_basis(self, position):
-        basis = torch.zeros(position.shape[0], self.in_dim)
+        basis = torch.zeros(position.shape[0], self.in_dim, device=position.device)
     
         for i in range(self.in_dim):
             basis[:,i] = self.mNormal[i].log_prob(position).exp()

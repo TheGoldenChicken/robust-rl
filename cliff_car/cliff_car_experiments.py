@@ -64,7 +64,7 @@ if __name__ == "__main__":
     bin_size = 500
 
     # Should have converged somewhat at this point
-    train_frames = 3000 # 12000
+    train_frames = 5000 # 12000
 
     # Agent parameters - Should not be changed!
     grad_batch_size = 10 # 10
