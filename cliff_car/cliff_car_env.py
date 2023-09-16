@@ -12,8 +12,6 @@ def drawImage(display, path, center, scale=None, angle=None):
         img = pygame.transform.rotate(img, angle)
 
     display.blit(img, center)
-    
-
 
 class CliffCar:
 
@@ -27,24 +25,24 @@ class CliffCar:
     OBS_DIM = 2
     START_POSITION = np.array([1,1], dtype=np.float32) # has to be discrete for discrete agent to work
     GOAL_POSITION = np.array([14,1], dtype=np.float32) # has to be discrete for discrete agent to work
-    BOUNDS = np.array([-3,-2,18,12]) # has to be discrete for discrete agent to work
+    BOUNDS = np.array([-10,-2,25,20]) # has to be discrete for discrete agent to work
     CLIFF_HEIGHT = 0
     SPEED = 0.5
 
-    def __init__(self, noise_mean = np.array([0,0]), noise_var = None, mode = "abrupt", r_basis_diff = 1, r_basis_var = 2):
+    def __init__(self, noise_mean = [0,0], noise_var = None, mode = "abrupt", r_basis_diff = 1, r_basis_var = 2):
 
         # Car settings
         self.position = self.START_POSITION
 
-        self.noise_mean = noise_mean
-        self.noise_var = noise_var
+        self.noise_mean = np.array(noise_mean)
+        self.noise_var = np.array(noise_var)
         
         # World settings
         self.mode = mode # "abrupt" or "penalty" - How the cliff is handled
         self.max_goal_distance = self.get_max_goal_distance()
         
         # Simulation settings
-        self.max_duration = 1000
+        self.max_duration = 200
         self.frame = 0
         
         self.max_min = [[self.BOUNDS[2], self.BOUNDS[3]], [self.BOUNDS[0], self.BOUNDS[1]]]
@@ -89,7 +87,7 @@ class CliffCar:
         noise = np.zeros(2)
         if(self.noise_var is not None):
 
-            noise = np.random.multivariate_normal(self.noise_mean, np.eye(2)*self.noise_var)
+            noise = np.random.multivariate_normal(self.noise_mean, self.noise_var)
 
         action_dir = self.translate_action[action]
 
@@ -177,59 +175,10 @@ class CliffCar:
         
         pygame.draw.rect(self.display, (0,255,0), goal_rect)
         pygame.draw.rect(self.display, (255,0,0), car_rect)
-
-class CliffCarRadial(CliffCar):
-    
-    def __init__(self, noise_mean = np.array([0,0]), noise_var = None, mode = "abrupt", r_basis_diff = 2, r_basis_var = 2):
-        super().__init__(noise_mean, noise_var, mode)
-        
-        self.r_basis_diff = r_basis_diff
-        self.r_basis_var = r_basis_var
-        
-        x_min, y_min, x_max, y_max = self.BOUNDS
-        self.OBS_DIM = len(np.arange(x_min, x_max+1, r_basis_diff))*len(np.arange(y_min, y_max+1, r_basis_diff))
-        
-        self.position_2d = self.START_POSITION
-        self.position = self.radial_basis(self.position_2d)
-        
-    
-    def step(self, action):
-        
-        self.position_2d = self.result(self.position_2d, action)
-
-        reward, done = self.reward_fn(self.position_2d)
-        
-        if self.frame >= self.max_duration:
-            done = True
-            reward = 0
-
-        if self.rendering:
-            self.render()
-            
-        self.frame += 1
-        
-        self.position = radial_basis(self.position_2d)
-
-        return self.position, reward, done, 'dummy' # Final value is dummy for working with gym envs
-    
-    def radial_basis(self, position_2d):
-        x_min, y_min, x_max, y_max = self.BOUNDS
-        x, y = np.meshgrid(np.arange(x_min, x_max+1, self.r_basis_diff), np.arange(y_min, y_max+1, self.r_basis_diff))
-        points = np.column_stack((x.ravel(), y.ravel()))
-        
-        # Evaluate 2D Gaussian distribution for each point in points
-        sigma = np.eye(2) * self.r_basis_var #TODO change this
-        sigma_det = np.linalg.det(sigma)
-        sigma_inv = np.linalg.inv(sigma)
-        basis = np.zeros(points.shape[0])
-        for i in range(points.shape[0]):
-            basis[i] = 1 / (2 * np.pi * np.sqrt(sigma_det)) * np.exp(-0.5 * (points[i] - position_2d).T @ sigma_inv @ (points[i] - position_2d))
-        
-        return basis
         
 class CliffCarDiscrete(CliffCar):
 
-    def __init__(self, noise_mean = np.array([0,0]), noise_var = None, mode = "abrupt"):
+    def __init__(self, noise_mean = [0,0], noise_var = None, mode = "abrupt"):
         super().__init__(noise_mean, noise_var, mode)
     
     def result(self, position, action):
@@ -260,8 +209,7 @@ class CliffCarDiscrete(CliffCar):
         return p
 
         
-        
-
+    
 car = CliffCar()
 
 if __name__ == "__main__":

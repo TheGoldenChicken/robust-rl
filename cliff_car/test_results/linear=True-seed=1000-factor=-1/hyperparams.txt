@@ -1,15 +1,15 @@
             Batch size, Fineness, ripe_when, state_max, state_min, ready_when, num_neighbours, bin_size, train_frames,            grad_batch_size, replay_buffer_size, max_min, epsilon_decay 
             100
-10
+20
 None
-[18 12]
-[-3 -2]
+[25 20]
+[-10  -2]
 10
 2
 500
-            5000
+            10000
 10
 1000
-[[[18, 12]], [[-3, -2]]]
-0.00016
+[[[25, 20]], [[-10, -2]]]
+0.002
 1000                    

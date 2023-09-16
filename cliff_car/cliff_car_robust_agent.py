@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import random
 import os
 from tqdm import tqdm
+import wandb
 
 class RobustCliffCarAgent(CliffCarAgent):
     def __init__(self, env, replay_buffer, epsilon_decay, network, grad_batch_size=30, delta=0.5, max_epsilon=1.0,
@@ -55,8 +56,7 @@ class RobustCliffCarAgent(CliffCarAgent):
         current_q_values = self.dqn(current_sample_obs).gather(1, current_sample_actions)
 
         robust_estimators = []
-        plotting_robust_estimators = [] # For holding output without gamma discounted, reward added robust estimators
-
+        
         for i, sample in enumerate(samples):
             state = sample["obs"]
             next_state = sample["next_obs"]
@@ -87,7 +87,6 @@ class RobustCliffCarAgent(CliffCarAgent):
 
             self.betas.append(beta_max)
             robust_estimators.append(robust_estimator)
-            plotting_robust_estimators.append(robust_estimator)
 
         robust_estimators = torch.FloatTensor(robust_estimators).to(device).reshape(-1, 1) * self.robust_factor # -1 because that works better? #unsqueezing because im stupid and lazy
         robust_estimators = rewards + self.gamma * robust_estimators * mask
@@ -97,13 +96,13 @@ class RobustCliffCarAgent(CliffCarAgent):
         # calculate dqn loss
         loss = F.smooth_l1_loss(current_q_values, robust_estimators, reduction='mean') # reduction same as default, no worries
 
-        return loss, robust_estimators, plotting_robust_estimators
+        return loss, robust_estimators
 
     def update_model(self): # -> torch.Tensor:
         """Update the model by gradient descent."""
         samples = self.get_samples() # Get_samples needs to be set for each subclass
 
-        loss, robust_estimator, _ = self._compute_dqn_loss(*samples)
+        loss, robust_estimator = self._compute_dqn_loss(*samples)
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -118,11 +117,12 @@ class RobustCliffCarAgent(CliffCarAgent):
         self.dqn.train()
 
         self.env.reset()
-        update_cnt = 0
+        
         epsilons = []
         losses = []
         scores = []
         score = 0
+        wandb.log({'score': score})
 
         # War up until we are ready to train.
         while(not self.training_ready):
@@ -146,13 +146,16 @@ class RobustCliffCarAgent(CliffCarAgent):
             # if episode ends
             if done:
                 self.env.reset()
+                wandb.log({'score': score})
                 scores.append(score)
                 score = 0
             
-
             loss = self.update_model()
             losses.append(loss)
-            update_cnt += 1
+            
+            wandb.log({'loss': loss[0]}) # Loss
+            wandb.log({'robust_estimator': loss[1]}) # Robust estimator
+            wandb.log({'epsilon': self.epsilon})
 
             # linearly decrease epsilon
             self.epsilon = max(
@@ -162,9 +165,11 @@ class RobustCliffCarAgent(CliffCarAgent):
             )
             epsilons.append(self.epsilon)
 
+
             if frame_idx % test_interval == 0:
+                print("\n>>> Testing: " + test_name_prefix + "-frame-" + str(frame_idx) + "-epsilon-" + str(round(self.epsilon,3)) + "-loss-" + str(round(loss[0],3)))
                 self.test(test_games=test_games,
-                          test_name_prefix = test_name_prefix,
+                          test_name_prefix = test_name_prefix + f"-frame-{str(frame_idx)}",
                           do_plots=do_test_plots)
                 pass
             # # plotting

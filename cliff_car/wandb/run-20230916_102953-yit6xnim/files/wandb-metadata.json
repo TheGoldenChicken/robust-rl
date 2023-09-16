@@ -1,0 +1,57 @@
+{
+    "os": "Windows-10-10.0.19045-SP0",
+    "python": "3.11.3",
+    "heartbeatAt": "2023-09-16T08:29:54.787465",
+    "startedAt": "2023-09-16T08:29:53.978283",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "c:\\Users\\calle\\Documents\\GitHub\\robust-rl\\cliff_car\\cliff_car_experiments.py",
+    "codePathLocal": "cliff_car_experiments.py",
+    "codePath": "cliff_car\\cliff_car_experiments.py",
+    "git": {
+        "remote": "https://github.com/TheGoldenChicken/robust-rl.git",
+        "commit": "aae28907e2dbfe0cf4343d356df23ccab31b1e04"
+    },
+    "email": "calle@rygecarlsen.dk",
+    "root": "C:/Users/calle/Documents/GitHub/robust-rl",
+    "host": "DESKTOP-OKSREAS",
+    "username": "calle",
+    "executable": "C:\\Users\\calle\\Anaconda3\\envs\\bachelor\\python.exe",
+    "cpu_count": 12,
+    "cpu_count_logical": 24,
+    "cpu_freq": {
+        "current": 3801.0,
+        "min": 0.0,
+        "max": 3801.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 3801.0,
+            "min": 0.0,
+            "max": 3801.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 931.3984336853027,
+            "used": 343.11256408691406
+        }
+    },
+    "gpu": "GeForce GTX 660",
+    "gpu_count": 2,
+    "gpu_devices": [
+        {
+            "name": "GeForce GTX 660",
+            "memory_total": 3221225472
+        },
+        {
+            "name": "GeForce GTX 660",
+            "memory_total": 3221225472
+        }
+    ],
+    "memory": {
+        "total": 31.91257095336914
+    }
+}

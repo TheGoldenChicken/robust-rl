@@ -1,0 +1,153 @@
+
+Started training: seed: 1001, linear: True, factor: -1, delta: 0.01
+C:\Users\calle\Anaconda3\envs\bachelor\Lib\site-packages\torch\functional.py:504: UserWarning: torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument. (Triggered internally at ..\aten\src\ATen\native\TensorShape.cpp:3484.)
+  return _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7%|██████████▉                                                                                                                                       | 149/2000 [03:58<49:19,  1.60s/it]
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 5/5 [01:55<00:00, 23.17s/it]
+ 12%|█████████████████▉                                                                                                                              | 249/2000 [08:32<1:00:01,  2.06s/it]
+Traceback (most recent call last):
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\cliff_car_experiments.py", line 139, in <module>
+    train_data = agent.train(train_frames = train_frames,
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\cliff_car_robust_agent.py", line 171, in train
+    self.test(test_games=test_games,
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\cliff_car_agent.py", line 218, in test
+    self.do_test_plots(all_sar, plot_name_prefix=test_name_prefix)
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\cliff_car_agent.py", line 252, in do_test_plots
+    wab_image_vval = wandb.Image(heatmap.T,
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\calle\Anaconda3\envs\bachelor\Lib\site-packages\wandb\sdk\data_types\image.py", line 161, in __init__
+    self._initialize_from_data(data_or_path, mode)
+  File "C:\Users\calle\Anaconda3\envs\bachelor\Lib\site-packages\wandb\sdk\data_types\image.py", line 301, in _initialize_from_data
+    self._image = pil_image.fromarray(
+                  ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\calle\Anaconda3\envs\bachelor\Lib\site-packages\PIL\Image.py", line 3112, in fromarray
+    return frombuffer(mode, size, obj, "raw", rawmode, 0, 1)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\calle\Anaconda3\envs\bachelor\Lib\site-packages\PIL\Image.py", line 3028, in frombuffer
+    return frombytes(mode, size, data, decoder_name, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\calle\Anaconda3\envs\bachelor\Lib\site-packages\PIL\Image.py", line 2970, in frombytes
+    im.frombytes(data, decoder_name, args)
+  File "C:\Users\calle\Anaconda3\envs\bachelor\Lib\site-packages\PIL\Image.py", line 826, in frombytes
+    raise ValueError(msg)
+ValueError: not enough image data

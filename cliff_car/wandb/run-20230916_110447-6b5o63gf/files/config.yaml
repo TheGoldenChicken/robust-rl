@@ -1,0 +1,81 @@
+wandb_version: 1
+
+delta:
+  desc: null
+  value: 0.01
+linear:
+  desc: null
+  value: true
+factor:
+  desc: null
+  value: -1
+seed:
+  desc: null
+  value: 1002
+robust_batch_size:
+  desc: null
+  value: 100
+fineness:
+  desc: null
+  value: 2
+ripe_when:
+  desc: null
+  value: null
+ready_when:
+  desc: null
+  value: 10
+num_neighbours:
+  desc: null
+  value: 2
+bin_size:
+  desc: null
+  value: 200
+train_frames:
+  desc: null
+  value: 5000
+grad_batch_size:
+  desc: null
+  value: 10
+replay_buffer_size:
+  desc: null
+  value: 1000
+epsilon_decay:
+  desc: null
+  value: 0.0005
+noise_var:
+  desc: null
+  value:
+  - - 0.05
+    - 0
+  - - 0
+    - 0.05
+noise_mean:
+  desc: null
+  value:
+  - 0
+  - 0
+_wandb:
+  desc: null
+  value:
+    python_version: 3.11.3
+    cli_version: 0.15.10
+    framework: torch
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    start_time: 1694855087.226756
+    t:
+      1:
+      - 1
+      - 55
+      2:
+      - 1
+      - 55
+      3:
+      - 13
+      - 16
+      - 23
+      4: 3.11.3
+      5: 0.15.10
+      8:
+      - 3
+      - 5

@@ -1,0 +1,28 @@
+2023-09-15 23:56:48,052 INFO    MainThread:32924 [wandb_setup.py:_flush():76] Current SDK version is 0.15.10
+2023-09-15 23:56:48,053 INFO    MainThread:32924 [wandb_setup.py:_flush():76] Configure stats pid to 32924
+2023-09-15 23:56:48,053 INFO    MainThread:32924 [wandb_setup.py:_flush():76] Loading settings from C:\Users\calle\.config\wandb\settings
+2023-09-15 23:56:48,053 INFO    MainThread:32924 [wandb_setup.py:_flush():76] Loading settings from c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\wandb\settings
+2023-09-15 23:56:48,053 INFO    MainThread:32924 [wandb_setup.py:_flush():76] Loading settings from environment variables: {}
+2023-09-15 23:56:48,053 INFO    MainThread:32924 [wandb_setup.py:_flush():76] Inferring run settings from compute environment: {'program_relpath': 'cliff_car\\cliff_car_experiments.py', 'program': 'c:\\Users\\calle\\Documents\\GitHub\\robust-rl\\cliff_car\\cliff_car_experiments.py'}
+2023-09-15 23:56:48,053 INFO    MainThread:32924 [wandb_setup.py:_flush():76] Applying login settings: {'api_key': '***REDACTED***'}
+2023-09-15 23:56:48,053 INFO    MainThread:32924 [wandb_setup.py:_flush():76] Applying login settings: {'api_key': '***REDACTED***'}
+2023-09-15 23:56:48,053 INFO    MainThread:32924 [wandb_init.py:_log_setup():524] Logging user logs to c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\wandb\run-20230915_235648-y7b8w0jo\logs\debug.log
+2023-09-15 23:56:48,053 INFO    MainThread:32924 [wandb_init.py:_log_setup():525] Logging internal logs to c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\wandb\run-20230915_235648-y7b8w0jo\logs\debug-internal.log
+2023-09-15 23:56:48,054 INFO    MainThread:32924 [wandb_init.py:init():564] calling init triggers
+2023-09-15 23:56:48,054 INFO    MainThread:32924 [wandb_init.py:init():571] wandb.init called with sweep_config: {}
+config: {'delta': 0.01, 'linear': False, 'factor': 1, 'seed': 1001, 'robust_batch_size': 100, 'fineness': 2, 'ripe_when': None, 'ready_when': 10, 'num_neighbours': 2, 'bin_size': 200, 'train_frames': 5000, 'grad_batch_size': 10, 'replay_buffer_size': 1000, 'epsilon_decay': 0.0004, 'noise_var': [[0.05, 0], [0, 0.05]], 'noise_mean': [0, 0]}
+2023-09-15 23:56:48,054 INFO    MainThread:32924 [wandb_init.py:init():614] starting backend
+2023-09-15 23:56:48,054 INFO    MainThread:32924 [wandb_init.py:init():618] setting up manager
+2023-09-15 23:56:48,056 INFO    MainThread:32924 [backend.py:_multiprocessing_setup():105] multiprocessing start_methods=spawn, using: spawn
+2023-09-15 23:56:48,057 INFO    MainThread:32924 [wandb_init.py:init():624] backend started and connected
+2023-09-15 23:56:48,061 INFO    MainThread:32924 [wandb_init.py:init():715] updated telemetry
+2023-09-15 23:56:48,099 INFO    MainThread:32924 [wandb_init.py:init():748] communicating run to backend with 90.0 second timeout
+2023-09-15 23:56:48,652 INFO    MainThread:32924 [wandb_run.py:_on_init():2220] communicating current version
+2023-09-15 23:56:48,783 INFO    MainThread:32924 [wandb_run.py:_on_init():2229] got version response 
+2023-09-15 23:56:48,783 INFO    MainThread:32924 [wandb_init.py:init():799] starting run threads in backend
+2023-09-15 23:56:48,940 INFO    MainThread:32924 [wandb_run.py:_console_start():2199] atexit reg
+2023-09-15 23:56:48,940 INFO    MainThread:32924 [wandb_run.py:_redirect():2054] redirect: wrap_raw
+2023-09-15 23:56:48,940 INFO    MainThread:32924 [wandb_run.py:_redirect():2119] Wrapping output streams.
+2023-09-15 23:56:48,940 INFO    MainThread:32924 [wandb_run.py:_redirect():2144] Redirects installed.
+2023-09-15 23:56:48,941 INFO    MainThread:32924 [wandb_init.py:init():840] run started, returning control to user process
+2023-09-15 23:58:35,413 WARNING MsgRouterThr:32924 [router.py:message_loop():77] message_loop has been closed

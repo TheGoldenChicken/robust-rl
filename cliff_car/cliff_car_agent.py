@@ -6,7 +6,9 @@ import torch.optim as optim
 import random
 from IPython.display import clear_output
 from tqdm import tqdm
-
+import os
+import wandb
+import cv2
 
 class CliffCarAgent:
     def __init__(self, env, replay_buffer, epsilon_decay, network, max_epsilon=1.0, min_epsilon=0.1, gamma=0.99, model_path=None):
@@ -32,7 +34,7 @@ class CliffCarAgent:
         self.dqn = network(env).to(self.device)
         if model_path is not None:
             self.load_model(model_path)
-        self.optimizer = optim.Adam(self.dqn.parameters(), lr=0.001) # Adam default lr=0.001
+        self.optimizer = optim.Adam(self.dqn.parameters(), lr=0.0005) # Adam default lr=0.001
 
         # transition to store in memory
         self.transition = list()
@@ -155,7 +157,6 @@ class CliffCarAgent:
                 self.test(test_games=test_games,
                           test_name_prefix = test_name_prefix + f"-frame-{str(frame_idx)}",
                           do_test_plots=do_test_plots)
-                pass
             # # plotting
             # if frame_idx % plotting_interval == 0:
             #     self._plot(frame_idx, scores, losses, epsilons)
@@ -227,13 +228,16 @@ class CliffCarAgent:
         x, y = torch.meshgrid(x_range, y_range)
         state_grid = torch.column_stack((x.ravel(), y.ravel()))
 
+        # if not os.path.exists(rf'intermediate_test_plots'):
+        #     os.makedirs(rf'intermediate_test_plots')
+
         # Get q-values for the state grid
         q_vals = self.get_q_vals(state_grid)
         v_vals = np.max(q_vals, axis=1).reshape(x.shape)
         # Plot the q-values as image using the brq cmap
         plt.imshow(v_vals, extent=[x_range[0], x_range[-1], y_range[0], y_range[-1]], origin='lower', cmap='brg')
         plt.colorbar()
-        plt.savefig(f'v_vals_{plot_name_prefix}.png')
+        plt.savefig(rf'intermediate_test_plots\v_vals_{plot_name_prefix + "-acum_r-" + str(round(np.mean([sum(sar[:,2,0]) for sar in all_sar]),3))}.png')
         plt.clf()
 
         # Plot the visited states as a heatmap
@@ -242,8 +246,18 @@ class CliffCarAgent:
         heatmap, _, _ = np.histogram2d(states[:,0], states[:,1], bins=[len(x_range), len(y_range)])
         plt.imshow(heatmap.T, extent=[x_range[0], x_range[-1], y_range[0], y_range[-1]], origin='lower', cmap='brg')
         plt.colorbar()
-        plt.savefig(f'heatmap_{plot_name_prefix}.png')
+        plt.savefig(rf'intermediate_test_plots\heatmap_{plot_name_prefix}.png')
         plt.clf()
+        
+        # Logging to wand and bias
+        wab_image_vval = wandb.Image(plt.get_cmap('brg')(v_vals)[:,:,:3], 
+                                    caption=plot_name_prefix + "-acum_r-" + str(round(np.mean([sum(sar[:,2,0]) for sar in all_sar]),3)),
+                                    mode = "RGB")
+        wab_image_heatmap = wandb.Image(plt.get_cmap('brg')(heatmap)[:,:,:3], 
+                                        caption=plot_name_prefix,
+                                        mode = "RGB")
+        wandb.log({"state_values": wab_image_vval})
+        wandb.log({"state_heat_map": wab_image_heatmap})
         
     def load_model(self, path):
         self.dqn.load_state_dict(torch.load(path, map_location=self.device))
@@ -251,7 +265,6 @@ class CliffCarAgent:
 
     def get_q_vals(self, states):
         return self.dqn(states).detach().cpu().numpy()
-
 
     def _plot(
             self,

@@ -1,0 +1,15 @@
+
+Started training: seed: 1002, linear: True, factor: 1, delta: 0.01
+Traceback (most recent call last):
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\cliff_car_experiments.py", line 143, in <module>
+    agent = RobustCliffCarAgent(env=env, replay_buffer=replay_buffer, network = RadialNonlinearNetwork2d,
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\cliff_car_robust_agent.py", line 18, in __init__
+    super().__init__(env, replay_buffer, epsilon_decay, network, max_epsilon, min_epsilon, gamma, model_path)
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\cliff_car_agent.py", line 34, in __init__
+    self.dqn = network(env).to(self.device)
+               ^^^^^^^^^^^^
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\network.py", line 81, in __init__
+    super(RadialNetwork2d, self).__init__()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: super(type, obj): obj must be an instance or subtype of type

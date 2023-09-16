@@ -1,0 +1,42 @@
+
+Started training: seed: 1001, linear: True, factor: -1, delta: 0.01
+C:\Users\calle\Anaconda3\envs\bachelor\Lib\site-packages\torch\functional.py:504: UserWarning: torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument. (Triggered internally at ..\aten\src\ATen\native\TensorShape.cpp:3484.)
+  return _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]
+
+
+  0%|▏                                                                                                                                   | 3/2000 [00:05<57:22,  1.72s/it]
+>>> Testing: -seed-1001-linear-True-delta-0.01-factor--1-frame-4-epsilon-0.999-loss-0.266
+
+
+
+  0%|▍                                                                                                                                 | 7/2000 [00:37<2:30:34,  4.53s/it]
+>>> Testing: -seed-1001-linear-True-delta-0.01-factor--1-frame-8-epsilon-0.999-loss-0.31
+  0%|▍                                                                                                                                 | 7/2000 [01:01<4:49:48,  8.72s/it]
+Traceback (most recent call last):
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\cliff_car_experiments.py", line 139, in <module>
+    train_data = agent.train(train_frames = train_frames,
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\cliff_car_robust_agent.py", line 171, in train
+    self.test(test_games=test_games,
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\cliff_car_agent.py", line 196, in test
+    action = self.select_action(self.env.position)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\cliff_car_agent.py", line 68, in select_action
+    selected_action = self.dqn(
+                      ^^^^^^^^^
+  File "C:\Users\calle\Anaconda3\envs\bachelor\Lib\site-packages\torch\nn\modules\module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\network.py", line 64, in forward
+    basis = self.radial_basis(x)
+            ^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\network.py", line 72, in radial_basis
+    basis[:,i] = self.mNormal[i].log_prob(position).exp()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\calle\Anaconda3\envs\bachelor\Lib\site-packages\torch\distributions\multivariate_normal.py", line 216, in log_prob
+    M = _batch_mahalanobis(self._unbroadcasted_scale_tril, diff)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\calle\Anaconda3\envs\bachelor\Lib\site-packages\torch\distributions\multivariate_normal.py", line 48, in _batch_mahalanobis
+    bx = bx.reshape(bx_new_shape)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

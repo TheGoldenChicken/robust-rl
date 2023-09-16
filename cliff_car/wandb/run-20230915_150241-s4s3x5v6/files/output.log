@@ -1,0 +1,29 @@
+
+Started training: seed: 1001, linear: True, factor: -1, delta: 0.01
+C:\Users\calle\Anaconda3\envs\bachelor\Lib\site-packages\torch\functional.py:504: UserWarning: torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument. (Triggered internally at ..\aten\src\ATen\native\TensorShape.cpp:3484.)
+  return _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]
+  0%|                                                                                                                                            | 0/2000 [00:00<?, ?it/s]
+>>> Testing: -seed-1001-linear-True-delta-0.01-factor--1-frame-1-epsilon-1.0-loss-0.359
+  0%|                                                                                                                                            | 0/2000 [00:07<?, ?it/s]
+Traceback (most recent call last):
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\cliff_car_experiments.py", line 139, in <module>
+    train_data = agent.train(train_frames = train_frames,
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\cliff_car_robust_agent.py", line 171, in train
+    self.test(test_games=test_games,
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\cliff_car_agent.py", line 195, in test
+    action = self.select_action(self.env.position)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\cliff_car_agent.py", line 67, in select_action
+    selected_action = self.dqn(
+                      ^^^^^^^^^
+  File "C:\Users\calle\Anaconda3\envs\bachelor\Lib\site-packages\torch\nn\modules\module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\network.py", line 64, in forward
+    basis = self.radial_basis(x)
+            ^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\calle\Documents\GitHub\robust-rl\cliff_car\network.py", line 72, in radial_basis
+    basis[:,i] = self.mNormal[i].log_prob(position).exp()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
