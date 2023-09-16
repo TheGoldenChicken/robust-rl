@@ -62,7 +62,7 @@ class CliffCarAgent:
         """Select an action from the input state."""
         # epsilon greedy policy
         if self.epsilon > np.random.random() and not self.is_test:
-            selected_action = random.randint(0, self.env.ACTION_DIM-1) # Why is this not inclusive, exclusive??? Stupid
+            selected_action = np.random.randint(0, self.env.ACTION_DIM) # Why is this not (inclusive, exclusive)??? Stupid
         else:
             # select_state = self.state_normalizer(state)
             selected_action = self.dqn(

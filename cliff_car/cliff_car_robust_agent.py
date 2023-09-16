@@ -15,6 +15,7 @@ import wandb
 class RobustCliffCarAgent(CliffCarAgent):
     def __init__(self, env, replay_buffer, epsilon_decay, network, grad_batch_size=30, delta=0.5, max_epsilon=1.0,
                  min_epsilon=0.1, gamma=0.99, model_path=None, robust_factor=1, linear_only=False):
+
         super().__init__(env, replay_buffer, epsilon_decay, network, max_epsilon, min_epsilon, gamma, model_path)
 
         self.robust_factor = robust_factor # Factor multiplied on the robust estimator
@@ -178,6 +179,10 @@ class RobustCliffCarAgent(CliffCarAgent):
 
         print("Training complete")
         return scores, losses, epsilons
+
+
+
+
 
 
 if __name__ == "__main__":

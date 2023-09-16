@@ -29,7 +29,7 @@ class CliffCar:
     CLIFF_HEIGHT = 0
     SPEED = 0.5
 
-    def __init__(self, noise_mean = [0,0], noise_var = None, mode = "abrupt", r_basis_diff = 1, r_basis_var = 2):
+    def __init__(self, noise_mean = [0,0], noise_var = None, mode = "abrupt", max_duration=200, r_basis_diff=1, r_basis_var=2):
 
         # Car settings
         self.position = self.START_POSITION
@@ -42,14 +42,17 @@ class CliffCar:
         self.max_goal_distance = self.get_max_goal_distance()
         
         # Simulation settings
-        self.max_duration = 200
+        self.max_duration = max_duration
+        if self.max_duration == None:
+            self.max_duration = np.inf
+
         self.frame = 0
-        
-        self.max_min = [[self.BOUNDS[2], self.BOUNDS[3]], [self.BOUNDS[0], self.BOUNDS[1]]]
-        
+
         self.r_basis_diff = r_basis_diff
         self.r_basis_var = r_basis_var
-        
+
+        self.max_min = [[self.BOUNDS[2], self.BOUNDS[3]], [self.BOUNDS[0], self.BOUNDS[1]]]
+
         # Rendering
         self.rendering = False
         
@@ -87,7 +90,7 @@ class CliffCar:
         noise = np.zeros(2)
         if(self.noise_var is not None):
 
-            noise = np.random.multivariate_normal(self.noise_mean, self.noise_var)
+            noise = np.random.multivariate_normal(self.noise_mean, np.eye(2)*self.noise_var)
 
         action_dir = self.translate_action[action]
 
@@ -213,7 +216,8 @@ class CliffCarDiscrete(CliffCar):
 car = CliffCar()
 
 if __name__ == "__main__":
-    env = CliffCarDiscrete(noise_var = np.array([[0.5,0],[0,0.5]]))
+    # env = CliffCarDiscrete(noise_var = np.array([[0.5,0],[0,0.5]]))
+    env = CliffCar(noise_var=0.005, max_duration=None)
     env.init_render()
 
     action = 0
@@ -230,9 +234,7 @@ if __name__ == "__main__":
                     if event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
                         pygame.quit()
                         quit()
-
-                if event.type == pygame.KEYUP:
-                    if event.key == pygame.K_a:
+                    elif event.key == pygame.K_a:
                         action = 3
                     elif event.key == pygame.K_d:
                         action = 1
@@ -242,10 +244,14 @@ if __name__ == "__main__":
                         action = 4
                     elif event.key == pygame.K_g:
                         env.show_grid = not env.show_grid
-                        
-                    action_taken = True
-            
-            if action_taken:
+
+
+                if event.type == pygame.KEYUP:
+                    if event.key in [pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s]:
+                        # action_taken = False
+                        action = 0
+
+            if True:
                 print(env.reward_fn(env.position)[0])
                 next_state, reward, done, _ = env.step(action)
 
