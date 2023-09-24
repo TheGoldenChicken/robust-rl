@@ -67,7 +67,7 @@ if __name__ == "__main__":
     epsilon_decay = 1/5000 # default: 1/5000
 
     # Seeds
-    seeds = [1002, 1003]
+    seeds = [2002, 1003]
     delta_vals = [0.01]#, 0.5, 1]
     # factors = [-1, 1] # Whether to add or subtract robust estimator from reward
     # factors = [1, -1]

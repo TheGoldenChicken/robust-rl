@@ -8,7 +8,6 @@ from IPython.display import clear_output
 from tqdm import tqdm
 import os
 import wandb
-import cv2
 
 class CliffCarAgent:
     def __init__(self, env, replay_buffer, epsilon_decay, network, max_epsilon=1.0, min_epsilon=0.1, gamma=0.99, model_path=None):
@@ -67,7 +66,7 @@ class CliffCarAgent:
             # select_state = self.state_normalizer(state)
             selected_action = self.dqn(
                 torch.FloatTensor(state).to(self.device)
-            ).argmax(axis=1)[0]
+            ).argmax()
             selected_action = int(selected_action)
 
         if not self.is_test:
