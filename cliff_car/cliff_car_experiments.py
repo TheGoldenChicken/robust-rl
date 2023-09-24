@@ -57,7 +57,7 @@ if __name__ == "__main__":
     ready_when = 10
     num_neighbours = 2
     bin_size = 500
-    train_frames = 5000 # 12000
+    train_frames = 30000 # 12000
     noise_var = [[0.05, 0],[0, 0.05]]
     noise_mean = [0, 0]
 
@@ -71,24 +71,24 @@ if __name__ == "__main__":
     delta_vals = [0.01]#, 0.5, 1]
     # factors = [-1, 1] # Whether to add or subtract robust estimator from reward
     # factors = [1, -1]
-    factors = [-1]
+    factors = [1,-1]
     # linear_only = [False, True] # Whether to use linear or quadratic approximation
-    linear_only = [True]
+    linear_only = [False]
     finenesses = [2]#[2, 5, 10]
     # epsilon_decays = [1/2500, 1/1000, 1/500, 1/100]
-    epsilon_decays = [1/2000] # default 1/3000
-    bin_size = [200]
+    epsilon_decays = [1/15000] # default 1/3000
+    bin_sizes = [200]
     
     # r_basis_diffs = [2, 1]
     r_basis_diffs = [1.5] #  default 2
-    r_basis_vars = [3]
+    r_basis_vars = [9,7]
     
     for seed in seeds:
         for linear in linear_only:
             for factor in factors:
                 for fineness in finenesses:
                     for epsilon_decay in epsilon_decays:
-                        for bin_size in bin_size:
+                        for bin_size in bin_sizes:
                             for r_basis_diff in r_basis_diffs:
                                 for r_basis_var in r_basis_vars:
                                     test_name = rf'linear={linear}-seed={seed}-factor={factor}-fineness={fineness}-epsilon_decay={epsilon_decay}-bin_size={bin_size}-r_basis_diff={r_basis_diff}-r_basis_var={r_basis_var}'
@@ -142,13 +142,13 @@ if __name__ == "__main__":
 
                                         agent = RobustCliffCarAgent(env=env, replay_buffer=replay_buffer, network = RadialNetwork2d,
                                                                 grad_batch_size=grad_batch_size,
-                                                                delta=delta, epsilon_decay=epsilon_decay, max_epsilon=0.5, min_epsilon=0.05,
+                                                                delta=delta, epsilon_decay=epsilon_decay, max_epsilon=0.99, min_epsilon=0.05,
                                                                 gamma=0.99, robust_factor=factor, linear_only=linear)
 
                                         train_start = time.time()
                                         train_data = agent.train(train_frames = train_frames,
-                                                                test_interval = 250,   
-                                                                test_games = 10,
+                                                                test_interval = 500,   
+                                                                test_games = 50,
                                                                 do_test_plots = True,
                                                                 test_name_prefix = "-seed-" + str(seed) + "-linear-" + str(linear) + "-delta-" + str(delta) + "-factor-" + str(factor) + "-r_basis_diff-" + str(r_basis_diff) + "-r_basis_var-" + str(r_basis_var))
                                         train_end = time.time()

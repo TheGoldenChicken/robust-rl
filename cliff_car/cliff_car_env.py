@@ -42,7 +42,7 @@ class CliffCar:
         self.max_goal_distance = self.get_max_goal_distance()
         
         # Simulation settings
-        self.max_duration = 200
+        self.max_duration = 500
         self.frame = 0
         
         self.max_min = [[self.BOUNDS[2], self.BOUNDS[3]], [self.BOUNDS[0], self.BOUNDS[1]]]
