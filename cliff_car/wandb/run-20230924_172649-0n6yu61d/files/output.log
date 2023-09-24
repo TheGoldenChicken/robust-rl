@@ -1,0 +1,3 @@
+
+Started training: seed: 2002, linear: True, factor: -1, delta: 0.01
+C:\Users\calle\anaconda3\envs\bachelor\lib\site-packages\torch\functional.py:504: UserWarning: torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument. (Triggered internally at ..\aten\src\ATen\native\TensorShape.cpp:3484.)
