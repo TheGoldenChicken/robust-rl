@@ -9,6 +9,7 @@ from tqdm import tqdm
 import os
 import wandb
 import pygame
+import matplotlib.patches as patches
 
 class CliffCarAgent:
     def __init__(self, env, replay_buffer, epsilon_decay, network, max_epsilon=1.0, min_epsilon=0.1, gamma=0.99, model_path=None):
@@ -34,7 +35,7 @@ class CliffCarAgent:
         self.dqn = network(env).to(self.device)
         if model_path is not None:
             self.load_model(model_path)
-        self.optimizer = optim.Adam(self.dqn.parameters(), lr=0.0005) # Adam default lr=0.001
+        self.optimizer = optim.Adam(self.dqn.parameters(), lr=0.001, weight_decay=0.0001) # Adam default lr=0.001
 
         # transition to store in memory
         self.transition = list()
@@ -222,7 +223,7 @@ class CliffCarAgent:
 
         return np.array(all_sar)
     
-    def do_test_plots(self, all_sar, state_res = 0.5, q_val_res = 1, plot_name_prefix = ""):
+    def do_test_plots(self, all_sar, state_res = 0.5, q_val_res = 0.8, plot_name_prefix = ""):
         
         ### PLOT THE HEATMAP OF VISITED STATES ###
 
@@ -234,6 +235,7 @@ class CliffCarAgent:
         # Plot the visited states as a heatmap
         states = np.array([sar[:,0] for sar in all_sar]).reshape(-1,2)
         states = states[~np.all(states == 0, axis=1)] # exclude rows with value [0,0]
+        states = np.concatenate((state_grid, states))
         heatmap, _, _ = np.histogram2d(states[:,0], states[:,1], bins=[len(x_range), len(y_range)])
         plt.imshow(heatmap.T, extent=[x_range[0], x_range[-1], y_range[0], y_range[-1]], origin='lower', cmap='brg')
         plt.colorbar()
@@ -257,35 +259,46 @@ class CliffCarAgent:
         scale = 100
         width = int((self.env.BOUNDS[2] - self.env.BOUNDS[0])*scale)
         height = int((self.env.BOUNDS[3] - self.env.BOUNDS[1])*scale)
-        display = pygame.display.set_mode((width, height))
-        
+
+        def draw_lines(distance = 5):
+
+            for i in range(0, width, distance*scale):
+                pygame.draw.line(display, (200,200,200), (i,0), (i,height), width = 2)
+            for i in range(0, height, distance*scale):
+                pygame.draw.line(display, (200,200,200), (0,i), (width,i), width = 2)
+
         q_vals = self.get_q_vals(state_grid)
 
         q_min = np.min(q_vals)
         q_max = np.max(q_vals)
 
-        diag = scale*0.33
+        diag = scale*0.33*q_val_res
+        size = scale*q_val_res
+        
+        display = pygame.display.set_mode((width, height))
+
         for i, state in enumerate(state_grid):
             offset = (state[0] + abs(self.env.BOUNDS[0]), state[1] + abs(self.env.BOUNDS[1]))
-            offset = (float(offset[0]) * scale, float(offset[1]) * scale)
+            offset = (float(offset[0]) * scale, height - float(offset[1]) * scale - scale)
+            # offset = (float(offset[0]) * scale * q_val_res, float(offset[1]) * scale * q_val_res)
 
-            offsets = {0 : (offset[0] + diag, offset[1] + diag, scale - 2*diag, scale - 2*diag),
-                       1 : [(offset[0] + scale, offset[1]),
-                            (offset[0] + scale, offset[1] + scale),
-                            (offset[0] + scale - diag, offset[1] + scale - diag),
-                            (offset[0] + scale - diag, offset[1] + diag)],
+            offsets = {0 : (offset[0] + diag, offset[1] + diag, size - 2*diag, size - 2*diag),
+                       1 : [(offset[0] + size, offset[1]),
+                            (offset[0] + size, offset[1] + size),
+                            (offset[0] + size - diag, offset[1] + size - diag),
+                            (offset[0] + size - diag, offset[1] + diag)],
                        2 : [(offset[0], offset[1]),
-                            (offset[0] + scale, offset[1]),
-                            (offset[0] + scale - diag, offset[1] + diag),
+                            (offset[0] + size, offset[1]),
+                            (offset[0] + size - diag, offset[1] + diag),
                             (offset[0] + diag, offset[1] + diag)],
-                       3 :  [(offset[0], offset[1] + scale),
+                       3 :  [(offset[0], offset[1] + size),
                             (offset[0], offset[1]),
                             (offset[0] + diag, offset[1] + diag),
-                            (offset[0] + diag, offset[1] + scale - diag)],
-                       4 :  [(offset[0] + scale, offset[1] + scale),
-                            (offset[0], offset[1] + scale),
-                            (offset[0] + diag, offset[1] + scale - diag),
-                            (offset[0] + scale - diag, offset[1] + scale - diag)]}
+                            (offset[0] + diag, offset[1] + size - diag)],
+                       4 :  [(offset[0] + size, offset[1] + size),
+                            (offset[0], offset[1] + size),
+                            (offset[0] + diag, offset[1] + size - diag),
+                            (offset[0] + size - diag, offset[1] + size - diag)]}
 
             # Noopt action
             color = value_to_color(q_vals[i][0], q_min, q_max)
@@ -303,8 +316,10 @@ class CliffCarAgent:
             color = value_to_color(q_vals[i][4], q_min, q_max)
             pygame.draw.polygon(display, color, offsets[4])
 
+        draw_lines()
+
         prefix = plot_name_prefix + "-acum_r-" + str(round(np.mean([sum(sar[:,2,0]) for sar in all_sar]),3))
-        
+
         # Update display_all
         pygame.display.flip()
         pygame.image.save(display, rf'intermediate_test_plots\action_values_{prefix}.png')
@@ -313,25 +328,25 @@ class CliffCarAgent:
 
         for i, state in enumerate(state_grid):
             offset = (state[0] + abs(self.env.BOUNDS[0]), state[1] + abs(self.env.BOUNDS[1]))
-            offset = (float(offset[0]) * scale, float(offset[1]) * scale)
+            offset = (float(offset[0]) * scale, height - float(offset[1]) * scale - scale)
 
-            offsets = {0 : (offset[0] + diag, offset[1] + diag, scale - 2*diag, scale - 2*diag),
-                       1 : [(offset[0] + scale, offset[1]),
-                            (offset[0] + scale, offset[1] + scale),
-                            (offset[0] + scale - diag, offset[1] + scale - diag),
-                            (offset[0] + scale - diag, offset[1] + diag)],
+            offsets = {0 : (offset[0] + diag, offset[1] + diag, size - 2*diag, size - 2*diag),
+                       1 : [(offset[0] + size, offset[1]),
+                            (offset[0] + size, offset[1] + size),
+                            (offset[0] + size - diag, offset[1] + size - diag),
+                            (offset[0] + size - diag, offset[1] + diag)],
                        2 : [(offset[0], offset[1]),
-                            (offset[0] + scale, offset[1]),
-                            (offset[0] + scale - diag, offset[1] + diag),
+                            (offset[0] + size, offset[1]),
+                            (offset[0] + size - diag, offset[1] + diag),
                             (offset[0] + diag, offset[1] + diag)],
-                       3 :  [(offset[0], offset[1] + scale),
+                       3 :  [(offset[0], offset[1] + size),
                             (offset[0], offset[1]),
                             (offset[0] + diag, offset[1] + diag),
-                            (offset[0] + diag, offset[1] + scale - diag)],
-                       4 :  [(offset[0] + scale, offset[1] + scale),
-                            (offset[0], offset[1] + scale),
-                            (offset[0] + diag, offset[1] + scale - diag),
-                            (offset[0] + scale - diag, offset[1] + scale - diag)]}
+                            (offset[0] + diag, offset[1] + size - diag)],
+                       4 :  [(offset[0] + size, offset[1] + size),
+                            (offset[0], offset[1] + size),
+                            (offset[0] + diag, offset[1] + size - diag),
+                            (offset[0] + size - diag, offset[1] + size - diag)]}
             
             # Draw the solid action
             max_action = np.argmax(q_vals[i])
@@ -340,6 +355,8 @@ class CliffCarAgent:
                 pygame.draw.rect(display, color, offsets[0])
             else:
                 pygame.draw.polygon(display, color, offsets[max_action])
+
+        draw_lines()
 
         # Update display_max
         pygame.display.update(display.get_rect())

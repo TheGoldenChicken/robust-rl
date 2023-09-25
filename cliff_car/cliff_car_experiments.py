@@ -57,17 +57,17 @@ if __name__ == "__main__":
     ready_when = 10
     num_neighbours = 2
     bin_size = 500
-    train_frames = 30000 # 12000
+    train_frames = 50000 # 12000
     noise_var = [[0.05, 0],[0, 0.05]]
     noise_mean = [0, 0]
 
     # Agent parameters - Should not be changed!
-    grad_batch_size = 10 # 10
+    grad_batch_size = 30 # 10
     replay_buffer_size = 500 #1000
     epsilon_decay = 1/5000 # default: 1/5000
 
     # Seeds
-    seeds = [2002, 1003]
+    seeds = [2002, 2003, 2004]
     delta_vals = [0.01]#, 0.5, 1]
     # factors = [-1, 1] # Whether to add or subtract robust estimator from reward
     # factors = [1, -1]
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     linear_only = [False]
     finenesses = [2]#[2, 5, 10]
     # epsilon_decays = [1/2500, 1/1000, 1/500, 1/100]
-    epsilon_decays = [1/15000] # default 1/3000
+    epsilon_decays = [1/10000] # default 1/3000
     bin_sizes = [200]
     
     # r_basis_diffs = [2, 1]
@@ -142,13 +142,13 @@ if __name__ == "__main__":
 
                                         agent = RobustCliffCarAgent(env=env, replay_buffer=replay_buffer, network = RadialNetwork2d,
                                                                 grad_batch_size=grad_batch_size,
-                                                                delta=delta, epsilon_decay=epsilon_decay, max_epsilon=0.99, min_epsilon=0.05,
+                                                                delta=delta, epsilon_decay=epsilon_decay, max_epsilon=0.99, min_epsilon=0.1,
                                                                 gamma=0.99, robust_factor=factor, linear_only=linear)
 
                                         train_start = time.time()
                                         train_data = agent.train(train_frames = train_frames,
-                                                                test_interval = 1000,   
-                                                                test_games = 50,
+                                                                test_interval = 500,   
+                                                                test_games = 100,
                                                                 do_test_plots = True,
                                                                 test_name_prefix = "-seed-" + str(seed) + "-linear-" + str(linear) + "-delta-" + str(delta) + "-factor-" + str(factor) + "-r_basis_diff-" + str(r_basis_diff) + "-r_basis_var-" + str(r_basis_var))
                                         train_end = time.time()
