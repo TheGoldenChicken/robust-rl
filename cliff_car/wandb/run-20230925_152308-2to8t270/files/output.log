@@ -1,0 +1,26 @@
+C:\Users\calle\anaconda3\envs\bachelor\lib\site-packages\torch\functional.py:504: UserWarning: torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument. (Triggered internally at ..\aten\src\ATen\native\TensorShape.cpp:3484.)
+  return _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]
+  0%|          | 4/30000 [00:01<2:58:59,  2.79it/s]
+
+
+
+  0%|          | 19/30000 [00:07<3:00:53,  2.76it/s]
+>>> Testing: -seed-2002-linear-False-delta-0.01-factor-1-r_basis_diff-1.5-r_basis_var-9-frame-20-epsilon-0.989-loss-0.403
+
+
+
+
+
+
+
+  0%|          | 19/30000 [00:25<11:12:45,  1.35s/it]
+Traceback (most recent call last):
+  File "c:\Users\calle\Desktop\Bachelor\robust-rl\cliff_car\cliff_car_experiments.py", line 149, in <module>
+    train_data = agent.train(train_frames = train_frames,
+  File "c:\Users\calle\Desktop\Bachelor\robust-rl\cliff_car\cliff_car_robust_agent.py", line 171, in train
+    self.test(test_games=test_games,
+  File "c:\Users\calle\Desktop\Bachelor\robust-rl\cliff_car\cliff_car_agent.py", line 219, in test
+    self.do_test_plots(all_sar, plot_name_prefix=test_name_prefix)
+  File "c:\Users\calle\Desktop\Bachelor\robust-rl\cliff_car\cliff_car_agent.py", line 330, in do_test_plots
+    display.fill(0,0,0)
+ValueError: invalid rectstyle object

@@ -1,0 +1,58 @@
+
+Started training: seed: 2002, linear: False, factor: 1, delta: 0.01
+C:\Users\calle\anaconda3\envs\bachelor\lib\site-packages\torch\functional.py:504: UserWarning: torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument. (Triggered internally at ..\aten\src\ATen\native\TensorShape.cpp:3484.)
+  return _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]
+
+
+  0%|                                                                     | 7/30000 [00:04<6:00:20,  1.39it/s]
+  0%|                                                                     | 9/30000 [00:05<5:18:38,  1.57it/s]
+
+
+
+
+
+
+  0%|                                                                    | 19/30000 [00:18<6:06:07,  1.36it/s]
+ 50%|█████████████████████████████████████                                     | 5/10 [00:01<00:01,  3.64it/s]
+
+
+  0%|                                                                   | 22/30000 [00:27<10:19:43,  1.24s/it]
+Traceback (most recent call last):
+  File "C:\Users\calle\anaconda3\envs\bachelor\lib\runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "C:\Users\calle\anaconda3\envs\bachelor\lib\runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "c:\Users\calle\.vscode\extensions\ms-python.python-2023.16.0\pythonFiles\lib\python\debugpy\__main__.py", line 39, in <module>
+    cli.main()
+  File "c:\Users\calle\.vscode\extensions\ms-python.python-2023.16.0\pythonFiles\lib\python\debugpy/..\debugpy\server\cli.py", line 430, in main
+    run()
+  File "c:\Users\calle\.vscode\extensions\ms-python.python-2023.16.0\pythonFiles\lib\python\debugpy/..\debugpy\server\cli.py", line 284, in run_file
+    runpy.run_path(target, run_name="__main__")
+  File "c:\Users\calle\.vscode\extensions\ms-python.python-2023.16.0\pythonFiles\lib\python\debugpy\_vendored\pydevd\_pydevd_bundle\pydevd_runpy.py", line 321, in run_path
+    return _run_module_code(code, init_globals, run_name,
+  File "c:\Users\calle\.vscode\extensions\ms-python.python-2023.16.0\pythonFiles\lib\python\debugpy\_vendored\pydevd\_pydevd_bundle\pydevd_runpy.py", line 135, in _run_module_code
+    _run_code(code, mod_globals, init_globals,
+  File "c:\Users\calle\.vscode\extensions\ms-python.python-2023.16.0\pythonFiles\lib\python\debugpy\_vendored\pydevd\_pydevd_bundle\pydevd_runpy.py", line 124, in _run_code
+    exec(code, run_globals)
+  File "c:\Users\calle\Desktop\Bachelor\robust-rl\cliff_car\cliff_car_experiments.py", line 149, in <module>
+    train_data = agent.train(train_frames = train_frames,
+  File "c:\Users\calle\Desktop\Bachelor\robust-rl\cliff_car\cliff_car_robust_agent.py", line 153, in train
+    loss = self.update_model()
+  File "c:\Users\calle\Desktop\Bachelor\robust-rl\cliff_car\cliff_car_robust_agent.py", line 105, in update_model
+    loss, robust_estimator = self._compute_dqn_loss(*samples)
+  File "c:\Users\calle\Desktop\Bachelor\robust-rl\cliff_car\cliff_car_robust_agent.py", line 82, in _compute_dqn_loss
+    robust_estimator, beta_max = distributionalQLearning.robust_estimator(X_p=state, y_p=next_state,
+  File "C:\Users\calle\Desktop\Bachelor\robust-rl\distributionalQLearning3.py", line 162, in robust_estimator
+    return maximize_f(f)
+  File "C:\Users\calle\Desktop\Bachelor\robust-rl\distributionalQLearning3.py", line 64, in maximize_f
+    res = minimize(lambda x : -f(x), 1, method = 'Nelder-Mead', tol = 1e-5, bounds = [(1e-5, np.inf)])
+  File "C:\Users\calle\anaconda3\envs\bachelor\lib\site-packages\scipy\optimize\_minimize.py", line 684, in minimize
+    res = _minimize_neldermead(fun, x0, args, callback, bounds=bounds,
+  File "C:\Users\calle\anaconda3\envs\bachelor\lib\site-packages\scipy\optimize\_optimize.py", line 926, in _minimize_neldermead
+    ind = np.argsort(fsim)
+  File "<__array_function__ internals>", line 200, in argsort
+  File "C:\Users\calle\anaconda3\envs\bachelor\lib\site-packages\numpy\core\fromnumeric.py", line 1146, in argsort
+    return _wrapfunc(a, 'argsort', axis=axis, kind=kind, order=order)
+  File "C:\Users\calle\anaconda3\envs\bachelor\lib\site-packages\numpy\core\fromnumeric.py", line 57, in _wrapfunc
+    return bound(*args, **kwds)
+KeyboardInterrupt

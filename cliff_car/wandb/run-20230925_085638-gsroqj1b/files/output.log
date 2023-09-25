@@ -1,0 +1,65 @@
+
+Started training: seed: 2002, linear: False, factor: 1, delta: 0.01
+C:\Users\calle\anaconda3\envs\bachelor\lib\site-packages\torch\functional.py:504: UserWarning: torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument. (Triggered internally at ..\aten\src\ATen\native\TensorShape.cpp:3484.)
+  return _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]
+
+
+  0%|                                                                     | 9/30000 [00:05<4:42:44,  1.77it/s]
+ 30%|██████████████████████▏                                                   | 3/10 [00:00<00:02,  3.47it/s]
+
+
+
+
+
+  0%|                                                                    | 17/30000 [00:17<6:09:33,  1.35it/s]
+  0%|                                                                    | 19/30000 [00:18<5:25:23,  1.54it/s]
+
+
+
+
+
+
+
+  0%|                                                                    | 29/30000 [00:33<7:22:11,  1.13it/s]
+>>> Testing: -seed-2002-linear-False-delta-0.01-factor-1-r_basis_diff-1.5-r_basis_var-9-frame-30-epsilon-0.988-loss-0.363
+
+  0%|                                                                   | 29/30000 [00:38<11:06:11,  1.33s/it]
+Traceback (most recent call last):
+  File "C:\Users\calle\anaconda3\envs\bachelor\lib\runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "C:\Users\calle\anaconda3\envs\bachelor\lib\runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "c:\Users\calle\.vscode\extensions\ms-python.python-2023.16.0\pythonFiles\lib\python\debugpy\__main__.py", line 39, in <module>
+    cli.main()
+  File "c:\Users\calle\.vscode\extensions\ms-python.python-2023.16.0\pythonFiles\lib\python\debugpy/..\debugpy\server\cli.py", line 430, in main
+    run()
+  File "c:\Users\calle\.vscode\extensions\ms-python.python-2023.16.0\pythonFiles\lib\python\debugpy/..\debugpy\server\cli.py", line 284, in run_file
+    runpy.run_path(target, run_name="__main__")
+  File "c:\Users\calle\.vscode\extensions\ms-python.python-2023.16.0\pythonFiles\lib\python\debugpy\_vendored\pydevd\_pydevd_bundle\pydevd_runpy.py", line 321, in run_path
+    return _run_module_code(code, init_globals, run_name,
+  File "c:\Users\calle\.vscode\extensions\ms-python.python-2023.16.0\pythonFiles\lib\python\debugpy\_vendored\pydevd\_pydevd_bundle\pydevd_runpy.py", line 135, in _run_module_code
+    _run_code(code, mod_globals, init_globals,
+  File "c:\Users\calle\.vscode\extensions\ms-python.python-2023.16.0\pythonFiles\lib\python\debugpy\_vendored\pydevd\_pydevd_bundle\pydevd_runpy.py", line 124, in _run_code
+    exec(code, run_globals)
+  File "c:\Users\calle\Desktop\Bachelor\robust-rl\cliff_car\cliff_car_experiments.py", line 149, in <module>
+    train_data = agent.train(train_frames = train_frames,
+  File "c:\Users\calle\Desktop\Bachelor\robust-rl\cliff_car\cliff_car_robust_agent.py", line 171, in train
+    self.test(test_games=test_games,
+  File "c:\Users\calle\Desktop\Bachelor\robust-rl\cliff_car\cliff_car_agent.py", line 197, in test
+    _, reward, done = self.step(action)
+  File "c:\Users\calle\Desktop\Bachelor\robust-rl\cliff_car\cliff_car_agent.py", line 82, in step
+    next_state, reward, done, _ = self.env.step(action)
+  File "c:\Users\calle\Desktop\Bachelor\robust-rl\cliff_car\cliff_car_env.py", line 71, in step
+    self.position = self.result(self.position, action)
+  File "c:\Users\calle\Desktop\Bachelor\robust-rl\cliff_car\cliff_car_env.py", line 90, in result
+    noise = np.random.multivariate_normal(self.noise_mean, self.noise_var)
+  File "mtrand.pyx", line 4226, in numpy.random.mtrand.RandomState.multivariate_normal
+  File "<__array_function__ internals>", line 200, in allclose
+  File "C:\Users\calle\anaconda3\envs\bachelor\lib\site-packages\numpy\core\numeric.py", line 2270, in allclose
+    res = all(isclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan))
+  File "<__array_function__ internals>", line 177, in isclose
+  File "_pydevd_bundle/pydevd_cython.pyx", line 1457, in _pydevd_bundle.pydevd_cython.SafeCallWrapper.__call__
+  File "_pydevd_bundle/pydevd_cython.pyx", line 1758, in _pydevd_bundle.pydevd_cython.ThreadTracer.__call__
+  File "c:\Users\calle\.vscode\extensions\ms-python.python-2023.16.0\pythonFiles\lib\python\debugpy\_vendored\pydevd\_pydev_bundle\pydev_is_thread_alive.py", line 9, in is_thread_alive
+    def is_thread_alive(t):
+KeyboardInterrupt

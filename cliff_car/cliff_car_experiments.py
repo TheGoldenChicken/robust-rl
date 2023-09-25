@@ -51,7 +51,7 @@ if __name__ == "__main__":
     state_max, state_min = np.array(env.max_min[0]), np.array(env.max_min[1])
     max_min = [[env.max_min[0]],[env.max_min[1]]]
     
-    robust_batch_size = 100
+    robust_batch_size = 75 # 100
     fineness = 5
     ripe_when = None
     ready_when = 10
@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
     # Agent parameters - Should not be changed!
     grad_batch_size = 10 # 10
-    replay_buffer_size = 1000 #1000
+    replay_buffer_size = 500 #1000
     epsilon_decay = 1/5000 # default: 1/5000
 
     # Seeds
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     
     # r_basis_diffs = [2, 1]
     r_basis_diffs = [1.5] #  default 2
-    r_basis_vars = [9,7]
+    r_basis_vars = [7]
     
     for seed in seeds:
         for linear in linear_only:
@@ -147,7 +147,7 @@ if __name__ == "__main__":
 
                                         train_start = time.time()
                                         train_data = agent.train(train_frames = train_frames,
-                                                                test_interval = 500,   
+                                                                test_interval = 1000,   
                                                                 test_games = 50,
                                                                 do_test_plots = True,
                                                                 test_name_prefix = "-seed-" + str(seed) + "-linear-" + str(linear) + "-delta-" + str(delta) + "-factor-" + str(factor) + "-r_basis_diff-" + str(r_basis_diff) + "-r_basis_var-" + str(r_basis_var))

@@ -1,0 +1,26 @@
+C:\Users\calle\anaconda3\envs\bachelor\lib\site-packages\torch\functional.py:504: UserWarning: torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument. (Triggered internally at ..\aten\src\ATen\native\TensorShape.cpp:3484.)
+  return _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]
+  0%|          | 4/30000 [00:01<3:03:40,  2.72it/s]
+
+
+  0%|          | 15/30000 [00:05<3:02:33,  2.74it/s]
+  0%|          | 19/30000 [00:06<2:46:48,  3.00it/s]
+
+
+
+
+
+
+
+
+
+
+
+
+  0%|          | 39/30000 [00:34<3:06:58,  2.67it/s]
+ 18%|#8        | 9/50 [00:00<00:01, 25.34it/s]
+
+
+
+
+
