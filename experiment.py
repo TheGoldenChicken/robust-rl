@@ -45,20 +45,22 @@ def create_directories(seed, delta, identifier):
         counter += 1
         test_name = test_name_body + f'-{counter}'
 
+    path = os.path.join("results", identifier, test_name)
     # Experiment directory
-    if not os.path.exists(rf'results\{identifier}\{test_name}'):
-        os.makedirs(rf'results\{identifier}\{test_name}')
+    if not os.path.exists(path):
+        os.makedirs(path)
 
+    path = os.path.join("results", identifier, test_name, "training")
     # Training plots directory
-    if not os.path.exists(rf'results\{identifier}\{test_name}\training'):
-        os.makedirs(rf'results\{identifier}\{test_name}\training')
+    if not os.path.exists(path):
+        os.makedirs(path)
 
+    path = os.path.join("results", identifier, test_name, "training")
     # Evaluation plots directory
-    if not os.path.exists(rf'results\{identifier}\{test_name}\evaluation'):
-        os.makedirs(rf'results\{identifier}\{test_name}\evaluation')
+    if not os.path.exists(path):
+        os.makedirs(path)
 
-
-    return f"results\{identifier}\{test_name}" # Return path to test directory
+    return ["results", identifier, test_name] # Return path to test directory
 
 if __name__ == "__main__":
 
@@ -139,12 +141,13 @@ if __name__ == "__main__":
     for seed in args.seed:
         for delta in args.delta:
 
-            path = create_directories(seed = seed,
-                                      delta = delta,
-                                      identifier = args.train_identifier)
+            path_components = create_directories(seed = seed,
+                                                 delta = delta,
+                                                 identifier = args.train_identifier)
 
+            path = os.path.join(*path_components, "hyperparams.txt")
             # Print hyperparameters to file for reproducibility
-            with open(rf"{path}\hyperparams.txt", 'w') as f:
+            with open(path, 'w') as f:
                 f.write(f"Seed: {seed}\nDelta: {delta}\nFineness: {args.fineness}\n \
                         Ripe when: {args.ripe_when}\nReady when: {args.ready_when}\n \
                         Num neighbours: {args.num_neighbours}\nBin size: {args.bin_size}\n \
@@ -160,7 +163,7 @@ if __name__ == "__main__":
             if wandb_active:
                 wandb.init(
                     project="robust-rl-cliff-car", 
-                    name=f"", 
+                    name=f"{path_components[1]}-{path_components[2]}", 
                     config={
                         "seed": seed,
                         "delta": delta,
@@ -211,7 +214,7 @@ if __name__ == "__main__":
             train_data = agent.train(train_frames = args.train_frames,
                                     test_interval = args.test_interval,   
                                     test_games = args.test_games,
-                                    plot_path = path,
+                                    plot_path = path_components,
                                     wandb_active=wandb_active)
             train_end = time.time()
 
@@ -242,14 +245,20 @@ if __name__ == "__main__":
         #        test_df = pd.DataFrame({test_columns[i]: test_data[i] for i in range(len(test_data))})
             time_df = pd.DataFrame({time_columns[i]: [time_data[i]] for i in range(len(time_data))}) # Training test, testing time
 
-            train_scores.to_csv(rf'{path}\training\train_score_data.csv')
-            train_df.to_csv(rf'{path}\training\train_data.csv')
+            path = os.path.join(*path_components, "training", "train_score_data.csv")
+            train_scores.to_csv(path)
+            path = os.path.join(*path_components, "training", "train_data.csv")
+            train_df.to_csv(path)
             # np.save(rf'test_results_{experiment_id}\{test_name}\{delta}-test_data.npy', test_data)
-            np.save(rf'{path}\evaluation\q_vals.npy', q_vals)
-            np.save(rf'{path}\evaluation\betas.npy', np.array(agent.betas))
+            path = os.path.join(*path_components, "evaluation", "q_vals.npy")
+            np.save(path, q_vals)
+            path = os.path.join(*path_components, "evaluation", "betas.npy")
+            np.save(path, np.array(agent.betas))
         #       test_df.to_csv(rf'test_results_{experiment_id}\{test_name}\{delta}-test_data.csv')
-            time_df.to_csv(rf'{path}\evaluation\time_data.csv')
-            agent.save_model(rf'{path}\evaluation\model')
+            path = os.path.join(*path_components, "evaluation", "time_data.csv")
+            time_df.to_csv(path)
+            path = os.path.join(*path_components, "evaluation", "model")
+            agent.save_model(path)
 
             torch.cuda.empty_cache()
             

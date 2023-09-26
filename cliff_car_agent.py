@@ -11,6 +11,7 @@ import wandb
 import pygame
 import matplotlib.patches as patches
 
+
 class CliffCarAgent:
     def __init__(self, env, replay_buffer, epsilon_decay, network,
                  max_epsilon=1.0, min_epsilon=0.1, gamma=0.99,
@@ -241,7 +242,8 @@ class CliffCarAgent:
         heatmap, _, _ = np.histogram2d(states[:,0], states[:,1], bins=[len(x_range), len(y_range)])
         plt.imshow(heatmap.T, extent=[x_range[0], x_range[-1], y_range[0], y_range[-1]], origin='lower', cmap='brg')
         plt.colorbar()
-        plt.savefig(rf'{path}\training\state_heatmap-frame-{frame}.png')
+        p = os.path.join(*path, "training", f"state_heatmap-frame-{frame}.png")
+        plt.savefig(p)
         plt.clf()
 
         ### PLOT THE STATE-ACTION VALUES USING PYGAME ###
@@ -320,11 +322,12 @@ class CliffCarAgent:
 
         draw_lines()
 
-        file_name = rf"{path}\training\action_values-frame-{frame}-acum_r-" + str(round(np.mean([sum(sar[:,2,0]) for sar in all_sar]),3)) + ".png"
-
+        p = rf"action_values-frame-{frame}-acum_r-" + str(round(np.mean([sum(sar[:,2,0]) for sar in all_sar]),3)) + ".png"
+        p = os.path.join(*path, "training", p)
+        
         # Update display_all
         pygame.display.flip()
-        pygame.image.save(display, file_name)
+        pygame.image.save(display, p)
         
         display.fill((0,0,0))
 
@@ -359,8 +362,9 @@ class CliffCarAgent:
                 pygame.draw.polygon(display, color, offsets[max_action])
 
         draw_lines()
-
-        file_name = rf"{path}\training\best_action-frame-{frame}-acum_r-" + str(round(np.mean([sum(sar[:,2,0]) for sar in all_sar]),3)) + ".png"
+        
+        file_name = rf"best_action-frame-{frame}-acum_r-" + str(round(np.mean([sum(sar[:,2,0]) for sar in all_sar]),3)) + ".png"
+        p = os.path.join(*path, "training", file_name)
 
         # Update display_max
         pygame.display.update(display.get_rect())
