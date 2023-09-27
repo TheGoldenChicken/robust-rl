@@ -10,7 +10,9 @@ import os
 import wandb
 import pygame
 import matplotlib.patches as patches
+import time
 
+os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 class CliffCarAgent:
     def __init__(self, env, replay_buffer, epsilon_decay, network,
@@ -39,7 +41,7 @@ class CliffCarAgent:
         if model_path is not None:
             self.load_model(model_path)
         self.optimizer = optim.Adam(self.dqn.parameters(), lr=learning_rate, weight_decay=weight_decay) # Adam default lr=0.001
-
+        
         # transition to store in memory
         self.transition = list()
 
@@ -106,7 +108,7 @@ class CliffCarAgent:
 
         return loss.item()
 
-    def train(self, train_frames: int, test_interval = 200, test_games = 100, do_test_plots = True, test_name_prefix = ""):
+    def train(self, train_epocs: int, test_interval = 200, test_games = 100, do_test_plots = True, test_name_prefix = ""):
         """Train the agent."""
         self.is_test = False
         self.dqn.train()
@@ -131,7 +133,7 @@ class CliffCarAgent:
         
         # Start training for the given amount of trames
         self.env.reset()
-        for frame_idx in tqdm(range(1, train_frames + 1)):
+        for epoc in tqdm(range(1, train_epocs + 1)):
             action = self.select_action(self.env.position)
             _, reward, done = self.step(action)
 
@@ -156,14 +158,14 @@ class CliffCarAgent:
             )
             epsilons.append(self.epsilon)
 
-            if frame_idx % test_interval == 0:
-                print(">>> Testing: " + test_name_prefix + "-frame-" + str(frame_idx) + "-epsilon-" + str(self.epsilon))
+            if epoc % test_interval == 0:
+                print(f">>> Testing at epoc: {epoc}. Time: {time.ctime()}")
                 self.test(test_games=test_games,
-                          test_name_prefix = test_name_prefix + f"-frame-{str(frame_idx)}",
-                          do_test_plots=do_test_plots)
+                          epoc = epoc,
+                          plot_path = plot_path)
             # # plotting
-            # if frame_idx % plotting_interval == 0:
-            #     self._plot(frame_idx, scores, losses, epsilons)
+            # if epoc % plotting_interval == 0:
+            #     self._plot(epoc, scores, losses, epsilons)
 
         print("Training complete")
         return scores, losses, epsilons
@@ -174,7 +176,7 @@ class CliffCarAgent:
         except:
             print("ERROR! Could not save model!")
 
-    def test(self, test_games, frame, plot_path = None, render_games: int=0, render_speed: int=60):
+    def test(self, test_games, epoc, plot_path = None, render_games: int=0, render_speed: int=60):
         """
         Test the agent
         :param test_games: number of test games to get score from
@@ -220,13 +222,13 @@ class CliffCarAgent:
                 self.env.render()
 
         if plot_path is not None:
-            self.do_test_plots(all_sar, plot_path, frame)
+            self.do_test_plots(all_sar, plot_path, epoc)
 
         self.is_test = False
 
         return np.array(all_sar)
     
-    def do_test_plots(self, all_sar, path, frame, state_res = 0.5, q_val_res = 0.8):
+    def do_test_plots(self, all_sar, path, epoc, state_res = 0.5, q_val_res = 0.8):
         
         ### PLOT THE HEATMAP OF VISITED STATES ###
 
@@ -242,7 +244,7 @@ class CliffCarAgent:
         heatmap, _, _ = np.histogram2d(states[:,0], states[:,1], bins=[len(x_range), len(y_range)])
         plt.imshow(heatmap.T, extent=[x_range[0], x_range[-1], y_range[0], y_range[-1]], origin='lower', cmap='brg')
         plt.colorbar()
-        p = os.path.join(*path, "training", f"state_heatmap-frame-{frame}.png")
+        p = os.path.join(*path, "training", f"state_heatmap-epoc-{epoc}.png")
         plt.savefig(p)
         plt.clf()
 
@@ -322,7 +324,7 @@ class CliffCarAgent:
 
         draw_lines()
 
-        p = rf"action_values-frame-{frame}-acum_r-" + str(round(np.mean([sum(sar[:,2,0]) for sar in all_sar]),3)) + ".png"
+        p = rf"action_values-epoc-{epoc}-acum_r-" + str(round(np.mean([sum(sar[:,2,0]) for sar in all_sar]),3)) + ".png"
         p = os.path.join(*path, "training", p)
         
         # Update display_all
@@ -363,12 +365,12 @@ class CliffCarAgent:
 
         draw_lines()
         
-        file_name = rf"best_action-frame-{frame}-acum_r-" + str(round(np.mean([sum(sar[:,2,0]) for sar in all_sar]),3)) + ".png"
+        file_name = rf"best_action-epoc-{epoc}-acum_r-" + str(round(np.mean([sum(sar[:,2,0]) for sar in all_sar]),3)) + ".png"
         p = os.path.join(*path, "training", file_name)
 
         # Update display_max
         pygame.display.update(display.get_rect())
-        pygame.image.save(display, file_name)
+        pygame.image.save(display, p)
         
         # Close the display
         pygame.display.quit()
@@ -383,7 +385,7 @@ class CliffCarAgent:
 
     def _plot(
             self,
-            frame_idx: int,
+            epoc: int,
             scores: List[float],
             losses: List[float],
             epsilons: List[float],
@@ -393,7 +395,7 @@ class CliffCarAgent:
         clear_output(True)
         plt.figure(figsize=(20, 5))
         plt.subplot(131)
-        plt.title('frame %s. score: %s' % (frame_idx, np.mean(scores[-10:])))
+        plt.title('epoc %s. score: %s' % (epoc, np.mean(scores[-10:])))
         plt.plot(scores)
         plt.subplot(132)
         plt.title('loss')

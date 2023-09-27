@@ -1,0 +1,20 @@
+Seed: 1
+Delta: 0.01
+Fineness: 2
+                         Ripe when: None
+Ready when: 10
+                         Num neighbours: 2
+Bin size: 200
+                         Replay buffer size: 500
+Robust batch size: 75
+                         Train epocs: 100000
+Grad batch size: 30
+                         Epsilon decay: 0.0001
+ Max epsilon: 0.99
+                        Min epsilon: 0.1
+ Learning rate: 0.00075
+                         Weight decay: 0.0001
+Noise var: [[0.05, 0], [0, 0.05]]
+                         Noise mean: [0, 0]
+Radial basis dist: 1.5
+                         Radial basis var: 7

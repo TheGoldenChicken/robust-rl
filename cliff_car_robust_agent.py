@@ -11,6 +11,8 @@ import random
 import os
 from tqdm import tqdm
 import wandb
+import time
+import torch.optim as optim
 
 class RobustCliffCarAgent(CliffCarAgent):
     def __init__(self, env, replay_buffer, epsilon_decay, network, grad_batch_size=30, delta=0.5, max_epsilon=1.0,
@@ -22,6 +24,8 @@ class RobustCliffCarAgent(CliffCarAgent):
         self.robust_factor = robust_factor # Factor multiplied on the robust estimator
         self.grad_batch_size = grad_batch_size # How many samples to compute each loss based off of
         self.delta = delta # For the robust estimator
+
+        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode = "max", factor=0.1, patience=2000, verbose=True)
 
         # Adding the below as class specific values is kinda stupid, however not having them here would require changing the train function
         self.betas = []
@@ -110,10 +114,11 @@ class RobustCliffCarAgent(CliffCarAgent):
         loss.backward()
         # torch.nn.utils.clip_grad_norm_(self.dqn.parameters(), max_norm=2)
         self.optimizer.step()
+        self.scheduler.step(torch.mean(robust_estimator))
 
         return loss.item(), torch.mean(robust_estimator).detach().cpu().numpy()
 
-    def train(self, train_frames: int, test_interval = 200, test_games = 100, plot_path = None, wandb_active = False):
+    def train(self, train_epocs: int, test_interval = 200, test_games = 100, plot_path = None, wandb_active = False, silence_tqdm = False):
         """Train the agent."""
         self.is_test = False
         self.dqn.train()
@@ -139,7 +144,7 @@ class RobustCliffCarAgent(CliffCarAgent):
         
         # Start training for the given amount of trames
         self.env.reset()
-        for frame_idx in tqdm(range(1, train_frames + 1)):
+        for epoc in tqdm(range(1, train_epocs + 1), disable=silence_tqdm):
             action = self.select_action(self.env.position)
             _, reward, done = self.step(action)
 
@@ -168,10 +173,10 @@ class RobustCliffCarAgent(CliffCarAgent):
             epsilons.append(self.epsilon)
 
 
-            if frame_idx % test_interval == 0:
-                print(f"\n>>> Testing! Frame: {str(frame_idx)}, Epsilon: {str(round(self.epsilon,3))}, Loss: {str(round(loss[0],3))}")
+            if epoc % test_interval == 0:
+                print(f">>> Testing at epoc: {epoc}. Time: {time.ctime()}")
                 self.test(test_games=test_games,
-                          frame = frame_idx,
+                          epoc = epoc,
                           plot_path = plot_path)
 
         print("Training complete")

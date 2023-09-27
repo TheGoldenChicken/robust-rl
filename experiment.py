@@ -67,9 +67,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog='Robust RL on Cliff Car')
 
     # Parameters changed most often
-    parser.add_argument('--seed', default=[1,2,3,4,5], help='Seed. Either None (random), int or list', required=False)
-    parser.add_argument('--delta', default = [1e-5, 0.01, 0.05, 0.1, 0.5, 1, 2],
-                        help = 'Delta value for robustness. Either int or list', required=False)
+    parser.add_argument('--seed', type=int, nargs='+', help='Seed. Either None (random), int or list', required=True)
+    parser.add_argument('--delta', type=float, nargs='+',
+                        help = 'Delta value for robustness. Either int or list', required=True)
     
     # Wandb: Weights and Biases
     parser.add_argument('--wandb_key', type = str, default = None, required=False)
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     parser.add_argument('--bin_size', type=int, default=200, required=False)
     parser.add_argument('--replay_buffer_size', type=int, default=500, required=False)
 
-    parser.add_argument('--train_frames', type=int, default=100000, required=False)
+    parser.add_argument('--train_epocs', type=int, default=100000, required=False)
     parser.add_argument('--test_interval', type=int, default=5000, required=False)
     parser.add_argument('--test_games', type=int, default=100, required=False)
 
@@ -108,17 +108,19 @@ if __name__ == "__main__":
     parser.add_argument('--radial_basis_dist', type=float, default=1.5, required=False)
     parser.add_argument('--radial_basis_var', type=float, default=7, required=False)
     
+    parser.add_argument('--silence_tqdm', type=bool, default=False, required=False)
+
     args = parser.parse_args()
 
     # Set up seed
-    if args.seed is None:
-        args.seed = [random.randint(0, 100000)]
-    elif type(args.seed) == int:
+    if type(args.seed) == int:
         args.seed = [args.seed]
 
     # Change to list if not already
-    if type(args.delta) == int:
+    if type(args.delta) == float:
         args.delta = [args.delta]
+
+    print(">>>>>>>>>>>>>>>>>>>>>> " + str(args.seed) + " " + str(type(args.seed)))
 
     # Set up wandb
     if args.wandb_key != None:
@@ -152,7 +154,7 @@ if __name__ == "__main__":
                         Ripe when: {args.ripe_when}\nReady when: {args.ready_when}\n \
                         Num neighbours: {args.num_neighbours}\nBin size: {args.bin_size}\n \
                         Replay buffer size: {args.replay_buffer_size}\nRobust batch size: {args.robust_batch_size}\n \
-                        Train frames: {args.train_frames}\nGrad batch size: {args.grad_batch_size}\n \
+                        Train epocs: {args.train_epocs}\nGrad batch size: {args.grad_batch_size}\n \
                         Epsilon decay: {args.epsilon_decay}\n Max epsilon: {args.max_epsilon}\n\
                         Min epsilon: {args.min_epsilon}\n Learning rate: {args.learning_rate}\n \
                         Weight decay: {args.weight_decay}\nNoise var: {args.noise_var}\n \
@@ -174,7 +176,7 @@ if __name__ == "__main__":
                         "bin_size": args.bin_size,
                         "replay_buffer_size": args.replay_buffer_size,
                         "robust_batch_size": args.robust_batch_size,
-                        "train_frames": args.train_frames,
+                        "train_epocs": args.train_epocs,
                         "grad_batch_size": args.grad_batch_size,
                         "epsilon_decay": args.epsilon_decay,
                         "max_epsilon": args.max_epsilon,
@@ -211,20 +213,21 @@ if __name__ == "__main__":
                                         gamma=args.gamma, learning_rate = args.learning_rate, weight_decay = args.weight_decay)
 
             train_start = time.time()
-            train_data = agent.train(train_frames = args.train_frames,
+            train_data = agent.train(train_epocs = args.train_epocs,
                                     test_interval = args.test_interval,   
                                     test_games = args.test_games,
                                     plot_path = path_components,
-                                    wandb_active=wandb_active)
+                                    wandb_active=wandb_active,
+                                    silence_tqdm = args.silence_tqdm)
             train_end = time.time()
 
-
+            print("Training finished. Time: " + str(train_end - train_start))
             ### TRAINING FINISHED - START EVALUATION ###
             print("==============================================")
             print(f">>> Started evaluation; seed: {seed}, delta: {delta}")
 
             test_start = train_end
-            test_data = agent.test(test_games=args.test_games, render_games=0, frame = args.train_frames)
+            test_data = agent.test(test_games=args.test_games, render_games=0, epoc = args.train_epocs)
             test_end = time.time()
 
             # States to extract q-values from
