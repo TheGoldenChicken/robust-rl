@@ -55,7 +55,7 @@ def create_directories(seed, delta, identifier):
     if not os.path.exists(path):
         os.makedirs(path)
 
-    path = os.path.join("results", identifier, test_name, "training")
+    path = os.path.join("results", identifier, test_name, "evaluation")
     # Evaluation plots directory
     if not os.path.exists(path):
         os.makedirs(path)
@@ -85,20 +85,20 @@ if __name__ == "__main__":
     parser.add_argument('--replay_buffer_size', type=int, default=500, required=False)
 
     parser.add_argument('--train_epocs', type=int, default=100000, required=False)
-    parser.add_argument('--test_interval', type=int, default=5000, required=False)
+    parser.add_argument('--test_interval', type=int, default=2000, required=False)
     parser.add_argument('--test_games', type=int, default=100, required=False)
 
     # Training parameters
     parser.add_argument('--robust_batch_size', type=int, default=75, required=False)
-    parser.add_argument('--grad_batch_size', type=int, default=30, required=False)
+    parser.add_argument('--grad_batch_size', type=int, default=32, required=False)
     parser.add_argument('--learning_rate', type=float, default=0.001, required=False)
-    parser.add_argument('--weight_decay', type=float, default=0.0001, required=False)
+    parser.add_argument('--weight_decay', type=float, default=0, required=False)
 
     # Epsilon values
     parser.add_argument('--epsilon_decay', type=float, default=1/10000, required=False)
-    parser.add_argument('--max_epsilon', type=float, default=0.99, required=False)
+    parser.add_argument('--max_epsilon', type=float, default=1, required=False)
     parser.add_argument('--min_epsilon', type=float, default=0.1, required=False)
-    parser.add_argument('--gamma', type=float, default=0.99, required=False)
+    parser.add_argument('--gamma', type=float, default=0.95, required=False)
 
     # Environment parameters
     parser.add_argument('--noise_var', type=float, default=[[0.05, 0],[0, 0.05]], required=False)

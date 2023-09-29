@@ -12,7 +12,7 @@
 #BSUB -gpu "num=1"
 
 ### -- set the job Name -- 
-#BSUB -J test_job
+#BSUB -J robust_rl
 
 ### -- ask for 1 core -- 
 #BSUB -n 16
@@ -50,8 +50,15 @@ python3 -m install install --upgrade urllib3
 #        --radial_basis_dist 1.5 --silence_tqdm True \
 #        --train_identifier radial_basis_15
 python experiment.py --wandb_key ec26ff6ba9b98d017cdb3165454ce21496c12c35 \
-       --test_interval 2000 --train_epocs 100000 \
+       --test_interval 2000 --train_epocs 80000 \
        --delta 0.01 0.1 0.5 --seed 1 \
-       --learning_rate 0.00075 \
-       --radial_basis_dist 1.5 --silence_tqdm False \
-       --train_identifier radial_basis_15-reduced_lr-and-scheduler
+       --learning_rate 0.0005 \
+       --radial_basis_dist 1 --silence_tqdm True \
+       --bin_size 50 \
+       --grad_batch_size 32 \
+       --robust_batch_size 32 \
+       --gamma 0.95 \
+       --fineness 1 \
+       --num_neighbours 3 \
+       --ready_when 1 \
+       --train_identifier trying_different_params

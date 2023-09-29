@@ -5,7 +5,7 @@ import distributionalQLearning as distributionalQLearning
 import numpy as np
 from replay_buffer import TheCoolerReplayBuffer, TheSlightlyCoolerReplayBuffer
 from cliff_car_env import CliffCar
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 import random
 import os
@@ -25,15 +25,15 @@ class RobustCliffCarAgent(CliffCarAgent):
         self.grad_batch_size = grad_batch_size # How many samples to compute each loss based off of
         self.delta = delta # For the robust estimator
 
-        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode = "max", factor=0.1, patience=2000, verbose=True)
-
+        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode = "max", factor=0.95, patience=1000, verbose=True)
+        
         # Adding the below as class specific values is kinda stupid, however not having them here would require changing the train function
         self.betas = []
         self.robust_estimators = []
         self.quadratic_approximations = []
         self.linear_only = linear_only
 
-    def get_samples(self) -> tuple[dict, dict]:
+    def get_samples(self) -> Tuple[dict, dict]:
         """
         Should be updated for each individual agent type
         """
@@ -112,11 +112,17 @@ class RobustCliffCarAgent(CliffCarAgent):
 
         self.optimizer.zero_grad()
         loss.backward()
+
+        mean_estimator = torch.mean(robust_estimator)
         # torch.nn.utils.clip_grad_norm_(self.dqn.parameters(), max_norm=2)
         self.optimizer.step()
-        self.scheduler.step(torch.mean(robust_estimator))
+        self.scheduler.step(mean_estimator)
 
-        return loss.item(), torch.mean(robust_estimator).detach().cpu().numpy()
+        # Reset the best known estimator whenever we decrease the learning rate
+        if self.scheduler.num_bad_epochs == 0:
+            self.scheduler.best = float(mean_estimator)
+
+        return loss.item(), mean_estimator.detach().cpu().numpy()
 
     def train(self, train_epocs: int, test_interval = 200, test_games = 100, plot_path = None, wandb_active = False, silence_tqdm = False):
         """Train the agent."""
@@ -165,11 +171,12 @@ class RobustCliffCarAgent(CliffCarAgent):
             if wandb_active: wandb.log({'epsilon': self.epsilon})
 
             # linearly decrease epsilon
-            self.epsilon = max(
-                self.min_epsilon, self.epsilon - (
-                        self.max_epsilon - self.min_epsilon
-                ) * self.epsilon_decay
-            )
+            # self.epsilon = max(
+            #     self.min_epsilon, self.epsilon - (
+            #             self.max_epsilon - self.min_epsilon
+            #     ) * self.epsilon_decay
+            # )
+            self.epsilon = self._get_epsilon(epoc, train_epocs)
             epsilons.append(self.epsilon)
 
 

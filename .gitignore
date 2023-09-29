@@ -1,3 +1,6 @@
 __pycache__/
 venv_1/
 wandb/
+*.err
+*.out
+*.png

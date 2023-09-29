@@ -51,7 +51,7 @@ class CliffCarAgent:
         # Should work for tensors and numpy...
         self.state_normalizer = lambda state: (state - self.min)/(self.max - self.min)
 
-    def get_samples(self) -> tuple[dict, ]:
+    def get_samples(self) -> Tuple[dict, ]:
         """
         Should be updated for each individual agent type
         returns: tuple[samples,current_samples] current_samples only if robust agent, samples is list in this case
@@ -175,6 +175,18 @@ class CliffCarAgent:
             torch.save(self.dqn.state_dict(), model_path)
         except:
             print("ERROR! Could not save model!")
+
+    def _get_epsilon(self, epoc, max_epocs):
+        min_after = 0.6 # between 0 and 1: When min epsilon will be reached. 0.8 = 80% of max_epocs
+        eps_max = 1 # between 0 and 1
+        eps_min = 0.1 # between 0 and eps_max
+
+        eps_decay_mode = "exp"
+        if eps_decay_mode == "exp":
+            epsilon = np.exp(epoc/(max_epocs*min_after)*np.log(eps_min/eps_max))*eps_max
+            epsilon = max(epsilon, eps_min)
+        
+        return float(epsilon)
 
     def test(self, test_games, epoc, plot_path = None, render_games: int=0, render_speed: int=60):
         """
