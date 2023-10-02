@@ -1,15 +1,15 @@
 import numpy as np
-from collections import defaultdict
+from collections import defaultdict, deque
 import itertools
+import torch
 
 class Bin:
     
     def __init__(self, size):
-        
         self.size = size
-        self.samples = np.empty((size,), dtype = dict)
-        self.is_full = False
+        self.samples = torch.empty(size, dtype=object)
         self.head_ptr = -1
+        self.is_full = False
         
     def store(self, sample):
         self.head_ptr += 1
@@ -20,35 +20,41 @@ class Bin:
             self.head_ptr = 0
             self.is_full = True
     
-    def get_samples(self):
-        if self.head_ptr == -1: # if empty
-            return None
-        if self.is_full: # if full
-            return self.samples
-        return self.samples[:self.head_ptr + 1] #else
+    def get(self, num_samples):
+        # Define a tensor of probabilities
+        probs = probs = torch.ones(self.head_ptr + 1) / (self.head_ptr + 1)
+
+        # Sample from the multinomial distribution
+        samples = torch.multinomial(probs, num_samples=num_samples, replacement=True)
+
+        # Return the samples
+        return self.samples[samples]
     
 class CoolerReplayBuffer:
     
-    def __init__(self, state_dim, action_dim, bin_width, bin_size):
+    def __init__(self, bin_width, bin_size, state_dim, action_dim = None):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.bin_width = bin_width
         self.bin_size = bin_size
         
-        self.bins = [defaultdict(lambda: Bin(self.bin_size)) for i in range(action_dim)]
+        # If action_dim is None the actions share the replay buffer
+        # (i.e. all actions are stored in the same bins)
+        if action_dim is None:
+            self.bins = [defaultdict(lambda: Bin(self.bin_size))]
+        else: # Each action has its own replay buffer
+            self.bins = [defaultdict(lambda: Bin(self.bin_size)) for i in range(action_dim)]
         
-    def get_idx(self, state : np.array):
-        return tuple(np.round(state / self.bin_width).astype(np.int32))
-    
-    def get_idx_array(self, state : np.array):
-        return np.round(state / self.bin_width).astype(np.int32)
+    def get_idx(self, state : torch.tensor):
+        return torch.round(state / self.bin_width)
+       
+    def store(self, sample : dict, randomize = False):
         
-    def store(self, sample : dict):
-        
-        # Stupid stuff to prevent singular matrices from appearing in calculation of the robust estimator
-        sample["state"] += np.random.normal(loc=0,scale=5e-4, size=self.state_dim)
-        sample["next_state"] += np.random.normal(loc=0,scale=5e-4, size=self.state_dim)
-        
+        # Avoid duplicates by adding random disturbance to the state
+        if randomize:
+            sample["state"] += np.random.normal(loc=0,scale=5e-4, size=self.state_dim)
+            sample["next_state"] += np.random.normal(loc=0,scale=5e-4, size=self.state_dim)
+            
         self.bins[sample["action"]][self.get_idx(sample["state"])].store(sample)
     
     def draw(self, n : int, action : int = None , replace : bool = False, min_req_ratio = 3):

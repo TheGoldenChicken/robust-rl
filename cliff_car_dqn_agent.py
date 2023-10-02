@@ -1,12 +1,12 @@
 from cliff_car_agent import CliffCarAgent
 import torch
 import torch.nn.functional as F
-import cliff_car.distributionalQLearning as distributionalQLearning
+import distributionalQLearning as distributionalQLearning
 import numpy as np
-from sumo.replay_buffer import ReplayBuffer
-from cliff_car_again import CliffCar
+from replay_buffer import ReplayBuffer
+from cliff_car_env import CliffCar
 from typing import Dict
-from sumo.network import Network
+from network import Network
 import random
 
 class DQNCliffCarAgent(CliffCarAgent):

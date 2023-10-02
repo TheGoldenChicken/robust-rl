@@ -7,7 +7,7 @@ from utils import neighbours, single_dim_interpreter
 class ReplayBuffer:
     """A simple numpy replay buffer."""
 
-    def __init__(self, obs_dim: int, size: int, batch_size: int = 32, ready_when=500):
+    def __init__(self, obs_dim: int, size: int, batch_size: int = 32, ready_when=500, **kwargs):
         self.obs_buf = np.zeros([size, obs_dim], dtype=np.float32)
         self.next_obs_buf = np.zeros([size, obs_dim], dtype=np.float32)
         self.acts_buf = np.zeros([size], dtype=np.int32)
@@ -112,7 +112,8 @@ class TheCoolerReplayBuffer(ReplayBuffer):
     Replay buffer more optimal for grid-based replay-buffering
     """
     def __init__(self, obs_dim, bin_size, batch_size, fineness, num_actions, state_max=np.infty,
-                 state_min=-np.infty, tb=True, ripe_when=None, ready_when=10, num_neighbours=2, noise_adder = True):
+                 state_min=-np.infty, tb=True, ripe_when=None, ready_when=10, num_neighbours=2, noise_adder = True,
+                 **kwargs):
         self.bins_per_action = (fineness**obs_dim)
         self.bins = (fineness**obs_dim)*num_actions + 1*tb
         self.size_per_action = (fineness**obs_dim)*bin_size # Max size per action
@@ -123,7 +124,7 @@ class TheCoolerReplayBuffer(ReplayBuffer):
         self.fineness = fineness
 
         # Have to call super here so ptr won't get replaced...
-        super().__init__(obs_dim, self.total_size, batch_size)
+        super().__init__(obs_dim, self.total_size, batch_size, **kwargs)
         self.ptr, self.size = [0] * self.bins, [0] * self.bins
         self.ptr, self.size = [0] * self.bins, [0] * self.bins
 

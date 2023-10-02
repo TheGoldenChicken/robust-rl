@@ -29,7 +29,8 @@ class CliffCar:
     CLIFF_HEIGHT = 0
     SPEED = 0.5
 
-    def __init__(self, noise_mean = [0,0], noise_var = None, mode = "abrupt", radial_basis_dist = 1, radial_basis_var = 2):
+    def __init__(self, noise_mean = [0,0], noise_var = None, mode = "abrupt",
+                 radial_basis_dist = 1, radial_basis_var = 2, **kwargs):
 
         # Car settings
         self.position = self.START_POSITION

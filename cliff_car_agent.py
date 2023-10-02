@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,17 +8,18 @@ import random
 from IPython.display import clear_output
 from tqdm import tqdm
 import os
-import wandb
 import pygame
-import matplotlib.patches as patches
 import time
 
+# Import different class decorators
+
+# Used to turn off video in pygame (Not supported on server without display)
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 class CliffCarAgent:
-    def __init__(self, env, replay_buffer, epsilon_decay, network,
+    def __init__(self, env, replay_buffer, network, epsilon_decay=0.0001,
                  max_epsilon=1.0, min_epsilon=0.1, gamma=0.99,
-                 learning_rate = 0.001, weight_decay = 0.0001, model_path=None):
+                 learning_rate = 0.001, weight_decay = 0.0001, model_path=None, **kwargs):
         self.env = env
         self.max, self.min = np.array(self.env.max_min[0]), np.array(self.env.max_min[1])
 
@@ -51,6 +53,7 @@ class CliffCarAgent:
         # Should work for tensors and numpy...
         self.state_normalizer = lambda state: (state - self.min)/(self.max - self.min)
 
+    @abstractmethod
     def get_samples(self) -> Tuple[dict, ]:
         """
         Should be updated for each individual agent type
@@ -59,6 +62,7 @@ class CliffCarAgent:
         raise(NotImplementedError)
         return samples
 
+    @abstractmethod
     def _compute_dqn_loss(self, samples: Dict[str, np.ndarray]) -> torch.Tensor:
         """Needs to be implemented for each agent"""
         raise(NotImplementedError)
@@ -108,67 +112,74 @@ class CliffCarAgent:
 
         return loss.item()
 
-    def train(self, train_epocs: int, test_interval = 200, test_games = 100, do_test_plots = True, test_name_prefix = ""):
-        """Train the agent."""
-        self.is_test = False
-        self.dqn.train()
-
-        self.env.reset()
-        update_cnt = 0
-        epsilons = []
-        losses = []
-        scores = []
-        score = 0
-
-        # War up until we are ready to train.
-        while(not self.training_ready):
-            action = self.select_action(self.env.position)
-            _, _, done = self.step(action)
-
-            # if episode ends
-            if done:
-                self.env.reset()
-            
-            self.training_ready = self.replay_buffer.training_ready()
+    @abstractmethod
+    def train(self, train_frames: int, test_interval = 200,
+              test_games = 100, plot_path = None, **kwargs):
+        """
+        Train the agent.
+        Return all scores, losses and epsilon values for all frames
         
-        # Start training for the given amount of trames
-        self.env.reset()
-        for epoc in tqdm(range(1, train_epocs + 1)):
-            action = self.select_action(self.env.position)
-            _, reward, done = self.step(action)
+        """
+        
+        raise(NotImplementedError)
+        # self.is_test = False
+        # self.dqn.train()
 
-            score += reward
+        # self.env.reset()
+        # update_cnt = 0
+        # epsilons = []
+        # losses = []
+        # scores = []
+        # score = 0
 
-            # if episode ends
-            if done:
-                self.env.reset()
-                scores.append(score)
-                score = 0
+        # # War up until we are ready to train.
+        # while(not self.training_ready):
+        #     action = self.select_action(self.env.position)
+        #     _, _, done = self.step(action)
+
+        #     # if episode ends
+        #     if done:
+        #         self.env.reset()
             
+        #     self.training_ready = self.replay_buffer.training_ready()
+        
+        # # Start training for the given amount of trames
+        # self.env.reset()
+        # for frame in tqdm(range(1, train_frames + 1)):
+        #     action = self.select_action(self.env.position)
+        #     _, reward, done = self.step(action)
 
-            loss = self.update_model()
-            losses.append(loss)
-            update_cnt += 1
+        #     score += reward
 
-            # linearly decrease epsilon
-            self.epsilon = max(
-                self.min_epsilon, self.epsilon - (
-                        self.max_epsilon - self.min_epsilon
-                ) * self.epsilon_decay
-            )
-            epsilons.append(self.epsilon)
+        #     # if episode ends
+        #     if done:
+        #         self.env.reset()
+        #         scores.append(score)
+        #         score = 0
+            
+        #     loss = self.update_model()
+        #     losses.append(loss)
+        #     update_cnt += 1
 
-            if epoc % test_interval == 0:
-                print(f">>> Testing at epoc: {epoc}. Time: {time.ctime()}")
-                self.test(test_games=test_games,
-                          epoc = epoc,
-                          plot_path = plot_path)
+        #     # linearly decrease epsilon
+        #     self.epsilon = max(
+        #         self.min_epsilon, self.epsilon - (
+        #                 self.max_epsilon - self.min_epsilon
+        #         ) * self.epsilon_decay
+        #     )
+        #     epsilons.append(self.epsilon)
+
+        #     if frame % test_interval == 0:
+        #         print(f">>> Testing at frame: {frame}. Time: {time.ctime()}")
+        #         self.test(test_games=test_games,
+        #                   frame = frame,
+        #                   plot_path = plot_path)
             # # plotting
-            # if epoc % plotting_interval == 0:
-            #     self._plot(epoc, scores, losses, epsilons)
+            # if frame % plotting_interval == 0:
+            #     self._plot(frame, scores, losses, epsilons)
 
         print("Training complete")
-        return scores, losses, epsilons
+        # return scores, losses, epsilons
 
     def save_model(self, model_path):
         try:
@@ -176,19 +187,19 @@ class CliffCarAgent:
         except:
             print("ERROR! Could not save model!")
 
-    def _get_epsilon(self, epoc, max_epocs):
-        min_after = 0.6 # between 0 and 1: When min epsilon will be reached. 0.8 = 80% of max_epocs
+    def _get_epsilon(self, frame, max_frames):
+        min_after = 0.6 # between 0 and 1: When min epsilon will be reached. 0.8 = 80% of max_frames
         eps_max = 1 # between 0 and 1
         eps_min = 0.1 # between 0 and eps_max
 
         eps_decay_mode = "exp"
         if eps_decay_mode == "exp":
-            epsilon = np.exp(epoc/(max_epocs*min_after)*np.log(eps_min/eps_max))*eps_max
+            epsilon = np.exp(frame/(max_frames*min_after)*np.log(eps_min/eps_max))*eps_max
             epsilon = max(epsilon, eps_min)
         
         return float(epsilon)
 
-    def test(self, test_games, epoc, plot_path = None, render_games: int=0, render_speed: int=60):
+    def test(self, test_games, frame, plot_path = None, render_games: int=0, render_speed: int=60):
         """
         Test the agent
         :param test_games: number of test games to get score from
@@ -234,13 +245,13 @@ class CliffCarAgent:
                 self.env.render()
 
         if plot_path is not None:
-            self.do_test_plots(all_sar, plot_path, epoc)
+            self.do_test_plots(all_sar, plot_path, frame)
 
         self.is_test = False
 
         return np.array(all_sar)
     
-    def do_test_plots(self, all_sar, path, epoc, state_res = 0.5, q_val_res = 0.8):
+    def do_test_plots(self, all_sar, path, frame, state_res = 0.5, q_val_res = 0.8):
         
         ### PLOT THE HEATMAP OF VISITED STATES ###
 
@@ -256,7 +267,7 @@ class CliffCarAgent:
         heatmap, _, _ = np.histogram2d(states[:,0], states[:,1], bins=[len(x_range), len(y_range)])
         plt.imshow(heatmap.T, extent=[x_range[0], x_range[-1], y_range[0], y_range[-1]], origin='lower', cmap='brg')
         plt.colorbar()
-        p = os.path.join(*path, "training", f"state_heatmap-epoc-{epoc}.png")
+        p = os.path.join(*path, "training", f"state_heatmap-frame-{frame}.png")
         plt.savefig(p)
         plt.clf()
 
@@ -336,7 +347,7 @@ class CliffCarAgent:
 
         draw_lines()
 
-        p = rf"action_values-epoc-{epoc}-acum_r-" + str(round(np.mean([sum(sar[:,2,0]) for sar in all_sar]),3)) + ".png"
+        p = rf"action_values-frame-{frame}-acum_r-" + str(round(np.mean([sum(sar[:,2,0]) for sar in all_sar]),3)) + ".png"
         p = os.path.join(*path, "training", p)
         
         # Update display_all
@@ -377,7 +388,7 @@ class CliffCarAgent:
 
         draw_lines()
         
-        file_name = rf"best_action-epoc-{epoc}-acum_r-" + str(round(np.mean([sum(sar[:,2,0]) for sar in all_sar]),3)) + ".png"
+        file_name = rf"best_action-frame-{frame}-acum_r-" + str(round(np.mean([sum(sar[:,2,0]) for sar in all_sar]),3)) + ".png"
         p = os.path.join(*path, "training", file_name)
 
         # Update display_max
@@ -397,7 +408,7 @@ class CliffCarAgent:
 
     def _plot(
             self,
-            epoc: int,
+            frame: int,
             scores: List[float],
             losses: List[float],
             epsilons: List[float],
@@ -407,7 +418,7 @@ class CliffCarAgent:
         clear_output(True)
         plt.figure(figsize=(20, 5))
         plt.subplot(131)
-        plt.title('epoc %s. score: %s' % (epoc, np.mean(scores[-10:])))
+        plt.title('frame %s. score: %s' % (frame, np.mean(scores[-10:])))
         plt.plot(scores)
         plt.subplot(132)
         plt.title('loss')

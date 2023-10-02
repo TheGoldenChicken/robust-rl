@@ -15,17 +15,17 @@ import time
 import torch.optim as optim
 
 class RobustCliffCarAgent(CliffCarAgent):
-    def __init__(self, env, replay_buffer, epsilon_decay, network, grad_batch_size=30, delta=0.5, max_epsilon=1.0,
+    def __init__(self, env, replay_buffer, network, epsilon_decay = 0.0001, grad_batch_size=30, delta=0.5, max_epsilon=1.0,
                  min_epsilon=0.1, gamma=0.99, learning_rate = 0.001, weight_decay = 0.0001,
-                 model_path=None, robust_factor=1, linear_only=False):
-        super().__init__(env, replay_buffer, epsilon_decay, network, max_epsilon, min_epsilon,
+                 model_path=None, robust_factor=1, linear_only=False, **kwargs):
+        super().__init__(env, replay_buffer, network, epsilon_decay, max_epsilon, min_epsilon,
                          gamma, learning_rate, weight_decay, model_path)
 
         self.robust_factor = robust_factor # Factor multiplied on the robust estimator
         self.grad_batch_size = grad_batch_size # How many samples to compute each loss based off of
         self.delta = delta # For the robust estimator
 
-        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode = "max", factor=0.95, patience=1000, verbose=True)
+        # self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode = "max", factor=0.95, patience=1000, verbose=True)
         
         # Adding the below as class specific values is kinda stupid, however not having them here would require changing the train function
         self.betas = []
@@ -116,15 +116,16 @@ class RobustCliffCarAgent(CliffCarAgent):
         mean_estimator = torch.mean(robust_estimator)
         # torch.nn.utils.clip_grad_norm_(self.dqn.parameters(), max_norm=2)
         self.optimizer.step()
-        self.scheduler.step(mean_estimator)
+        # self.scheduler.step(mean_estimator)
 
         # Reset the best known estimator whenever we decrease the learning rate
-        if self.scheduler.num_bad_epochs == 0:
-            self.scheduler.best = float(mean_estimator)
+        # if self.scheduler.num_bad_frames == 0:
+        #     self.scheduler.best = float(mean_estimator)
 
         return loss.item(), mean_estimator.detach().cpu().numpy()
 
-    def train(self, train_epocs: int, test_interval = 200, test_games = 100, plot_path = None, wandb_active = False, silence_tqdm = False):
+    def train(self, train_frames: int, test_interval = 200, test_games = 100, plot_path = None,
+                    wandb_active = False, silence_tqdm = False, **kwargs):
         """Train the agent."""
         self.is_test = False
         self.dqn.train()
@@ -150,7 +151,7 @@ class RobustCliffCarAgent(CliffCarAgent):
         
         # Start training for the given amount of trames
         self.env.reset()
-        for epoc in tqdm(range(1, train_epocs + 1), disable=silence_tqdm):
+        for frame in tqdm(range(1, train_frames + 1), disable=silence_tqdm):
             action = self.select_action(self.env.position)
             _, reward, done = self.step(action)
 
@@ -176,14 +177,14 @@ class RobustCliffCarAgent(CliffCarAgent):
             #             self.max_epsilon - self.min_epsilon
             #     ) * self.epsilon_decay
             # )
-            self.epsilon = self._get_epsilon(epoc, train_epocs)
+            self.epsilon = self._get_epsilon(frame, train_frames)
             epsilons.append(self.epsilon)
 
 
-            if epoc % test_interval == 0:
-                print(f">>> Testing at epoc: {epoc}. Time: {time.ctime()}")
+            if frame % test_interval == 0:
+                print(f">>> Testing at frame: {frame}. Time: {time.ctime()}")
                 self.test(test_games=test_games,
-                          epoc = epoc,
+                          frame = frame,
                           plot_path = plot_path)
 
         print("Training complete")
