@@ -57,17 +57,6 @@ class RadialNetwork2d(nn.Module):
         self.sigma_inv = self.sigma_inv.unsqueeze(0).unsqueeze(0).repeat(self.grid.shape[0], self.grid.shape[1], 1, 1)
 
         self.layers = nn.Sequential(nn.Linear(self.in_dim, env.ACTION_DIM))
-
-        # points = torch.column_stack((x.ravel(), y.ravel()))
-
-        # sigma = torch.eye(2) * self.env.radial_basis_diff
-        # self.mNormal = []
-        # for i in range(points.shape[0]):
-        #     m = MultivariateNormal(points[i], sigma)
-        #     self.mNormal.append(m)
-
-
-        # Formula for 2d gaussian function
         
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -102,46 +91,13 @@ class RadialNetwork2d(nn.Module):
 
         return basis
 
-class RadialNonlinearNetwork2d(nn.Module):
+class RadialNonLinearNetwork2d(RadialNetwork2d):
     
     def __init__(self, env):
-        super(RadialNonlinearNetwork2d, self).__init__()
-        
-        self.env = env
-        
-        x_min, y_min, x_max, y_max = self.env.BOUNDS
-        x_range = torch.arange(x_min, x_max, self.env.radial_basis_diff)
-        y_range = torch.arange(y_min, y_max, self.env.radial_basis_diff)
+        super(RadialNonLinearNetwork2d, self).__init__(env)
 
-        self.in_dim = x_range.shape[0] * y_range.shape[0]
-        
-        x, y = torch.meshgrid(x_range, y_range)
-        points = torch.column_stack((x.ravel(), y.ravel()))
-
-        sigma = torch.eye(2) * self.env.radial_basis_diff
-        self.mNormal = []
-        for i in range(points.shape[0]):
-            m = MultivariateNormal(points[i], sigma)
-            self.mNormal.append(m)
-
-        self.layers = nn.Sequential(nn.Linear(self.in_dim, 128),
-                                    nn.ReLU(),
-                                    nn.BatchNorm1d(128),
-                                    nn.Linear(128, env.ACTION_DIM))
-    
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward method implementation."""
-        
-        basis = self.radial_basis(x)
-        
-        return self.layers(basis)
-
-    def radial_basis(self, position):
-        basis = torch.zeros(position.shape[0], self.in_dim, device=position.device)
-    
-        for i in range(self.in_dim):
-            basis[:,i] = self.mNormal[i].log_prob(position).exp()
-        
-        basis.requires_grad = False
-        
-        return basis
+        self.layers = nn.Sequential(
+            nn.Linear(self.in_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, env.ACTION_DIM)
+            )

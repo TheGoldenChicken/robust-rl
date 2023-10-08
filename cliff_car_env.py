@@ -23,8 +23,8 @@ class CliffCar:
     CLIFF_PENALTY = -1
     ACTION_DIM = len(translate_action)
     OBS_DIM = 2
-    START_POSITION = np.array([1,1], dtype=np.float32) # has to be discrete for discrete agent to work
-    GOAL_POSITION = np.array([14,1], dtype=np.float32) # has to be discrete for discrete agent to work
+    START_POSITION = np.array([1,15], dtype=np.float32) # has to be discrete for discrete agent to work
+    GOAL_POSITION = np.array([15,1], dtype=np.float32) # has to be discrete for discrete agent to work
     BOUNDS = np.array([-10,-2,25,20]) # has to be discrete for discrete agent to work
     CLIFF_HEIGHT = 0
     SPEED = 0.5

@@ -211,7 +211,7 @@ class CliffCarAgent:
         all_sar = [] # All state_action_reward
         self.dqn.eval() # Set network to evaluation mode disabling dropout
 
-        for i in tqdm(range(test_games)):
+        for _ in tqdm(range(test_games)):
             self.env.reset()
             done = False
 
@@ -219,15 +219,15 @@ class CliffCarAgent:
 
             sar = np.zeros([self.env.max_duration + 1, 3,2]) # state, action, reward
 
-            frame = 0
+            test_frame = 0
             # Changed here from training, since we play games till the end, not for a certain number of steps (frames)
             while not done:
                 action = self.select_action(self.env.position)
                 _, reward, done = self.step(action)
 
-                sar[frame] = np.array([self.env.position, np.array([action,0]), np.array([reward,0])])
+                sar[test_frame] = np.array([self.env.position, np.array([action,0]), np.array([reward,0])])
 
-                frame += 1
+                test_frame += 1
 
             all_sar.append(sar)
 

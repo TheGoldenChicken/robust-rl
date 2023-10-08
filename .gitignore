@@ -1,6 +1,8 @@
 __pycache__/
 venv_1/
 wandb/
+results/
+predecated/
 *.err
 *.out
 *.png

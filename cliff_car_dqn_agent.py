@@ -6,16 +6,18 @@ import numpy as np
 from replay_buffer import ReplayBuffer
 from cliff_car_env import CliffCar
 from typing import Dict
-from network import Network
-import random
+import time
+import wandb
+from tqdm import tqdm
 
 class DQNCliffCarAgent(CliffCarAgent):
-    def __init__(self, env, replay_buffer, epsilon_decay, target_update,
-                 max_epsilon=1.0, min_epsilon=0.1, gamma=0.99, model_path=None):
-        super().__init__(env, replay_buffer, epsilon_decay, max_epsilon, min_epsilon, gamma, model_path)
-
+    def __init__(self, env, replay_buffer, network, epsilon_decay=0.0001, target_update=300,
+                 learning_rate=0.0001, weight_decay=0.0001,
+                 max_epsilon=1.0, min_epsilon=0.1, gamma=0.99, model_path=None, **kwargs):
+        super().__init__(env, replay_buffer, network, epsilon_decay, max_epsilon, min_epsilon,
+                         gamma, learning_rate, weight_decay, model_path)
         self.target_update = target_update
-        self.dqn_target = Network(env.obs_dim, env.action_dim).to(self.device)
+        self.dqn_target = network(env).to(self.device)
         self.dqn_target.load_state_dict(self.dqn.state_dict())
         self.dqn_target.eval()
 
@@ -54,7 +56,9 @@ class DQNCliffCarAgent(CliffCarAgent):
 
         return loss
 
-    def train(self, num_frames: int, plotting_interval: int = 200, save_model=None):
+    def train(self, train_frames: int, test_interval = 200,
+              test_games = 100, plot_path = None,
+              wandb_active = False, silence_tqdm = False, **kwargs):
         """Train the agent."""
         self.is_test = False
 
@@ -64,10 +68,11 @@ class DQNCliffCarAgent(CliffCarAgent):
         losses = []
         scores = []
         score = 0
+        if wandb_active: wandb.log({'score': score})
 
         current_episode_score = 0
 
-        for frame_idx in range(1, num_frames + 1):
+        for frame in tqdm(range(1, train_frames + 1), disable=silence_tqdm):
             action = self.select_action(state)
             next_state, reward, done = self.step(action)
             current_episode_score += reward
@@ -78,6 +83,7 @@ class DQNCliffCarAgent(CliffCarAgent):
             # if episode ends
             if done:
                 state = self.env.reset()
+                if wandb_active: wandb.log({'score': score})
                 scores.append(score)
                 score = 0
 
@@ -86,9 +92,13 @@ class DQNCliffCarAgent(CliffCarAgent):
                 self.training_ready = self.replay_buffer.training_ready()
 
             else:
+                
                 loss = self.update_model()
                 losses.append(loss)
                 update_cnt += 1
+
+                if wandb_active: wandb.log({'loss': loss}) # Loss
+                if wandb_active: wandb.log({'epsilon': self.epsilon})
 
                 # linearly decrease epsilon
                 self.epsilon = max(
@@ -101,11 +111,11 @@ class DQNCliffCarAgent(CliffCarAgent):
                 if update_cnt % self.target_update == 0:
                     self._target_hard_update()
 
-            # plotting
-                if frame_idx % plotting_interval == 0:
-                    self._plot(frame_idx, scores, losses, epsilons)
-                    #self._special_plot(episode_scores, epsilons, losses, frame_idx)
-                    print(frame_idx, loss, self.epsilon, )
+                if frame % test_interval == 0:
+                    print(f">>> Testing at frame: {frame}. Time: {time.ctime()}")
+                    self.test(test_games=test_games,
+                            frame = frame,
+                            plot_path = plot_path)
 
         print("Training complete")
         return scores, losses, epsilons

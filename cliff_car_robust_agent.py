@@ -172,12 +172,12 @@ class RobustCliffCarAgent(CliffCarAgent):
             if wandb_active: wandb.log({'epsilon': self.epsilon})
 
             # linearly decrease epsilon
-            # self.epsilon = max(
-            #     self.min_epsilon, self.epsilon - (
-            #             self.max_epsilon - self.min_epsilon
-            #     ) * self.epsilon_decay
-            # )
-            self.epsilon = self._get_epsilon(frame, train_frames)
+            self.epsilon = max(
+                self.min_epsilon, self.epsilon - (
+                        self.max_epsilon - self.min_epsilon
+                ) * self.epsilon_decay
+            )
+            # self.epsilon = self._get_epsilon(frame, train_frames)
             epsilons.append(self.epsilon)
 
 

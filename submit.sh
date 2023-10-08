@@ -54,11 +54,7 @@ python experiment.py --wandb_key ec26ff6ba9b98d017cdb3165454ce21496c12c35 \
        --delta 0.01 0.1 0.5 --seed 1 \
        --learning_rate 0.0005 \
        --radial_basis_dist 1 --silence_tqdm True \
-       --bin_size 50 \
-       --grad_batch_size 32 \
-       --robust_batch_size 32 \
-       --gamma 0.95 \
-       --fineness 1 \
-       --num_neighbours 3 \
-       --ready_when 1 \
-       --train_identifier trying_different_params
+       --radial_basis_var 7 \
+       --gamma 0.99 \
+       --non_linear \
+       --train_identifier dqn_test

@@ -10,13 +10,13 @@ import torch
 import random
 import numpy as np
 from cliff_car_env import CliffCar
-from replay_buffer import TheCoolerReplayBuffer
+from replay_buffer import TheCoolerReplayBuffer, ReplayBuffer
 from cliff_car_robust_agent import RobustCliffCarAgent
-from network import RadialNetwork2d
+from cliff_car_dqn_agent import DQNCliffCarAgent
+from network import RadialNetwork2d, RadialNonLinearNetwork2d
 import time
 import pandas as pd
 import argparse
-
 import wandb
 
 def seed_everything(seed_value):
@@ -72,29 +72,34 @@ if __name__ == "__main__":
                         required=True)
     parser.add_argument('--delta', type=float, nargs='+',
                         help = 'Delta value for robustness. Either int or list',
-                        required=True)
+                        default=0.01)
     
     # Wandb: Weights and Biases
     parser.add_argument('--wandb_key', type = str, default = None, required=False)
 
     parser.add_argument('--train_identifier', default = None, help= "Used to identify the training run.", required=False)
 
+    # Agent and environment type
+    parser.add_argument('--robust_agent', default=False, required=False, action='store_true')
+    parser.add_argument('--discrete_env', default=False, required=False, action='store_true')
+    parser.add_argument('--non_linear', default=True, required=False, action='store_true')
+
     # Replay buffer parameters
     parser.add_argument('--fineness', type=int, default=2, required=False)
     parser.add_argument('--ripe_when', type=int, default=None, required=False)
     parser.add_argument('--ready_when', type=int, default=10, required=False)
     parser.add_argument('--num_neighbours', type=int, default=2, required=False)
-    parser.add_argument('--bin_size', type=int, default=200, required=False)
     parser.add_argument('--replay_buffer_size', type=int, default=500, required=False)
+    parser.add_argument('--bin_size', type=int, default=200, required=False)
 
-    parser.add_argument('--train_frames', type=int, default=100000, required=False)
-    parser.add_argument('--test_interval', type=int, default=2000, required=False)
+    parser.add_argument('--train_frames', type=int, default=1000000, required=False)
+    parser.add_argument('--test_interval', type=int, default=10000, required=False)
     parser.add_argument('--test_games', type=int, default=100, required=False)
 
     # Training parameters
     parser.add_argument('--robust_batch_size', type=int, default=75, required=False)
     parser.add_argument('--grad_batch_size', type=int, default=32, required=False)
-    parser.add_argument('--learning_rate', type=float, default=0.001, required=False)
+    parser.add_argument('--learning_rate', type=float, default=0.0001, required=False)
     parser.add_argument('--weight_decay', type=float, default=0, required=False)
 
     # Epsilon values
@@ -198,33 +203,31 @@ if __name__ == "__main__":
             print(f">>> Started training; seed: {seed}, delta: {delta}")
             seed_everything(seed)
 
-            # env = CliffCar(noise_var = args.noise_var, noise_mean = args.noise_mean,
-            #                radial_basis_dist = args.radial_basis_dist, radial_basis_var = args.radial_basis_var)
             env = CliffCar(**vars(args))
 
-            state_max, state_min = np.array(env.max_min[0]), np.array(env.max_min[1])
-            replay_buffer = TheCoolerReplayBuffer(obs_dim=env.OBS_DIM, num_actions=env.ACTION_DIM,
-                                                  state_min=state_min, state_max=state_max,
-                                                  batch_size = args.robust_batch_size,
-                                                  **vars(args))
-                                                #   bin_size=args.bin_size, batch_size=args.robust_batch_size,
-                                                #   fineness=args.fineness, ripe_when=args.ripe_when,
-                                                #   ready_when=args.ready_when,
-                                                #   num_neighbours=args.num_neighbours, tb=True)
 
-            agent = RobustCliffCarAgent(env=env, replay_buffer=replay_buffer, network = RadialNetwork2d,
-                                        **vars(args))
-                                        # grad_batch_size=args.grad_batch_size, delta=delta,
-                                        # epsilon_decay=args.epsilon_decay, max_epsilon=args.max_epsilon, min_epsilon=args.min_epsilon,
-                                        # gamma=args.gamma, learning_rate = args.learning_rate, weight_decay = args.weight_decay)
+            if args.non_linear:
+                network = RadialNonLinearNetwork2d
+            else:
+                network = RadialNetwork2d   
+
+            state_max, state_min = np.array(env.max_min[0]), np.array(env.max_min[1])
+            if args.robust_agent:
+                replay_buffer = TheCoolerReplayBuffer(obs_dim=env.OBS_DIM, num_actions=env.ACTION_DIM,
+                                                    state_min=state_min, state_max=state_max,
+                                                    batch_size = args.robust_batch_size,
+                                                    **vars(args))
+
+                agent = RobustCliffCarAgent(env=env, replay_buffer=replay_buffer, network = network,
+                                            **vars(args))
+            else: # DQN agent
+                replay_buffer = ReplayBuffer(obs_dim=env.OBS_DIM, size=args.bin_size,
+                                             batch_size=args.grad_batch_size,
+                                             **vars(args))
+                agent = DQNCliffCarAgent(env=env, replay_buffer=replay_buffer, network = network,
+                                         **vars(args))
 
             train_start = time.time()
-            # train_data = agent.train(train_frames = args.train_frames,
-            #                         test_interval = args.test_interval,   
-            #                         test_games = args.test_games,
-            #                         plot_path = path_components,
-            #                         wandb_active=wandb_active,
-            #                         silence_tqdm = args.silence_tqdm)
             train_data = agent.train(plot_path = path_components, wandb_active=wandb_active,
                                      **vars(args))
             train_end = time.time()
@@ -263,8 +266,8 @@ if __name__ == "__main__":
             # np.save(rf'test_results_{experiment_id}\{test_name}\{delta}-test_data.npy', test_data)
             path = os.path.join(*path_components, "evaluation", "q_vals.npy")
             np.save(path, q_vals)
-            path = os.path.join(*path_components, "evaluation", "betas.npy")
-            np.save(path, np.array(agent.betas))
+            # path = os.path.join(*path_components, "evaluation", "betas.npy")
+            # np.save(path, np.array(agent.betas))
         #       test_df.to_csv(rf'test_results_{experiment_id}\{test_name}\{delta}-test_data.csv')
             path = os.path.join(*path_components, "evaluation", "time_data.csv")
             time_df.to_csv(path)
