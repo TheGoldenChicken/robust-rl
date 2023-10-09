@@ -83,8 +83,6 @@ class CliffCarAgent:
         if not self.is_test:
             self.transition = [state, selected_action]
             
-        if(selected_action >= 5):
-            print(selected_action)
         return selected_action
 
     def step(self, action: int) -> Tuple[np.ndarray, np.float64, bool]:
