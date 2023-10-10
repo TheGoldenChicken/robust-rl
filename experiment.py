@@ -109,11 +109,11 @@ if __name__ == "__main__":
     parser.add_argument('--gamma', type=float, default=0.95, required=False)
 
     # Environment parameters
-    parser.add_argument('--noise_var', type=float, default=[[0.05, 0],[0, 0.05]], required=False)
+    parser.add_argument('--noise_var', type=float, default=[[0.5, 0],[0, 0.5]], required=False)
     parser.add_argument('--noise_mean', type=float, default=[0, 0], required=False)
 
     # Network parameters
-    parser.add_argument('--radial_basis_dist', type=float, default=1.5, required=False)
+    parser.add_argument('--radial_basis_dist', type=float, default=1, required=False)
     parser.add_argument('--radial_basis_var', type=float, default=7, required=False)
     
     parser.add_argument('--silence_tqdm', type=bool, default=False, required=False)
