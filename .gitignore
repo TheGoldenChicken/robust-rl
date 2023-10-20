@@ -6,3 +6,5 @@ predecated/
 *.err
 *.out
 *.png
+.idea/
+.vscode/

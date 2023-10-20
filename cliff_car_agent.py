@@ -77,7 +77,7 @@ class CliffCarAgent:
             # select_state = self.state_normalizer(state)
             selected_action = self.dqn(
                 torch.FloatTensor(state).to(self.device)
-            ).argmax()
+            ).argmin()
             selected_action = int(selected_action)
 
         if not self.is_test:
