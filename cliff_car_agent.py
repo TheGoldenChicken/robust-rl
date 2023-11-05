@@ -20,6 +20,7 @@ class CliffCarAgent:
     def __init__(self, env, replay_buffer, network, epsilon_decay=0.0001,
                  max_epsilon=1.0, min_epsilon=0.1, gamma=0.99,
                  learning_rate = 0.001, weight_decay = 0.0001, model_path=None, **kwargs):
+
         self.env = env
         self.max, self.min = np.array(self.env.max_min[0]), np.array(self.env.max_min[1])
 

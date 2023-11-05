@@ -15,11 +15,13 @@ def drawImage(display, path, center, scale=None, angle=None):
 
 class CliffCar:
 
+    # Used to translate actions from network output to environment
     translate_action = {0 : np.array([0,0]),
                         1 : np.array([1,0]),
                         2 : np.array([0,1]),
                         3 : np.array([-1,0]),
                         4 : np.array([0,-1])}
+
     CLIFF_PENALTY = -1
     ACTION_DIM = len(translate_action)
     OBS_DIM = 2
@@ -30,7 +32,7 @@ class CliffCar:
     SPEED = 0.5
 
     def __init__(self, noise_mean = [0,0], noise_var = None, mode = "abrupt",
-                 radial_basis_dist = 1, radial_basis_var = 2, **kwargs):
+                 radial_basis_dist = 1, radial_basis_var = 2, torch_mode=True, **kwargs):
 
         # Car settings
         self.position = self.START_POSITION
@@ -53,7 +55,14 @@ class CliffCar:
         
         # Rendering
         self.rendering = False
-        
+
+        # For slightly faster random samples (saves around .5 seconds per 20000 samples) - It adds up?
+        self.torch_mode = torch_mode
+        if self.torch_mode:
+            from torch.distributions import MultivariateNormal
+            from torch import tensor
+            self.mult_normal = MultivariateNormal(tensor(noise_mean), tensor(noise_var))
+
     def clamp_position(self, position):
         position[0] = min(max(position[0], self.BOUNDS[0]), self.BOUNDS[2])
         position[1] = min(max(position[1], self.BOUNDS[1]), self.BOUNDS[3])
@@ -61,6 +70,10 @@ class CliffCar:
         return position
     
     def get_max_goal_distance(self):
+        """
+        Used to get the maximum possible distance the agent can be from the goal
+        For purposes of reward normalization
+        """
         d1 = np.sum((self.GOAL_POSITION - self.BOUNDS[0:2])**2)
         d2 = np.sum((self.GOAL_POSITION - self.BOUNDS[2:4])**2)
         d3 = np.sum((self.GOAL_POSITION - self.BOUNDS[[0,3]])**2)
@@ -88,7 +101,11 @@ class CliffCar:
         noise = np.zeros(2)
         if(self.noise_var is not None):
 
-            noise = np.random.multivariate_normal(self.noise_mean, self.noise_var)
+            if self.torch_mode:
+                noise = self.mult_normal.sample((1,)).numpy()
+
+            else:
+                noise = np.random.multivariate_normal(self.noise_mean, self.noise_var)
 
         action_dir = self.translate_action[action]
 
