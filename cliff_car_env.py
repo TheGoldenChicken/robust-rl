@@ -39,7 +39,7 @@ class CliffCar:
 
         self.noise_mean = np.array(noise_mean)
         self.noise_var = np.array(noise_var)
-        
+
         # World settings
         self.mode = mode # "abrupt" or "penalty" - How the cliff is handled
         self.max_goal_distance = self.get_max_goal_distance()
@@ -60,8 +60,8 @@ class CliffCar:
         self.torch_mode = torch_mode
         if self.torch_mode:
             from torch.distributions import MultivariateNormal
-            from torch import tensor
-            self.mult_normal = MultivariateNormal(tensor(noise_mean), tensor(noise_var))
+            from torch import tensor, float
+            self.mult_normal = MultivariateNormal(tensor(noise_mean, dtype=float), tensor(noise_var, dtype=float))
 
     def clamp_position(self, position):
         position[0] = min(max(position[0], self.BOUNDS[0]), self.BOUNDS[2])
@@ -102,7 +102,7 @@ class CliffCar:
         if(self.noise_var is not None):
 
             if self.torch_mode:
-                noise = self.mult_normal.sample((1,)).numpy()
+                noise = self.mult_normal.sample((1,)).squeeze().numpy()
 
             else:
                 noise = np.random.multivariate_normal(self.noise_mean, self.noise_var)
@@ -228,10 +228,10 @@ class CliffCarDiscrete(CliffCar):
 
         
     
-car = CliffCar()
+# car = CliffCar()
 
 if __name__ == "__main__":
-    env = CliffCarDiscrete(noise_var = np.array([[0.5,0],[0,0.5]]))
+    env = CliffCar(noise_var = np.array([[0.5,0],[0,0.5]]))
     env.init_render()
 
     action = 0
@@ -247,9 +247,6 @@ if __name__ == "__main__":
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
                         pygame.quit()
-                        quit()
-
-                if event.type == pygame.KEYUP:
                     if event.key == pygame.K_a:
                         action = 3
                     elif event.key == pygame.K_d:
@@ -260,10 +257,14 @@ if __name__ == "__main__":
                         action = 4
                     elif event.key == pygame.K_g:
                         env.show_grid = not env.show_grid
-                        
-                    action_taken = True
+                        quit()
+
+                if event.type == pygame.KEYUP:
+                    if event.key in [pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s]:
+                        action = 0
+
             
-            if action_taken:
+            if True:
                 print(env.reward_fn(env.position)[0])
                 next_state, reward, done, _ = env.step(action)
 

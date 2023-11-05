@@ -18,6 +18,7 @@ start_time_np = time.time()
 for i in range(test_numbers):
     noise = np.random.multivariate_normal(noise_mean, noise_var)
 
+print(noise)
 print(time.time() - start_time_np )
 
 tsart_time_torch = time.time()
@@ -26,8 +27,9 @@ multivariate = torch.distributions.MultivariateNormal(torch_mean, torch_var)
 bo = True
 for i in range(test_numbers):
     if bo is True:
-        noise = multivariate.sample((1,)).numpy()
+        noise = multivariate.sample((1,)).squeeze().numpy()
 
+print(noise)
 print(time.time() - tsart_time_torch)
 
 scipy_start_time = time.time()
@@ -37,4 +39,5 @@ normal = multivariate_normal(mean=noise_mean, cov=noise_var)
 for i in range(test_numbers):
     noise = normal.rvs(1)
 
+print(noise)
 print(time.time() - scipy_start_time)
