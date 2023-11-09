@@ -10,6 +10,7 @@ import torch
 import random
 import numpy as np
 from cliff_car_env import CliffCar
+from cliff_car_env_minimize import CliffCar as CliffCarMinimize
 from replay_buffer import TheCoolerReplayBuffer, ReplayBuffer
 from cliff_car_robust_agent import RobustCliffCarAgent
 from cliff_car_dqn_agent import DQNCliffCarAgent
@@ -118,7 +119,11 @@ if __name__ == "__main__":
     
     parser.add_argument('--silence_tqdm', type=bool, default=False, required=False)
 
-    args = parser.parse_args()
+    try:
+        args = parser.parse_args()
+    except argparse.ArgumentError as exc:
+        print(exc.message, '\n', exc.argument)
+        sys.exit(2)
 
     # Set up seed
     if type(args.seed) == int:
@@ -200,7 +205,7 @@ if __name__ == "__main__":
             print(f">>> Started training; seed: {seed}, delta: {delta}")
             seed_everything(seed)
 
-            env = CliffCar(**vars(args))
+            env = CliffCarMinimize(**vars(args))
 
 
             if args.non_linear:
