@@ -78,12 +78,12 @@ if __name__ == "__main__":
     # Wandb: Weights and Biases
     parser.add_argument('--wandb_key', type = str, default = None, required=False)
 
-    parser.add_argument('--train_identifier', default = None, help= "Used to identify the training run.", required=False)
+    parser.add_argument('--train_identifier', default = "unnamed", help= "Used to identify the training run.", required=False)
 
     # Agent and environment type
-    parser.add_argument('--robust_agent', default=False, required=False, action='store_true')
+    parser.add_argument('--robust_agent', default=False, required=False, action='store_true') # Robust or DQN agent
     parser.add_argument('--discrete_env', default=False, required=False, action='store_true')
-    parser.add_argument('--non_linear', default=True, required=False, action='store_true')
+    parser.add_argument('--non_linear', default=True, required=False, action='store_true') # Non-linear or linear network
 
     # Replay buffer parameters
     parser.add_argument('--fineness', type=int, default=2, required=False)
@@ -146,12 +146,9 @@ if __name__ == "__main__":
     else:
         wandb_active = False
 
-    
-    if args.train_identifier is None:
-        args.train_identifier = f"training-{time.ctime()}" # If no identifier is given, use the time
-        args.train_identifier = args.train_identifier.replace(':', '-').replace(' ','_') # Reformat to avoid path issues
-    else:
-        args.train_identifier = f"training-{args.train_identifier.replace(' ', '_')}"
+    # Set up train identifier
+    args.train_identifier += f"-{time.ctime()}" # Add date for uniqueness
+    args.train_identifier = args.train_identifier.replace(':', '-').replace(' ','_') # Reformat to avoid path issues
 
     for seed in args.seed:
         for delta in args.delta:

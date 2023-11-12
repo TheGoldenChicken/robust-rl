@@ -8,19 +8,6 @@ class Network(nn.Module):
         """Initialization."""
         super(Network, self).__init__()
 
-        # self.layers = nn.Sequential(
-        #     nn.Linear(in_dim, 128),
-        #     nn.ReLU(),
-        #     nn.Dropout(p=0.2),  # Dropout layer after the first ReLU
-        #     nn.Linear(128, 128),
-        #     nn.ReLU(),
-        #     nn.Dropout(p=0.2),  # Dropout layer after the second ReLU
-        #     nn.Linear(128, 128),
-        #     nn.ReLU(),
-        #     nn.Dropout(p=0.2),  # Dropout layer after the third ReLU
-        #     nn.Linear(128, out_dim)
-        # )
-        #
         self.layers = nn.Sequential(
             nn.Linear(env.OBS_DIM, 128),
             nn.ReLU(),
