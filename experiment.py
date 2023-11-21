@@ -150,8 +150,12 @@ if __name__ == "__main__":
     args.train_identifier += f"-{time.ctime()}" # Add date for uniqueness
     args.train_identifier = args.train_identifier.replace(':', '-').replace(' ','_') # Reformat to avoid path issues
 
+    actual_deltas = args.delta.copy()
+
+
     for seed in args.seed:
-        for delta in args.delta:
+        for delta in actual_deltas:
+            args.delta = delta
 
             path_components = create_directories(seed = seed,
                                                  delta = delta,
