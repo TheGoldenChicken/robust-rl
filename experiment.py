@@ -116,8 +116,9 @@ if __name__ == "__main__":
     # Network parameters
     parser.add_argument('--radial_basis_dist', type=float, default=1, required=False)
     parser.add_argument('--radial_basis_var', type=float, default=7, required=False)
-    
-    parser.add_argument('--silence_tqdm', type=bool, default=False, required=False)
+
+    # Cursed way to store booleans, I know
+    parser.add_argument('--silence_tqdm', default=False, required=False, action='store_true')
 
     try:
         args = parser.parse_args()

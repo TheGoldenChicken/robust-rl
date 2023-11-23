@@ -37,14 +37,25 @@ source venv_1/bin/activate
 
 python3 -m pip install -r requirements.txt
 
-python3 -m install install --upgrade urllib3
+python3 -m pip install --upgrade urllib3
 
 python experiment.py --wandb_key ec26ff6ba9b98d017cdb3165454ce21496c12c35 \
-       --test_interval 2000 --train_epocs 80000 \
+       --test_interval 2000 --train_frames 80000 \
        --delta 0.01 0.1 0.5 --seed 1 2 3\
        --learning_rate 0.0005 \
-       --radial_basis_dist 1 --silence_tqdm True \
+       --radial_basis_dist 1 --silence_tqdm \
        --radial_basis_var 7 \
        --gamma 0.99 \
        --robust_agent \
        --train_identifier robust_agent
+
+# Used for running experiments locally - No WandB because Karl (me) is stupid, and tqdm because I like to see tqdm
+# python experiment.py \
+#       --test_interval 2000 --train_frames 80000 \
+#       --delta 0.01 0.1 0.5 --seed 1 2 3\
+#       --learning_rate 0.0005 \
+#       --radial_basis_dist 1 \
+#       --radial_basis_var 7 \
+#       --gamma 0.99 \
+#       --robust_agent \
+#       --train_identifier robust_agent \
