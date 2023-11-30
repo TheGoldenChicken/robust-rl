@@ -78,7 +78,7 @@ class RobustCliffCarAgent(CliffCarAgent):
                 continue
             
             Q_vals = self.dqn(torch.FloatTensor(next_state).to(device))  # Should all have the same action
-            Q_vals = Q_vals.max(dim=1, keepdim=True)[0].detach().cpu().numpy()
+            Q_vals = Q_vals.min(dim=1, keepdim=True)[0].detach().cpu().numpy()
 
             # No reason for calculating robust estimator in the real way if it gets masked anyway
             if mask[i] == 0:

@@ -48,7 +48,7 @@ class DQNCliffCarAgent(CliffCarAgent):
         # G_t   = r + gamma * v(s_{t+1})  if state != Terminal
         #       = r                       otherwise
         curr_q_value = self.dqn(state).gather(1, action)
-        next_q_value = self.dqn_target(next_state).max(dim=1, keepdim=True)[0].detach()
+        next_q_value = self.dqn_target(next_state).min(dim=1, keepdim=True)[0].detach()
         mask = 1 - done
         target = (reward + self.gamma * next_q_value * mask).to(self.device)
         # calculate dqn loss

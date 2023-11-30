@@ -14,7 +14,7 @@ from cliff_car_env_minimize import CliffCar as CliffCarMinimize
 from replay_buffer import TheCoolerReplayBuffer, ReplayBuffer
 from cliff_car_robust_agent import RobustCliffCarAgent
 from cliff_car_dqn_agent import DQNCliffCarAgent
-from network import RadialNetwork2d, RadialNonLinearNetwork2d
+from network import RadialNetwork2d, RadialNonLinearNetwork2d, Network
 import time
 import pandas as pd
 import argparse
@@ -217,6 +217,8 @@ if __name__ == "__main__":
                 network = RadialNonLinearNetwork2d
             else:
                 network = RadialNetwork2d   
+                
+            network = Network
 
             state_max, state_min = np.array(env.max_min[0]), np.array(env.max_min[1])
             if args.robust_agent:

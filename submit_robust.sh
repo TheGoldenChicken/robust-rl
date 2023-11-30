@@ -12,10 +12,10 @@
 #BSUB -gpu "num=1"
 
 ### -- set the job Name -- 
-#BSUB -J robust_rl
+#BSUB -J robust_rl_network
 
 ### -- ask for 1 core -- 
-#BSUB -n 16
+#BSUB -n 8
 
 ### -- specify that we need 2GB of memory per core/slot -- 
 #BSUB -R "rusage[mem=3GB]"
@@ -35,19 +35,19 @@ python3 -m venv venv_1
 
 source venv_1/bin/activate
 
+pip install --upgrade urllib3==1.26.15
+
 python3 -m pip install -r requirements.txt
 
-python3 -m pip install --upgrade urllib3
-
 python experiment.py --wandb_key ec26ff6ba9b98d017cdb3165454ce21496c12c35 \
-       --test_interval 2000 --train_frames 80000 \
+       --test_interval 50000 --train_frames 2000000  \
        --delta 0.01 0.1 0.5 --seed 1 2 3\
-       --learning_rate 0.0005 \
-       --radial_basis_dist 1 --silence_tqdm \
-       --radial_basis_var 7 \
+       --learning_rate 0.001 \
+       --radial_basis_dist 2 --silence_tqdm \
+       --radial_basis_var 5 \
        --gamma 0.99 \
        --robust_agent \
-       --train_identifier robust_agent
+       --train_identifier robust_agent_network
 
 # Used for running experiments locally - No WandB because Karl (me) is stupid, and tqdm because I like to see tqdm
 # python experiment.py \

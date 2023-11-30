@@ -34,10 +34,10 @@ class CliffCarAgent:
         self.replay_buffer = replay_buffer
         self.training_ready = False
 
-        # self.device = torch.device(
-        #     "cuda" if torch.cuda.is_available() else "cpu"
-        # )
-        self.device = torch.device("cpu")
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
+        # self.device = torch.device("cpu")
         # print(self.device) # Just to know which one we're on
 
         self.dqn = network(env).to(self.device)

@@ -9,11 +9,13 @@ class Network(nn.Module):
         super(Network, self).__init__()
 
         self.layers = nn.Sequential(
-            nn.Linear(env.OBS_DIM, 128),
+            nn.Linear(env.OBS_DIM, 512),
             nn.ReLU(),
-            nn.Linear(128, 128),
+            nn.Linear(512, 512),
             nn.ReLU(),
-            nn.Linear(128, env.ACTION_DIM)
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, env.ACTION_DIM)
         )
 
 
@@ -88,3 +90,4 @@ class RadialNonLinearNetwork2d(RadialNetwork2d):
             nn.ReLU(),
             nn.Linear(128, env.ACTION_DIM)
             )
+      
