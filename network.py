@@ -31,16 +31,20 @@ class RadialNetwork2d(nn.Module):
         self.env = env
         
         x_min, y_min, x_max, y_max = self.env.BOUNDS
-        x_range = torch.arange(x_min, x_max, self.env.radial_basis_dist)
-        y_range = torch.arange(y_min, y_max, self.env.radial_basis_dist)
+        N_x = int((x_max - x_min)/self.env.radial_basis_dist)
+        N_y = int((y_max - y_min)/self.env.radial_basis_dist)
+        
+        x_range = torch.linspace(0, 1, N_x)
+        y_range = torch.linspace(0, 1, N_y)
 
-        self.in_dim = x_range.shape[0] * y_range.shape[0]
+        self.in_dim = x_range.shape[0] * y_range.shape[0] + env.OBS_DIM
         
         x, y = torch.meshgrid(x_range, y_range)
 
         self.grid = torch.stack((x,y), axis = 2)
 
-        self.sigma_inv = (torch.eye(2)*self.env.radial_basis_var).inverse()
+        self.sigma_inv = torch.tensor([[(x_max - x_min)/self.env.radial_basis_var, 0],
+                                       [0, (y_max - y_min)/self.env.radial_basis_var]], dtype = torch.float32)
 
         # repeat the inverse matrixx*y times so the final shape is x*y*2*2
         self.sigma_inv = self.sigma_inv.unsqueeze(0).unsqueeze(0).repeat(self.grid.shape[0], self.grid.shape[1], 1, 1)
@@ -50,15 +54,16 @@ class RadialNetwork2d(nn.Module):
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward method implementation."""
+    
+        # if position.shape[0] == 1, add a batch dimension
+        if x.shape == (2,):
+            x = x.unsqueeze(0)
         
         basis = self.radial_basis(x)
         
-        return self.layers(basis)
+        return self.layers(torch.cat((basis, x), dim=1))
 
     def radial_basis(self, position):
-        # if position.shape[0] == 1, add a batch dimension
-        if position.shape == (2,):
-            position = position.unsqueeze(0)
         
         # broadcast the position to the shape of the radial basis. Current shape is b*2
         # so the final shape is b*x*y*2 where b is the batch size
@@ -86,8 +91,10 @@ class RadialNonLinearNetwork2d(RadialNetwork2d):
         super(RadialNonLinearNetwork2d, self).__init__(env)
 
         self.layers = nn.Sequential(
-            nn.Linear(self.in_dim, 128),
+            nn.Linear(self.in_dim, 512),
             nn.ReLU(),
-            nn.Linear(128, env.ACTION_DIM)
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, env.ACTION_DIM)
             )
       

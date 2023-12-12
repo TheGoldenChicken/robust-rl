@@ -21,11 +21,11 @@ class DQNCliffCarAgent(CliffCarAgent):
         self.dqn_target.load_state_dict(self.dqn.state_dict())
         self.dqn_target.eval()
 
-        # self.state_normalizer = lambda state: (state - self.min)/(self.max - self.min)
+        self.state_normalizer = lambda state: (state - self.min)/(self.max - self.min)
 
         # Yeah, this isn't even the stupidest solution...
         self.tens_min,self.tens_max = torch.FloatTensor(self.min).to(self.device), torch.FloatTensor(self.max).to(self.device)
-        # self.tensor_normalizer = lambda state: (state - self.tens_min)/(self.tens_max - self.tens_min)
+        self.tensor_normalizer = lambda state: (state - self.tens_min)/(self.tens_max - self.tens_min)
 
 
     def get_samples(self) -> tuple[dict, ]:
@@ -43,8 +43,8 @@ class DQNCliffCarAgent(CliffCarAgent):
         reward = torch.FloatTensor(samples["rews"].reshape(-1, 1)).to(device)
         done = torch.FloatTensor(samples["done"].reshape(-1, 1)).to(device)
 
-        # state = self.tensor_normalizer(state)
-        # next_state = self.tensor_normalizer(next_state)
+        state = self.tensor_normalizer(state)
+        next_state = self.tensor_normalizer(next_state)
         # G_t   = r + gamma * v(s_{t+1})  if state != Terminal
         #       = r                       otherwise
         curr_q_value = self.dqn(state).gather(1, action)

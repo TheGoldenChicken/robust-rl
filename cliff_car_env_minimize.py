@@ -20,7 +20,7 @@ class CliffCar:
                         2 : np.array([0,1]),
                         3 : np.array([-1,0]),
                         4 : np.array([0,-1])}
-    CLIFF_PENALTY = -1
+    CLIFF_PENALTY = -10
     ACTION_DIM = len(translate_action)
     OBS_DIM = 2
     START_POSITION = np.array([1,15], dtype=np.float32) # has to be discrete for discrete agent to work
@@ -29,7 +29,7 @@ class CliffCar:
     CLIFF_HEIGHT = 0
     SPEED = 0.5
 
-    def __init__(self, noise_mean = [0,0], noise_var = None, mode = "abrupt",
+    def __init__(self, noise_mean = 0, noise_var = None, mode = "abrupt",
                  radial_basis_dist = 1, radial_basis_var = 2, **kwargs):
 
         # Car settings
@@ -86,9 +86,10 @@ class CliffCar:
     
     def result(self, position, action):
         noise = np.zeros(2)
-        if(self.noise_var is not None):
-
-            noise = np.random.multivariate_normal(self.noise_mean, self.noise_var)
+        mean = np.array([self.noise_mean,self.noise_mean])
+        if(self.noise_var != 0):
+            var = np.array([[self.noise_var,0],[0,self.noise_var]])
+            noise = np.random.multivariate_normal(mean, var)
 
         action_dir = self.translate_action[action]
 
@@ -207,7 +208,6 @@ class CliffCarDiscrete(CliffCar):
         
         return p
 
-        
     
 car = CliffCar()
 

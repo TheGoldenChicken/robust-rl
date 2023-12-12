@@ -102,45 +102,78 @@ def maximize_f(f):
 #         else:
 #             return x_mid
 
-def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1, linear_only = False):
+def pre_sub_robust_estimator(X,y,X_,v, delta = 0.1, linear_only = False):
     
-    if not linear_only:
-        ### Quadratic approximation ###
-        A, b, c = quadratic_approximation(X_v, y_v)
-        ### Check if A is positive definite ###
-        # We know it is semi- since A is always symmetric
-        w, _ = np.linalg.eig(A)
-        if np.any(w < 0):
-            # If any eigenvalue is negative, use linear approximation instead
-            b, c = linear_approximation(X_v, y_v)
-            A = np.zeros((len(b),len(b)))
-    else:
-        b, c = linear_approximation(X_v, y_v)
-        A = np.zeros((len(b),len(b)))
-        
-    # b, c = linear_approximation(X_v, y_v)
-    # A = np.zeros((len(b),len(b)))
-
-    ### Gaussian approximation ###
-    # Compute the mean and covariance of the samples X_p, y_p
-    mu = np.mean(X_p, axis = 0)
-    Sigma = np.cov(X_p.T)
-
-    # For 1D environments expand the dimensions for the covariance
-    if Sigma.shape == (): Sigma = np.expand_dims(np.expand_dims(Sigma, axis = 0),axis=0)
-
+    d = 2
+    
+    Sigma = np.cov(y.T)
+    mu = np.mean(X, axis = 0)
+    
+    Sigma_inv = np.linalg.pinv(Sigma)
+    
     def estimator(beta):
-        Sigma_inv = np.linalg.pinv(Sigma)
-        Sigma_tilde = np.linalg.pinv(Sigma_inv+(2/beta)*A)
-        Sigma_tilde_inv = np.linalg.pinv(Sigma_tilde)
-        mu_tilde = ((mu.T@Sigma_inv+(-b.T/beta))@Sigma_tilde).flatten() # We flatten here to avoid a mishap with Sigma_tilde
-        k1 = np.sqrt(np.linalg.det(Sigma_tilde)/np.linalg.det(Sigma))
-        k2 = (-1/2)*mu.T@Sigma_inv@mu+(1/2)*mu_tilde.T@Sigma_tilde_inv@mu_tilde+(c/-beta)
+        A, b, c = quadratic_approximation(X = X_, y = v)
+        
+        s = mu.T@Sigma_inv - b.T/beta
+        S = Sigma_inv / 2 + A / beta
 
-
-        return - beta * (np.log(k1) + k2) - delta * beta
-
+        # Fast way of checking for positive semi-definite using chelesky
+        try:
+            np.linalg.cholesky(S)
+            return 1
+        except:
+            b, c = linear_approximation(X = X_, y = v)
+            S = Sigma_inv / 2
+        
+        t1 = -np.log(np.linalg.det(np.eye(d)/2 + A@Sigma/beta))/2
+        t2 = d*np.log(1/2)/2
+        t3 = -mu.T@Sigma_inv@mu/2
+        t4 = -c/beta
+        t5 = s.T@S@s/4
+        
+        return - beta * (t1+t2+t3+t4+t5) - delta * beta
+    
     return estimator
+
+# def pre_sub_robust_estimator(X_p,y_p,X_v,y_v, delta = 0.1, linear_only = False):
+    
+#     if not linear_only:
+#         ### Quadratic approximation ###
+#         A, b, c = quadratic_approximation(X_v, y_v)
+#         ### Check if A is positive definite ###
+#         # We know it is semi- since A is always symmetric
+#         w, _ = np.linalg.eig(A)
+#         if np.any(w < 0):
+#             # If any eigenvalue is negative, use linear approximation instead
+#             b, c = linear_approximation(X_v, y_v)
+#             A = np.zeros((len(b),len(b)))
+#     else:
+#         b, c = linear_approximation(X_v, y_v)
+#         A = np.zeros((len(b),len(b)))
+        
+#     # b, c = linear_approximation(X_v, y_v)
+#     # A = np.zeros((len(b),len(b)))
+
+#     ### Gaussian approximation ###
+#     # Compute the mean and covariance of the samples X_p, y_p
+#     mu = np.mean(X_p, axis = 0)
+#     Sigma = np.cov(X_p.T)
+
+#     # For 1D environments expand the dimensions for the covariance
+#     if Sigma.shape == (): Sigma = np.expand_dims(np.expand_dims(Sigma, axis = 0),axis=0)
+
+#     def estimator(beta):
+#         Sigma_inv = np.linalg.pinv(Sigma)
+#         Sigma_tilde = np.linalg.pinv(Sigma_inv+(2/beta)*A)
+#         Sigma_tilde_inv = np.linalg.pinv(Sigma_tilde)
+#         mu_tilde = ((mu.T@Sigma_inv+(-b.T/beta))@Sigma_tilde).flatten() # We flatten here to avoid a mishap with Sigma_tilde
+#         k1 = np.sqrt(np.linalg.det(Sigma_tilde)/np.linalg.det(Sigma))
+#         k2 = (-1/2)*mu.T@Sigma_inv@mu+(1/2)*mu_tilde.T@Sigma_tilde_inv@mu_tilde+(c/-beta)
+
+
+#         return - beta * (np.log(k1) + k2) - delta * beta
+
+#     return estimator
 
 def pre_sub_robust_estimator_prime_approx(X_p,y_p,X_v,y_v, delta,tol = 1e-3, linear_only = False):
     return lambda beta : (pre_sub_robust_estimator(X_p,y_p,X_v,y_v,delta,linear_only)(beta+tol)- \

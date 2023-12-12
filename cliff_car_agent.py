@@ -75,9 +75,9 @@ class CliffCarAgent:
         if self.epsilon > np.random.random() and not self.is_test:
             selected_action = random.randint(0, self.env.ACTION_DIM-1) # Why is this not inclusive, exclusive??? Stupid
         else:
-            # select_state = self.state_normalizer(state)
+            select_state = self.state_normalizer(state)
             selected_action = self.dqn(
-                torch.FloatTensor(state).to(self.device)
+                torch.FloatTensor(select_state).to(self.device)
             ).argmin()
             selected_action = int(selected_action)
 
