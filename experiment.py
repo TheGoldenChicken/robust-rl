@@ -222,10 +222,10 @@ if __name__ == "__main__":
 
             state_max, state_min = np.array(env.max_min[0]), np.array(env.max_min[1])
             if args.robust_agent:
-                replay_buffer = TheCoolerReplayBuffer(obs_dim=env.OBS_DIM, num_actions=env.ACTION_DIM,
-                                                    state_min=state_min, state_max=state_max,
-                                                    batch_size = args.robust_batch_size,
-                                                    **vars(args))
+                # replay_buffer = TheCoolerReplayBuffer(obs_dim=env.OBS_DIM, num_actions=env.ACTION_DIM,
+                #                                     state_min=state_min, state_max=state_max,
+                #                                     batch_size = args.robust_batch_size,
+                #                                     **vars(args))
                 replay_buffer = TheSlightlyCoolerReplayBuffer(obs_dim=env.OBS_DIM, size=args.bin_size,
                                              batch_size=args.grad_batch_size,
                                              **vars(args))

@@ -50,7 +50,7 @@ class ReplayBuffer:
 
 class TheSlightlyCoolerReplayBuffer(ReplayBuffer):
 
-    def __init__(self, obs_dim: int, size: int, batch_size: int = 32):
+    def __init__(self, obs_dim: int, size: int, batch_size: int = 32, **kwargs):
         super().__init__(obs_dim, size, batch_size)
         self.noise_adder = True # Since this is used for robust agent, we must also add noise
 

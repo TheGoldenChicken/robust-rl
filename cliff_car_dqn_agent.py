@@ -28,7 +28,7 @@ class DQNCliffCarAgent(CliffCarAgent):
         self.tensor_normalizer = lambda state: (state - self.tens_min)/(self.tens_max - self.tens_min)
 
 
-    def get_samples(self) -> tuple[dict, ]:
+    def get_samples(self):
         """
         Pretty self-explanatory for this one tbh
         """
