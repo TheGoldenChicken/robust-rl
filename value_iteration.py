@@ -1,13 +1,19 @@
+import os
 from collections import defaultdict
 import numpy as np
 from cliff_car_env import CliffCarDiscrete
+from cliff_car_env_minimize import CliffCarDiscrete as CliffCarMinimizeDiscrete
 import pygame
-import os
-
 
 class ValueIteration:
+    
+    # actions = [(0,0),(1,0),(0,1),(-1,0),(0,-1)]
+    actions = [0,1,2,3,4]
 
-    def __init__(self):
+    def __init__(self, env_type):
+        
+        self.env_type = env_type
+        
         self.Q = defaultdict(float)
         self.V = defaultdict(float)
         
@@ -32,11 +38,11 @@ class ValueIteration:
             
             # State value iteration
             for state in states:
-                for action in env.ACTIONS:
-                    Q_old = self.Q[tuple(state), tuple(action)]
+                for action in self.actions:
+                    Q_old = self.Q[tuple(state), action]
                     for (state_, reward), p in env.transition_prob(state, action, sim = 250).items():
-                        Q_max = max([self.Q[tuple(state_), tuple(action_)] for action_ in env.ACTIONS])                        
-                        Q_[tuple(state), tuple(action)] += p * (reward + gamma * Q_max)
+                        Q_max = max([self.Q[tuple(state_), action_] for action_ in self.actions])                        
+                        Q_[tuple(state), action] += p * (reward + gamma * Q_max)
                         
                         for event in pygame.event.get():
                             if event.type == pygame.KEYDOWN:
@@ -55,7 +61,7 @@ class ValueIteration:
                                     self.mode = "policy"
                                     self.draw_state_values(env, pi, min_V, max_V, min_Q, max_Q) 
 
-                    Delta = max(Delta, abs(Q_old - Q_[tuple(state), tuple(action)]))
+                    Delta = max(Delta, abs(Q_old - Q_[tuple(state), action]))
                     
                     
             
@@ -76,18 +82,18 @@ class ValueIteration:
                 pi = defaultdict(lambda : tuple([0,0]))
                 for state in states:
                     Q_max = float('-inf')
-                    for action in env.ACTIONS:
-                        if Q_max < self.Q[tuple(state), tuple(action)]:
-                            Q_max = self.Q[tuple(state), tuple(action)]
+                    for action in self.actions:
+                        if Q_max < self.Q[tuple(state), action]:
+                            Q_max = self.Q[tuple(state), action]
                             best_action = action
                             
-                        Q_new = self.Q[tuple(state), tuple(action)]    
+                        Q_new = self.Q[tuple(state), action]    
                         min_Q = min(min_Q, Q_new)
                         max_Q = max(max_Q, Q_new)
                         
                     self.V[tuple(state)] = Q_max
                     
-                    pi[tuple(state)] = tuple(best_action)
+                    pi[tuple(state)] = best_action
                     
                     min_V = min(min_V, Q_max)
                     max_V = max(max_V, Q_max)
@@ -103,12 +109,12 @@ class ValueIteration:
         for state in states:
             Q_max = float('-inf')
             best_action = None
-            for action in env.ACTIONS:
-                if Q_max < self.Q[tuple(state), tuple(action)]:
-                    Q_max = self.Q[tuple(state), tuple(action)]
+            for action in self.actions:
+                if Q_max < self.Q[tuple(state), action]:
+                    Q_max = self.Q[tuple(state), action]
                     best_action = action
             self.V[tuple(state)] = Q_max
-            pi[tuple(state)] = tuple(best_action)
+            pi[tuple(state)] = best_action
         
         # Save pygame screen as image
         for m in "state_values", "action_values", "policy":
@@ -117,12 +123,16 @@ class ValueIteration:
             d_val = str(round(Delta,3)).replace('.','_')
 
             # Create folder if it doesn't exist
-            folder_name = f"cliff_car\\plots\\value_iteration\\noise-{env.noise_var[0][0]}"
+            folder_name = rf"value_iteration\{self.env_type}\noise-{env.noise_var}"
             if not os.path.exists(folder_name):
                 os.makedirs(folder_name)
                 
-            pygame.image.save(self.display, rf"cliff_car\plots\value_iteration\noise-{env.noise_var[0][0]}\value_iter_{self.mode}_tol-{d_val}.png")
+            pygame.image.save(self.display, rf"value_iteration\{self.env_type}\noise-{env.noise_var}\value_iter_{self.mode}_tol-{d_val}.png")
             #f"vi_policy:{self.mode}_delta:{str(round(Delta,3)).replace('.',',')}.png"1
+            
+            # Save self.V to a numpy file
+            np.save(rf"value_iteration\{self.env_type}\noise-{env.noise_var}\value_iter_V.npy", dict(self.V))
+            np.save(rf"value_iteration\{self.env_type}\noise-{env.noise_var}\value_iter_Q.npy", dict(self.Q))
         
         return pi
     
@@ -264,14 +274,16 @@ class ValueIteration:
         # Draw the goal as a circle outline
         pygame.draw.circle(self.display, (100, 100, 255), (tfx(env.GOAL_POSITION[0]), self.render_height - tfy(env.GOAL_POSITION[1])), radius = 10, width = 2)
 
+import tqdm
 
-for i in [0,0.1,0.5,1,1.5]:    
-    env = CliffCarDiscrete(noise_var = np.array([[i,0],[0,i]]), mode = "penalty")
+for env_type, env_class in zip(["maximize","minimize"],[CliffCarDiscrete, CliffCarMinimizeDiscrete]):
+    for i in tqdm.tqdm([0]):    
+        env = env_class(noise_mean = 0, noise_var = i, mode = "abrupt")
 
-    value_iteration = ValueIteration()
-    value_iteration.init_render()
+        value_iteration = ValueIteration(env_type)
+        value_iteration.init_render()
 
 
-    pi = value_iteration(env, tol = 0.9)
+        pi = value_iteration(env, tol = 0.1)
 
 # Save pygame screen as an image

@@ -3,6 +3,8 @@ import pygame
 import matplotlib.pyplot as plt
 import os
 from collections import defaultdict
+from torch.distributions import MultivariateNormal
+import torch
 
 def drawImage(display, path, center, scale=None, angle=None):
     img = pygame.image.load(path)
@@ -31,14 +33,14 @@ class CliffCar:
     CLIFF_HEIGHT = 0
     SPEED = 0.5
 
-    def __init__(self, noise_mean = [0,0], noise_var = None, mode = "abrupt",
+    def __init__(self, noise_mean = 0, noise_var = None, mode = "abrupt",
                  radial_basis_dist = 1, radial_basis_var = 2, torch_mode=True, **kwargs):
 
         # Car settings
         self.position = self.START_POSITION
 
-        self.noise_mean = np.array(noise_mean)
-        self.noise_var = np.array(noise_var)
+        self.noise_mean = noise_mean
+        self.noise_var = noise_var
 
         # World settings
         self.mode = mode # "abrupt" or "penalty" - How the cliff is handled
@@ -58,10 +60,10 @@ class CliffCar:
 
         # For slightly faster random samples (saves around .5 seconds per 20000 samples) - It adds up?
         self.torch_mode = torch_mode
-        if self.torch_mode:
-            from torch.distributions import MultivariateNormal
-            from torch import tensor, float
-            self.mult_normal = MultivariateNormal(tensor(noise_mean, dtype=float), tensor(noise_var, dtype=float))
+        if self.torch_mode and self.noise_var != 0:
+            mean = torch.tensor([self.noise_mean,self.noise_mean],dtype = torch.float32)
+            var = torch.tensor([[self.noise_var,0],[0,self.noise_var]],dtype = torch.float32)
+            self.mult_normal = MultivariateNormal(mean, var)
 
     def clamp_position(self, position):
         position[0] = min(max(position[0], self.BOUNDS[0]), self.BOUNDS[2])
@@ -99,13 +101,13 @@ class CliffCar:
     
     def result(self, position, action):
         noise = np.zeros(2)
-        if(self.noise_var is not None):
-
+        if(self.noise_var != 0):
             if self.torch_mode:
                 noise = self.mult_normal.sample((1,)).squeeze().numpy()
-
             else:
-                noise = np.random.multivariate_normal(self.noise_mean, self.noise_var)
+                mean = np.array([self.noise_mean,self.noise_mean])
+                var = np.array([[self.noise_var,0],[0,self.noise_var]])
+                noise = np.random.multivariate_normal(mean, var)
 
         action_dir = self.translate_action[action]
 
@@ -196,7 +198,7 @@ class CliffCar:
         
 class CliffCarDiscrete(CliffCar):
 
-    def __init__(self, noise_mean = [0,0], noise_var = None, mode = "abrupt"):
+    def __init__(self, noise_mean = 0, noise_var = None, mode = "abrupt"):
         super().__init__(noise_mean, noise_var, mode)
     
     def result(self, position, action):
