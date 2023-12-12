@@ -24,7 +24,7 @@ class CliffCar:
                         3 : np.array([-1,0]),
                         4 : np.array([0,-1])}
 
-    CLIFF_PENALTY = -1
+    CLIFF_PENALTY = -2
     ACTION_DIM = len(translate_action)
     OBS_DIM = 2
     START_POSITION = np.array([1,15], dtype=np.float32) # has to be discrete for discrete agent to work
@@ -119,7 +119,10 @@ class CliffCar:
 
     def reward_fn(self, position):
         
-        # If the car is below the cliff 
+        # Calculate distance to cliff (as reward)
+        reward = (position[0] - self.GOAL_POSITION[0])**2 + (position[1] - self.GOAL_POSITION[1])**2
+        reward = 1 - reward/self.max_goal_distance # Normalize distance
+        
         if position[1] < self.CLIFF_HEIGHT:
             if self.mode == "abrupt":
                 # End the game immediatly
@@ -128,12 +131,6 @@ class CliffCar:
                 # Give a penalty for being in the cliff. Don't end the game
                 return self.CLIFF_PENALTY, False
             else: raise ValueError("Invalid mode. Should either be 'abrupt' or 'penalty'")
-        
-        # If the car is above the cliff (else)
-        
-        # Calculate distance to cliff (as reward)
-        reward = (position[0] - self.GOAL_POSITION[0])**2 + (position[1] - self.GOAL_POSITION[1])**2
-        reward = 1 - reward/self.max_goal_distance # Normalize distance
         
         return reward, False
     

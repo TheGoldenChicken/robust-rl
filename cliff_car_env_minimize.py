@@ -22,7 +22,7 @@ class CliffCar:
                         2 : np.array([0,1]),
                         3 : np.array([-1,0]),
                         4 : np.array([0,-1])}
-    CLIFF_PENALTY = -10
+    CLIFF_PENALTY = 2
     ACTION_DIM = len(translate_action)
     OBS_DIM = 2
     START_POSITION = np.array([1,15], dtype=np.float32) # has to be discrete for discrete agent to work
@@ -122,7 +122,7 @@ class CliffCar:
         if position[1] < self.CLIFF_HEIGHT:
             if self.mode == "abrupt":
                 # End the game immediatly
-                return reward, True
+                return 0, True
             elif self.mode == "penalty":
                 # Give a penalty for being in the cliff. Don't end the game
                 return reward + self.CLIFF_PENALTY, False
