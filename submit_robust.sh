@@ -40,11 +40,11 @@ pip install --upgrade urllib3==1.26.15
 python3 -m pip install -r requirements.txt
 
 python experiment.py --wandb_key ec26ff6ba9b98d017cdb3165454ce21496c12c35 \
-       --test_interval 4000 --train_frames 100000  \
+       --test_interval 1000 --train_frames 50000  \
        --delta 0.01 0.1 0.5 --seed 1 2 3\
-       --robust_batch_size 512 \
-       --grad_batch_size 256 \
-       --learning_rate 0.0005 \
+       --robust_batch_size 256 \
+       --grad_batch_size 32 \
+       --learning_rate 0.00001 \
        --radial_basis_dist 2 \
        --radial_basis_var 3 \
        --noise_var 0.01 \
@@ -53,6 +53,7 @@ python experiment.py --wandb_key ec26ff6ba9b98d017cdb3165454ce21496c12c35 \
        --fineness 2 \
        --non_linear \
        --robust_agent \
+       --bin_size 100000 \
        --train_identifier robust_use_y
 
 # Used for running experiments locally - No WandB because Karl (me) is stupid, and tqdm because I like to see tqdm

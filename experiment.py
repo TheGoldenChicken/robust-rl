@@ -104,7 +104,7 @@ if __name__ == "__main__":
     parser.add_argument('--weight_decay', type=float, default=0, required=False)
 
     # Epsilon values
-    parser.add_argument('--epsilon_decay', type=float, default=1/10000, required=False)
+    parser.add_argument('--epsilon_decay', type=float, default=1/1000, required=False)
     parser.add_argument('--max_epsilon', type=float, default=1, required=False)
     parser.add_argument('--min_epsilon', type=float, default=0.1, required=False)
     parser.add_argument('--gamma', type=float, default=0.95, required=False)

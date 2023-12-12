@@ -10,6 +10,8 @@ from tqdm import tqdm
 import os
 import pygame
 import time
+from cliff_car_env import CliffCar as CliffCarMaximize
+from cliff_car_env_minimize import CliffCar as CliffCarMinimize
 
 # Import different class decorators
 
@@ -53,6 +55,13 @@ class CliffCarAgent:
 
         # Should work for tensors and numpy...
         self.state_normalizer = lambda state: (state - self.min)/(self.max - self.min)
+        
+        if type(env) is CliffCarMaximize:
+            self.best_model_return = 0
+        elif type(env) is CliffCarMinimize:
+            self.best_model_return = 1000
+        else:
+            raise "Invalid Environment"
 
     @abstractmethod
     def get_samples(self) -> Tuple[dict, ]:
@@ -121,64 +130,6 @@ class CliffCarAgent:
         """
         
         raise(NotImplementedError)
-        # self.is_test = False
-        # self.dqn.train()
-
-        # self.env.reset()
-        # update_cnt = 0
-        # epsilons = []
-        # losses = []
-        # scores = []
-        # score = 0
-
-        # # War up until we are ready to train.
-        # while(not self.training_ready):
-        #     action = self.select_action(self.env.position)
-        #     _, _, done = self.step(action)
-
-        #     # if episode ends
-        #     if done:
-        #         self.env.reset()
-            
-        #     self.training_ready = self.replay_buffer.training_ready()
-        
-        # # Start training for the given amount of trames
-        # self.env.reset()
-        # for frame in tqdm(range(1, train_frames + 1)):
-        #     action = self.select_action(self.env.position)
-        #     _, reward, done = self.step(action)
-
-        #     score += reward
-
-        #     # if episode ends
-        #     if done:
-        #         self.env.reset()
-        #         scores.append(score)
-        #         score = 0
-            
-        #     loss = self.update_model()
-        #     losses.append(loss)
-        #     update_cnt += 1
-
-        #     # linearly decrease epsilon
-        #     self.epsilon = max(
-        #         self.min_epsilon, self.epsilon - (
-        #                 self.max_epsilon - self.min_epsilon
-        #         ) * self.epsilon_decay
-        #     )
-        #     epsilons.append(self.epsilon)
-
-        #     if frame % test_interval == 0:
-        #         print(f">>> Testing at frame: {frame}. Time: {time.ctime()}")
-        #         self.test(test_games=test_games,
-        #                   frame = frame,
-        #                   plot_path = plot_path)
-            # # plotting
-            # if frame % plotting_interval == 0:
-            #     self._plot(frame, scores, losses, epsilons)
-
-        print("Training complete")
-        # return scores, losses, epsilons
 
     def save_model(self, model_path):
         try:
@@ -227,9 +178,23 @@ class CliffCarAgent:
                 sar[test_frame] = np.array([self.env.position, np.array([action,0]), np.array([reward,0])])
 
                 test_frame += 1
-
+                
+                
             all_sar.append(sar)
 
+        # Check for improvement and save model
+        mean_return = np.mean([np.sum(sar[-1]) for sar in all_sar])
+        if type(self.env) is CliffCarMaximize and mean_return > self.best_model_return:
+            self.save_model(os.path.join(*plot_path, "training", "best_model"))
+            print(f">>> Improvement, old: {self.best_model_return}, new: {mean_return}")
+            self.best_model_return = mean_return
+        elif type(self.env) is CliffCarMinimize and mean_return < self.best_model_return:
+            self.save_model(os.path.join(*plot_path, "training", "best_model"))
+            print(f">>> Improvement, old: {self.best_model_return}, new: {mean_return}")
+            self.best_model_return = mean_return
+        else:
+            print(f">>> No improvement, old: {self.best_model_return}, new: {mean_return}")
+            
         # If statement necessary, otherwise Pygame opens and stays loitering around
         if render_games > 0:
             self.env.init_render()

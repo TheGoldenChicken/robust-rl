@@ -44,15 +44,15 @@ python3 -m pip install -r requirements.txt
 # python3 -m install 'urllib3<2.0'
 
 python experiment.py --wandb_key ec26ff6ba9b98d017cdb3165454ce21496c12c35 \
-       --test_interval 5000 --train_frames 50000 \
-       --robust_batch_size 256 \
-       --grad_batch_size 256 \
+       --test_interval 1000 --train_frames 50000 \
+       --robust_batch_size 128 \
+       --grad_batch_size 128 \
+       --learning_rate 0.00005 \
+       --radial_basis_dist 2 \
+       --radial_basis_var 3 \
        --delta 0 --seed 1 2 3\
-       --learning_rate 0.0005 \
-       --noise_var 0 \
-       --radial_basis_dist 2 --silence_tqdm \
-       --radial_basis_var 5 \
        --non_linear \
        --noise_var 0.01 \
        --gamma 0.99 \
+       --bin_size 100000 \
        --train_identifier dqn_RBF
