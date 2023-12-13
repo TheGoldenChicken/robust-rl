@@ -11,7 +11,7 @@ import random
 import numpy as np
 from cliff_car_env import CliffCar
 from cliff_car_env_minimize import CliffCar as CliffCarMinimize
-from replay_buffer import TheCoolerReplayBuffer, ReplayBuffer
+from replay_buffer import TheCoolerReplayBuffer, ReplayBuffer, TheSlightlyCoolerReplayBuffer
 from cliff_car_robust_agent import RobustCliffCarAgent
 from cliff_car_dqn_agent import DQNCliffCarAgent
 from network import RadialNetwork2d, RadialNonLinearNetwork2d, Network
@@ -222,10 +222,13 @@ if __name__ == "__main__":
 
             state_max, state_min = np.array(env.max_min[0]), np.array(env.max_min[1])
             if args.robust_agent:
-                replay_buffer = TheCoolerReplayBuffer(obs_dim=env.OBS_DIM, num_actions=env.ACTION_DIM,
-                                                    state_min=state_min, state_max=state_max,
-                                                    batch_size = args.robust_batch_size,
-                                                    **vars(args))
+                # replay_buffer = TheCoolerReplayBuffer(obs_dim=env.OBS_DIM, num_actions=env.ACTION_DIM,
+                #                                     state_min=state_min, state_max=state_max,
+                #                                     batch_size = args.robust_batch_size,
+                #                                     **vars(args))
+                replay_buffer = TheSlightlyCoolerReplayBuffer(obs_dim=env.OBS_DIM, size=args.bin_size,
+                                             batch_size=args.grad_batch_size,
+                                             **vars(args))
 
                 agent = RobustCliffCarAgent(env=env, replay_buffer=replay_buffer, network = network,
                                             **vars(args))

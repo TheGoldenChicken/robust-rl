@@ -122,7 +122,7 @@ class CliffCar:
         if position[1] < self.CLIFF_HEIGHT:
             if self.mode == "abrupt":
                 # End the game immediatly
-                return 0, True
+                return 1, True
             elif self.mode == "penalty":
                 # Give a penalty for being in the cliff. Don't end the game
                 return reward + self.CLIFF_PENALTY, False
