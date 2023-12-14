@@ -83,29 +83,7 @@ class TheSlightlyCoolerReplayBuffer(ReplayBuffer):
         self.size = min(self.size + 1, self.max_size)
 
 
-    # def sample_from_scratch(self, K, nn, num_times=1, specific_action=None, distance='Euclidian', check_ripeness=True):
-    #     """
-    #     Basically like sample_from_scratch for TheCoolerReplayBuffer
-    #     But this is probably pretty slow
-    #     This should be pretty FACKING SLOW
-    #     """
-    #     # TODO
-    #     # I know this is stupid, will fix later, same for TCRP
-    #     KNN_sampless = []
-    #     # Should replace be false here?
-
-    #     current_idxs = np.random.choice(self.size, size=num_times, replace=False)
-    #     current_samples = self[current_idxs] # Samples to calc KNN from
-
-    #     for i, r in enumerate(current_samples['obs']):
-    #         dists = [np.linalg.norm(r - x) if self.acts_buf[p] == self.acts_buf[i] else np.infty for p, x in enumerate(self.obs_buf[:self.size])]
-    #         K = min(K, len(dists))
-    #         idxs = np.argpartition(dists, K)[:K]
-    #         KNN_sampless.append(self[idxs])
-
-    #     return KNN_sampless, current_samples
-
-    def sample_from_scratch(self, K, nn, num_times=1, specific_action=None, distance='Euclidean', check_ripeness=True):
+    def sample_from_scratch(self, K, nn, num_times=1, specific_action=None, distance='Euclidian', check_ripeness=True):
         """
         Basically like sample_from_scratch for TheCoolerReplayBuffer
         But this is probably pretty slow
@@ -113,22 +91,20 @@ class TheSlightlyCoolerReplayBuffer(ReplayBuffer):
         """
         # TODO
         # I know this is stupid, will fix later, same for TCRP
-        KNN_samples = []
+        KNN_sampless = []
+        # Should replace be false here?
 
         current_idxs = np.random.choice(self.size, size=num_times, replace=False)
         current_samples = self[current_idxs] # Samples to calc KNN from
 
-        tree = cKDTree(self.obs_buf[:self.size])
-        dists, idxs = tree.query(current_samples['obs'], k=K+1) # +1 to exclude self
+        for i, r in enumerate(current_samples['obs']):
+            dists = [np.linalg.norm(r - x) if self.acts_buf[p] == self.acts_buf[i] else np.infty for p, x in enumerate(self.obs_buf[:self.size])]
+            K = min(K, len(dists))
+            idxs = np.argpartition(dists, K)[:K]
+            KNN_sampless.append(self[idxs])
 
-        for i, (dist_row, idx_row) in enumerate(zip(dists, idxs)):
-            if specific_action is not None:
-                same_action_mask = (self.acts_buf[idx_row] == specific_action)
-                dist_row = dist_row[same_action_mask]
-                idx_row = idx_row[same_action_mask]
-            KNN_samples.append(self[idx_row[1:]]) # Exclude self
+        return KNN_sampless, current_samples
 
-        return KNN_samples, current_samples
 
     def training_ready(self) -> bool:
         return self.size >= self.ready_when

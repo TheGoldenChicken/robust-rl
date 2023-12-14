@@ -15,7 +15,7 @@
 #BSUB -J robust_rl_network
 
 ### -- ask for 1 core -- 
-#BSUB -n 8
+#BSUB -n 12
 
 ### -- specify that we need 2GB of memory per core/slot -- 
 #BSUB -R "rusage[mem=3GB]"
@@ -39,12 +39,27 @@ pip install --upgrade urllib3==1.26.15
 
 python3 -m pip install -r requirements.txt
 
+
 python experiment.py --wandb_key ec26ff6ba9b98d017cdb3165454ce21496c12c35 \
-       --test_interval 1000 --train_frames 50000  \
-       --delta 0.01 0.1 0.5 --seed 1 2 3\
-       --robust_batch_size 256 \
+       --test_interval 1000 --train_frames 10000 \
+       --robust_batch_size 128 \
        --grad_batch_size 128 \
-       --learning_rate 0.00005 \
+       --learning_rate  0.00001 \
+       --radial_basis_dist 2 \
+       --radial_basis_var 3 \
+       --delta 0 --seed 1 2 3\
+       --non_linear \
+       --noise_var 0.01 \
+       --gamma 0.99 \
+       --bin_size 100000 \
+       --train_identifier dqn_this
+
+python experiment.py --wandb_key ec26ff6ba9b98d017cdb3165454ce21496c12c35 \
+       --test_interval 1000 --train_frames 10000  \
+       --delta 0 0.5 --seed 10 20 30\
+       --robust_batch_size 128 \
+       --grad_batch_size 128 \
+       --learning_rate 0.00001 \
        --radial_basis_dist 2 \
        --radial_basis_var 3 \
        --noise_var 0.01 \
@@ -53,7 +68,7 @@ python experiment.py --wandb_key ec26ff6ba9b98d017cdb3165454ce21496c12c35 \
        --non_linear \
        --robust_agent \
        --bin_size 10000 \
-       --train_identifier robust_use_y
+       --train_identifier robust_this
 
 # Used for running experiments locally - No WandB because Karl (me) is stupid, and tqdm because I like to see tqdm
 # python experiment.py \

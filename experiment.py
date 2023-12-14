@@ -104,7 +104,7 @@ if __name__ == "__main__":
     parser.add_argument('--weight_decay', type=float, default=0, required=False)
 
     # Epsilon values
-    parser.add_argument('--epsilon_decay', type=float, default=1/1000, required=False)
+    parser.add_argument('--epsilon_decay', type=float, default=1/5000, required=False)
     parser.add_argument('--max_epsilon', type=float, default=1, required=False)
     parser.add_argument('--min_epsilon', type=float, default=0.1, required=False)
     parser.add_argument('--gamma', type=float, default=0.95, required=False)
@@ -133,6 +133,8 @@ if __name__ == "__main__":
     # Change to list if not already
     if type(args.delta) == float:
         args.delta = [args.delta]
+        
+    print(">>>>>>>>>>",type(args.delta),args.delta)
 
     print(">>>>>>>>>>>>>>>>>>>>>> " + str(args.seed) + " " + str(type(args.seed)))
 
@@ -222,13 +224,13 @@ if __name__ == "__main__":
 
             state_max, state_min = np.array(env.max_min[0]), np.array(env.max_min[1])
             if args.robust_agent:
-                # replay_buffer = TheCoolerReplayBuffer(obs_dim=env.OBS_DIM, num_actions=env.ACTION_DIM,
-                #                                     state_min=state_min, state_max=state_max,
-                #                                     batch_size = args.robust_batch_size,
-                #                                     **vars(args))
-                replay_buffer = TheSlightlyCoolerReplayBuffer(obs_dim=env.OBS_DIM, size=args.bin_size,
-                                             batch_size=args.grad_batch_size,
-                                             **vars(args))
+                replay_buffer = TheCoolerReplayBuffer(obs_dim=env.OBS_DIM, num_actions=env.ACTION_DIM,
+                                                    state_min=state_min, state_max=state_max,
+                                                    batch_size = args.robust_batch_size,
+                                                    **vars(args))
+                # replay_buffer = TheSlightlyCoolerReplayBuffer(obs_dim=env.OBS_DIM, size=args.bin_size,
+                #                              batch_size=args.grad_batch_size,
+                #                              **vars(args))
 
                 agent = RobustCliffCarAgent(env=env, replay_buffer=replay_buffer, network = network,
                                             **vars(args))
